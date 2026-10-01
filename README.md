@@ -1,6 +1,6 @@
 -- ==========================================================
--- SCRIPT MENU SYSTEM V12.5 ULTRA CHILL EDITION (Kianbest Hub)
--- Features: Fix Image Background, Chill Lo-Fi Glassmorphism, Anti-Ban
+-- SCRIPT MENU SYSTEM V12.7 ULTRA CHILL (Kianbest Hub)
+-- Updates: Auto Toggle Notifications, 10 Chill Presets, Reset BG Button
 -- Compatibility: Delta, Hydrogen, Fluxus, Solara, Wave, CodeX
 -- ==========================================================
 
@@ -15,40 +15,34 @@ local TeleportService = game:GetService("TeleportService")
 local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 
--- Kiểm tra Service an toàn
 local VirtualInputManager, VirtualUser
 pcall(function() VirtualInputManager = game:GetService("VirtualInputManager") end)
 pcall(function() VirtualUser = game:GetService("VirtualUser") end)
 
--- 1. CẤU HÌNH HỆ THỐNG
+-- CẤU HÌNH HỆ THỐNG
 local Config = {
-    -- Anti-Ban & Security Settings
     AntiBanEnabled = true,
     AntiKick = true,
     AntiLog = true,
     SpoofStats = true,
     DisableClientAC = true,
 
-    -- ESP & Visuals
     ESPEnabled = false,
     ESPNamesEnabled = false,
     ESPHealthEnabled = false,
     
-    -- Movement
     NoclipEnabled = false,
     SpeedEnabled = false,
     SpeedValue = 35,
     FlyEnabled = false,
     FlySpeed = 75,
     
-    -- Fix Lag Modes
     PotatoMode = false,
     FullBright = false,
     LowPoly = false,
     AutoMemoryClean = true,
     HidePlayers = false,
     
-    -- Combat VIP
     SelectedTarget = nil,
     AutoTPTarget = false,
     AutoAttack = false,
@@ -57,26 +51,28 @@ local Config = {
     HitboxExpander = false,
     HitboxSize = 18,
     
-    -- Interface & Chill Background Config
     AntiAFK = true,
     CurrentChillIndex = 1,
     CustomAssetID = "",
-    BgTransparency = 0.45, -- Độ mờ ảnh chill
-    FrameTransparency = 0.25, -- Độ mờ khung glassmorphism
+    BgTransparency = 0.45,
+    FrameTransparency = 0.25,
     ToggleKey = Enum.KeyCode.RightControl
 }
 
--- DANH SÁCH IMAGE ID CHILL LO-FI / AESTHETIC HD (ĐÃ FIX LỖI HIỂN THỊ)
+-- DANH SÁCH 10 IMAGE ID CHILL LO-FI / AESTHETIC HD
 local ChillPresets = {
-    "rbxassetid://6071575925",  -- Lo-Fi Rainy City Night
-    "rbxassetid://7043825807",  -- Aesthetic Pink Sunset Sky
-    "rbxassetid://6985068228",  -- Chill Anime Room
-    "rbxassetid://11414436906", -- Pastel Purple Clouds
-    "rbxassetid://10023403248", -- Anime Cozy Street
-    "rbxassetid://11702739401"  -- Chill Galaxy Night
+    "rbxassetid://6071575925",  -- 1. Lo-Fi Rainy City Night (Mặc định)
+    "rbxassetid://7043825807",  -- 2. Soft Pink Sunset Sky
+    "rbxassetid://6985068228",  -- 3. Chill Anime Room
+    "rbxassetid://11414436906", -- 4. Pastel Purple Clouds
+    "rbxassetid://10023403248", -- 5. Anime Cozy Street
+    "rbxassetid://11702739401", -- 6. Chill Galaxy Night
+    "rbxassetid://6032220401",  -- 7. Cyberpunk Neon City
+    "rbxassetid://142410803",   -- 8. Minimalist Dark Lace Pattern
+    "rbxassetid://9132200898",  -- 9. Aesthetic Dusk Cloud
+    "rbxassetid://7041740322"   -- 10. Retro Purple Horizon
 }
 
--- THEMES MÀU CHILL PASTEL
 local Themes = {
     ChillPurple = { Name = "Chill Lavender 🔮", Bg = Color3.fromRGB(20, 16, 28), Sidebar = Color3.fromRGB(14, 10, 20), Accent = Color3.fromRGB(185, 140, 255), Button = Color3.fromRGB(32, 24, 44), Text = Color3.fromRGB(240, 235, 255) },
     SoftPink = { Name = "Soft Sakura 🌸", Bg = Color3.fromRGB(28, 18, 24), Sidebar = Color3.fromRGB(20, 12, 17), Accent = Color3.fromRGB(255, 150, 190), Button = Color3.fromRGB(42, 26, 36), Text = Color3.fromRGB(255, 240, 248) },
@@ -86,22 +82,21 @@ local Themes = {
 
 local CurrentTheme = Themes.ChillPurple
 
--- KHỞI TẠO SCREENGUI
 local ParentGui = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
-if ParentGui:FindFirstChild("KianbestMenuV12_5") then
-    ParentGui.KianbestMenuV12_5:Destroy()
+if ParentGui:FindFirstChild("KianbestMenuV12_7") then
+    ParentGui.KianbestMenuV12_7:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "KianbestMenuV12_5"
+ScreenGui.Name = "KianbestMenuV12_7"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = ParentGui
 
--- NOTIFICATION TOAST SYSTEM
+-- SYSTEM NOTIFICATION TOAST
 local NotificationFrame = Instance.new("Frame")
 NotificationFrame.Name = "NotificationFrame"
-NotificationFrame.Size = UDim2.new(0, 240, 0, 220)
-NotificationFrame.Position = UDim2.new(1, -250, 1, -230)
+NotificationFrame.Size = UDim2.new(0, 250, 0, 240)
+NotificationFrame.Position = UDim2.new(1, -260, 1, -250)
 NotificationFrame.BackgroundTransparency = 1
 NotificationFrame.ZIndex = 50
 NotificationFrame.Parent = ScreenGui
@@ -112,11 +107,11 @@ NotificationList.Padding = UDim.new(0, 6)
 NotificationList.VerticalAlignment = Enum.VerticalAlignment.Bottom
 
 local function Notify(title, text, duration)
-    duration = duration or 2.5
+    duration = duration or 2.2
     local Toast = Instance.new("Frame")
     Toast.Size = UDim2.new(1, 0, 0, 46)
     Toast.BackgroundColor3 = CurrentTheme.Sidebar
-    Toast.BackgroundTransparency = 0.2
+    Toast.BackgroundTransparency = 0.15
     Toast.BorderSizePixel = 0
     Toast.ZIndex = 51
     Toast.Parent = NotificationFrame
@@ -152,7 +147,7 @@ local function Notify(title, text, duration)
 
     task.delay(duration, function()
         pcall(function()
-            local fadeOutInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+            local fadeOutInfo = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
             TweenService:Create(Toast, fadeOutInfo, {BackgroundTransparency = 1}):Play()
             TweenService:Create(Stroke, fadeOutInfo, {Transparency = 1}):Play()
             TweenService:Create(TTitle, fadeOutInfo, {TextTransparency = 1}):Play()
@@ -173,7 +168,7 @@ pcall(function()
         local oldKick
         oldKick = hookfunction(LocalPlayer.Kick, function(self, ...)
             if Config.AntiKick and self == LocalPlayer then
-                Notify("🛡️ Anti-Ban", "Đã chặn 1 yêu cầu Kick từ Server!")
+                Notify("🛡️ Anti-Ban Shield", "Đã chặn 1 yêu cầu Kick từ Server!")
                 return nil
             end
             return oldKick(self, ...)
@@ -230,7 +225,6 @@ MainStroke.Color = CurrentTheme.Accent
 MainStroke.Thickness = 1.5
 MainStroke.Transparency = 0.3
 
--- BACKGROUND IMAGE CHILL CHILL (MỜ MỜ KÍNH VẠN HOA)
 local MainBgImage = Instance.new("ImageLabel")
 MainBgImage.Name = "MainBgChill"
 MainBgImage.Size = UDim2.new(1, 0, 1, 0)
@@ -241,7 +235,6 @@ MainBgImage.Image = ChillPresets[Config.CurrentChillIndex]
 MainBgImage.ZIndex = 1
 MainBgImage.Parent = MainFrame
 
--- HIỆU ỨNG DẢI MÀU MỜ LO-FI OVERLAY
 local GlassGradient = Instance.new("UIGradient")
 GlassGradient.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
@@ -263,7 +256,7 @@ Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 12)
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(0, 320, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
-Title.Text = "☕ Kianbest Hub v12.5 ULTRA CHILL"
+Title.Text = "☕ Kianbest Hub v12.7 ULTRA CHILL"
 Title.TextColor3 = CurrentTheme.Accent
 Title.TextSize = 13
 Title.Font = Enum.Font.FredokaOne
@@ -411,7 +404,7 @@ local FixLagPage = CreateTab("Fix Lag VIP", "🚀", 4)
 local SettingsPage = CreateTab("Settings & Chill", "☕", 5)
 
 ----------------------------------------------------------
--- UI BUILDERS WITH GLASS TRANSPARENCY
+-- UI BUILDERS WITH AUTOMATIC NOTIFICATIONS
 ----------------------------------------------------------
 local function CreateToggle(parent, text, defaultState, callback)
     local Btn = Instance.new("TextButton")
@@ -441,6 +434,11 @@ local function CreateToggle(parent, text, defaultState, callback)
     Btn.MouseButton1Click:Connect(function()
         state = not state
         StatusInd.BackgroundColor3 = state and CurrentTheme.Accent or Color3.fromRGB(60, 65, 75)
+        
+        local cleanTitle = text:gsub("^[%s%p%c]+", "")
+        cleanTitle = cleanTitle ~= "" and cleanTitle or "Tính năng"
+        Notify(cleanTitle, state and "Đã BẬT 🟢" or "Đã TẮT 🔴")
+        
         callback(state)
     end)
     return Btn
@@ -634,7 +632,7 @@ CreateButton(FixLagPage, "🚀 Kích Hoạt Max FPS (Siêu Nhẹ Map)", Color3.f
             end
         end
     end)
-    Notify("Fix Lag VIP", "Đã bật Max FPS thành công!")
+    Notify("Fix Lag VIP", "Đã bật Max FPS thành công! 🚀")
 end)
 
 CreateToggle(FixLagPage, "🥔 Chế Độ Potato Graphics", Config.PotatoMode, function(state)
@@ -673,10 +671,10 @@ local SList = Instance.new("UIListLayout", SettingsPage)
 SList.SortOrder = Enum.SortOrder.LayoutOrder
 SList.Padding = UDim.new(0, 8)
 
-CreateButton(SettingsPage, "🌄 Đổi Ảnh Background Chill Chill (Preset 1 - 6)", Color3.fromRGB(45, 30, 55), function()
+CreateButton(SettingsPage, "🌄 Đổi Ảnh Background Chill (Preset 1 - 10)", Color3.fromRGB(45, 30, 55), function()
     Config.CurrentChillIndex = (Config.CurrentChillIndex % #ChillPresets) + 1
     MainBgImage.Image = ChillPresets[Config.CurrentChillIndex]
-    Notify("Chill Bg", "Đã chuyển sang Nền Lo-Fi Chill #" .. Config.CurrentChillIndex .. " ☕")
+    Notify("Chill Bg", "Đã chuyển sang Nền Chill #" .. Config.CurrentChillIndex .. "/" .. #ChillPresets .. " ☕")
 end)
 
 -- Ô NHẬP CUSTOM IMAGE ID
@@ -692,7 +690,7 @@ Instance.new("UICorner", CustomIdContainer).CornerRadius = UDim.new(0, 6)
 local CustomIdBox = Instance.new("TextBox")
 CustomIdBox.Size = UDim2.new(1, -80, 1, 0)
 CustomIdBox.Position = UDim2.new(0, 10, 0, 0)
-CustomIdBox.PlaceholderText = "Nhập ID Ảnh Roblox Tự Chọn (Ví dụ: 6071575925)..."
+CustomIdBox.PlaceholderText = "Nhập ID Ảnh Roblox (Ví dụ: 6071575925)..."
 CustomIdBox.Text = ""
 CustomIdBox.TextColor3 = CurrentTheme.Text
 CustomIdBox.PlaceholderColor3 = Color3.fromRGB(160, 150, 175)
@@ -722,8 +720,16 @@ ApplyIdBtn.MouseButton1Click:Connect(function()
         MainBgImage.Image = "rbxassetid://" .. input
         Notify("Background", "Đã áp dụng Custom Image ID: " .. input)
     else
-        Notify("Background Lỗi", "Vui lòng nhập số ID hợp lệ!")
+        Notify("Background Lỗi", "Vui lòng nhập ID hợp lệ!")
     end
+end)
+
+-- NÚT RESET KHÔI PHÚC ẢNH BACKGROUND MẶC ĐỊNH
+CreateButton(SettingsPage, "🔄 Reset Ảnh Background Về Mặc Định", Color3.fromRGB(55, 30, 35), function()
+    Config.CurrentChillIndex = 1
+    MainBgImage.Image = ChillPresets[1]
+    CustomIdBox.Text = ""
+    Notify("Background Reset", "Đã khôi phục ảnh background về mặc định ban đầu! ☕✨")
 end)
 
 CreateButton(SettingsPage, "🎨 Đổi Tone Màu Theme (Purple/Pink/Ocean/Mint)", Color3.fromRGB(35, 30, 48), function()
@@ -779,7 +785,6 @@ local function ExecuteM1KillProtocol()
     end)
 end
 
--- RENDER & UPDATE LOOP
 local lastTime = tick()
 local frameCount = 0
 local memoryTimer = 0
@@ -803,7 +808,6 @@ RunService.RenderStepped:Connect(function(dt)
         lastTime = tick()
     end
 
-    -- Clean Memory
     if Config.AutoMemoryClean then
         memoryTimer = memoryTimer + dt
         if memoryTimer >= 20 then
@@ -816,7 +820,6 @@ RunService.RenderStepped:Connect(function(dt)
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChildOfClass("Humanoid")
 
-    -- Hitbox Expander
     if Config.HitboxExpander then
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character then
@@ -831,7 +834,6 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    -- Combat Target Auto TP & Auto Attack
     if Config.SelectedTarget and Config.SelectedTarget.Character then
         local tHRP = Config.SelectedTarget.Character:FindFirstChild("HumanoidRootPart")
         local tHum = Config.SelectedTarget.Character:FindFirstChildOfClass("Humanoid")
@@ -844,7 +846,6 @@ RunService.RenderStepped:Connect(function(dt)
     if Config.SpeedEnabled and hum then hum.WalkSpeed = Config.SpeedValue end
 end)
 
--- ANTI-AFK 24/7
 LocalPlayer.Idled:Connect(function()
     if Config.AntiAFK and VirtualUser then
         pcall(function()
@@ -855,4 +856,4 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
-Notify("Kianbest Hub", "Đã tải v12.5 CHILL EDITION! Nền mờ mờ Lo-Fi đã hiển thị hoàn hảo! ☕✨")
+Notify("Kianbest Hub", "Đã tải v12.7! Đã thêm nút Reset Background Mặc Định ☕✨")
