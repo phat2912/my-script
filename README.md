@@ -1,766 +1,3442 @@
---==========================================================
--- KIANBEST HUB V9.6 - UI / PROTOTYPE
--- Mobile Friendly • Theme • Tabs • FPS/Ping • Notifications
--- Dùng cho Roblox Studio / game của bạn
---==========================================================
+--[[
+    Kianbest Anti-Cheat V3
+    PART 1/5
+    Server-side protection
+]]
 
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local Stats = game:GetService("Stats")
+local DataStoreService = game:GetService("DataStoreService")
+local ServerStorage = game:GetService("ServerStorage")
 
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-
---==========================================================
+--------------------------------------------------
 -- CONFIG
---==========================================================
+--------------------------------------------------
 
-local Config = {
-    MenuOpen = true,
-    AntiAFK = false,
-    CurrentTheme = 1,
-    CurrentBackground = 1,
-    ToggleKey = Enum.KeyCode.RightControl
-}
-
-local Themes = {
-    {
-        Name = "Cute Pink 🌸",
-        Bg = Color3.fromRGB(30, 22, 30),
-        Sidebar = Color3.fromRGB(22, 16, 23),
-        Button = Color3.fromRGB(45, 30, 43),
-        Accent = Color3.fromRGB(255, 120, 180),
-        Text = Color3.fromRGB(255, 240, 247)
+local CONFIG = {
+    Admins = {
+        -- Thay bằng UserId Roblox của bạn
+        [123456789] = true,
     },
 
-    {
-        Name = "Cyber Blue 💎",
-        Bg = Color3.fromRGB(20, 27, 38),
-        Sidebar = Color3.fromRGB(13, 19, 29),
-        Button = Color3.fromRGB(28, 40, 57),
-        Accent = Color3.fromRGB(80, 200, 255),
-        Text = Color3.fromRGB(235, 248, 255)
+    Detection = {
+        Enabled = true,
+
+        MaxWalkSpeed = 24,
+        MaxJumpPower = 70,
+
+        StrikeLimit = 5,
+        StrikeDecayTime = 30,
+
+        SpawnGraceTime = 5,
+        TeleportDistance = 100,
+        MaxMovementSpeed = 80,
+
+        CheckInterval = 0.25,
     },
 
-    {
-        Name = "Purple 🔮",
-        Bg = Color3.fromRGB(27, 21, 38),
-        Sidebar = Color3.fromRGB(19, 14, 28),
-        Button = Color3.fromRGB(41, 30, 55),
-        Accent = Color3.fromRGB(190, 120, 255),
-        Text = Color3.fromRGB(245, 238, 255)
-    }
+    Ban = {
+        Enabled = true,
+        Permanent = true,
+
+        Reason = "Anti-Cheat detected",
+    },
+
+    Debug = false,
 }
 
-local Backgrounds = {
-    "",
-    "rbxassetid://11702739401",
-    "rbxassetid://10023403248",
-    "rbxassetid://6071575925",
-    "rbxassetid://11414436906"
-}
+--------------------------------------------------
+-- SERVICES / STORAGE
+--------------------------------------------------
 
-local Theme = Themes[Config.CurrentTheme]
+local BanStore = DataStoreService:GetDataStore(
+    "Kianbest_AntiCheat_Bans_V3"
+)
 
---==========================================================
--- CLEAN OLD GUI
---==========================================================
+local RootFolder = ServerStorage:FindFirstChild(
+    "KianbestAntiCheat"
+)
 
-local old = PlayerGui:FindFirstChild("KianbestHubV96")
-if old then
-    old:Destroy()
+if not RootFolder then
+    RootFolder = Instance.new("Folder")
+    RootFolder.Name = "KianbestAntiCheat"
+    RootFolder.Parent = ServerStorage
 end
 
---==========================================================
--- GUI
---==========================================================
+--------------------------------------------------
+-- PLAYER STATE
+--------------------------------------------------
 
-local Gui = Instance.new("ScreenGui")
-Gui.Name = "KianbestHubV96"
-Gui.ResetOnSpawn = false
-Gui.IgnoreGuiInset = true
-Gui.Parent = PlayerGui
+local PlayerState = {}
 
---==========================================================
--- NOTIFICATION
---==========================================================
+local function createState(player)
+    PlayerState[player] = {
+        Strikes = 0,
 
-local NotificationHolder = Instance.new("Frame")
-NotificationHolder.Size = UDim2.new(0, 260, 0, 200)
-NotificationHolder.Position = UDim2.new(1, -275, 1, -215)
-NotificationHolder.BackgroundTransparency = 1
-NotificationHolder.Parent = Gui
+        LastPosition = nil,
+        LastCheck = os.clock(),
 
-local NotificationLayout = Instance.new("UIListLayout")
-NotificationLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
-NotificationLayout.Padding = UDim.new(0, 7)
-NotificationLayout.Parent = NotificationHolder
+        SpawnTime = os.clock(),
 
-local function Notify(title, message)
-    local Toast = Instance.new("Frame")
-    Toast.Size = UDim2.new(1, 0, 0, 55)
-    Toast.BackgroundColor3 = Theme.Sidebar
-    Toast.BorderSizePixel = 0
-    Toast.Parent = NotificationHolder
+        ExemptUntil = 0,
 
-    Instance.new("UICorner", Toast).CornerRadius = UDim.new(0, 10)
+        IsBanned = false,
 
-    local Stroke = Instance.new("UIStroke")
-    Stroke.Color = Theme.Accent
-    Stroke.Thickness = 1.5
-    Stroke.Parent = Toast
+        LastStrikeReason = "",
+        LastStrikeTime = 0,
+    }
+end
 
-    local Title = Instance.new("TextLabel")
-    Title.Size = UDim2.new(1, -16, 0, 20)
-    Title.Position = UDim2.new(0, 8, 0, 5)
-    Title.BackgroundTransparency = 1
-    Title.Text = title
-    Title.TextColor3 = Theme.Accent
-    Title.Font = Enum.Font.SourceSansBold
-    Title.TextSize = 14
-    Title.TextXAlignment = Enum.TextXAlignment.Left
-    Title.Parent = Toast
+local function getState(player)
+    return PlayerState[player]
+end
 
-    local Text = Instance.new("TextLabel")
-    Text.Size = UDim2.new(1, -16, 0, 22)
-    Text.Position = UDim2.new(0, 8, 0, 27)
-    Text.BackgroundTransparency = 1
-    Text.Text = message
-    Text.TextColor3 = Theme.Text
-    Text.Font = Enum.Font.SourceSans
-    Text.TextSize = 12
-    Text.TextXAlignment = Enum.TextXAlignment.Left
-    Text.Parent = Toast
+--------------------------------------------------
+-- ADMIN CHECK
+--------------------------------------------------
 
-    task.delay(2.5, function()
-        if Toast.Parent then
-            local t = TweenService:Create(
-                Toast,
-                TweenInfo.new(.3),
-                {BackgroundTransparency = 1}
+local function isAdmin(player)
+    return CONFIG.Admins[player.UserId] == true
+end
+
+--------------------------------------------------
+-- DEBUG
+--------------------------------------------------
+
+local function debugPrint(...)
+    if CONFIG.Debug then
+        print("[Kianbest Anti-Cheat]", ...)
+    end
+end
+
+--------------------------------------------------
+-- BAN DATA
+--------------------------------------------------
+
+local function getBanKey(userId)
+    return "BAN_" .. tostring(userId)
+end
+
+local function getBanData(player)
+    local success, result = pcall(function()
+        return BanStore:GetAsync(
+            getBanKey(player.UserId)
+        )
+    end)
+
+    if not success then
+        warn(
+            "[Kianbest Anti-Cheat] DataStore error:",
+            result
+        )
+
+        return nil
+    end
+
+    return result
+end
+
+--------------------------------------------------
+-- APPLY BAN
+--------------------------------------------------
+
+local function banPlayer(player, reason)
+    if not player or not player.Parent then
+        return
+    end
+
+    if isAdmin(player) then
+        debugPrint(
+            "Admin ban prevented:",
+            player.Name
+        )
+
+        return
+    end
+
+    reason = reason or CONFIG.Ban.Reason
+
+    local state = getState(player)
+
+    if state then
+        state.IsBanned = true
+    end
+
+    local banData = {
+        UserId = player.UserId,
+        Name = player.Name,
+        Reason = reason,
+        Time = os.time(),
+        Permanent = CONFIG.Ban.Permanent,
+    }
+
+    pcall(function()
+        BanStore:SetAsync(
+            getBanKey(player.UserId),
+            banData
+        )
+    end)
+
+    player:Kick(
+        "You have been banned.\nReason: "
+        .. tostring(reason)
+    )
+end
+
+--------------------------------------------------
+-- CHECK EXISTING BAN
+--------------------------------------------------
+
+local function checkBan(player)
+    if isAdmin(player) then
+        return false
+    end
+
+    local data = getBanData(player)
+
+    if not data then
+        return false
+    end
+
+    return true, data
+end
+
+--------------------------------------------------
+-- STRIKE SYSTEM
+--------------------------------------------------
+
+local function addStrike(player, reason)
+    local state = getState(player)
+
+    if not state then
+        return
+    end
+
+    if isAdmin(player) then
+        return
+    end
+
+    if os.clock() < state.ExemptUntil then
+        return
+    end
+
+    state.Strikes += 1
+    state.LastStrikeReason = reason
+    state.LastStrikeTime = os.clock()
+
+    debugPrint(
+        player.Name,
+        "Strike:",
+        state.Strikes,
+        reason
+    )
+
+    if state.Strikes >= CONFIG.Detection.StrikeLimit then
+        banPlayer(
+            player,
+            reason
+        )
+    end
+end
+
+--------------------------------------------------
+-- STRIKE DECAY
+--------------------------------------------------
+
+local function updateStrikeDecay(player)
+    local state = getState(player)
+
+    if not state then
+        return
+    end
+
+    if state.Strikes <= 0 then
+        return
+    end
+
+    if os.clock() - state.LastStrikeTime
+        >= CONFIG.Detection.StrikeDecayTime
+    then
+        state.Strikes = math.max(
+            0,
+            state.Strikes - 1
+        )
+
+        state.LastStrikeTime = os.clock()
+
+        debugPrint(
+            player.Name,
+            "Strike decay:",
+            state.Strikes
+        )
+    end
+end
+
+--------------------------------------------------
+-- CHARACTER SETUP
+--------------------------------------------------
+
+local function setupCharacter(player, character)
+    local state = getState(player)
+
+    if not state then
+        return
+    end
+
+    state.SpawnTime = os.clock()
+    state.LastPosition = nil
+    state.LastCheck = os.clock()
+
+    local humanoid = character:FindFirstChildOfClass(
+        "Humanoid"
+    )
+
+    local root = character:FindFirstChild(
+        "HumanoidRootPart"
+    )
+
+    if humanoid then
+        humanoid.WalkSpeed =
+            math.min(
+                humanoid.WalkSpeed,
+                CONFIG.Detection.MaxWalkSpeed
             )
 
-            t:Play()
+        humanoid.JumpPower =
+            math.min(
+                humanoid.JumpPower,
+                CONFIG.Detection.MaxJumpPower
+            )
+    end
 
-            TweenService:Create(
-                Title,
-                TweenInfo.new(.3),
-                {TextTransparency = 1}
-            ):Play()
-
-            TweenService:Create(
-                Text,
-                TweenInfo.new(.3),
-                {TextTransparency = 1}
-            ):Play()
-
-            t.Completed:Wait()
-            Toast:Destroy()
-        end
-    end)
+    if root then
+        state.LastPosition = root.Position
+    end
 end
 
---==========================================================
--- MAIN FRAME
---==========================================================
+--------------------------------------------------
+-- PLAYER JOIN
+--------------------------------------------------
 
-local Main = Instance.new("Frame")
-Main.Name = "Main"
-Main.Size = UDim2.new(0.92, 0, 0, 390)
-Main.Position = UDim2.new(0.04, 0, 0.5, -195)
-Main.BackgroundColor3 = Theme.Bg
-Main.BorderSizePixel = 0
-Main.Active = true
-Main.Parent = Gui
+Players.PlayerAdded:Connect(function(player)
 
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 14)
-MainCorner.Parent = Main
+    createState(player)
 
-local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Theme.Accent
-MainStroke.Thickness = 2
-MainStroke.Parent = Main
+    local banned, data = checkBan(player)
 
-local SizeConstraint = Instance.new("UISizeConstraint")
-SizeConstraint.MinSize = Vector2.new(300, 330)
-SizeConstraint.MaxSize = Vector2.new(650, 450)
-SizeConstraint.Parent = Main
+    if banned then
+        task.defer(function()
 
---==========================================================
--- BACKGROUND
---==========================================================
+            local reason =
+                "Existing ban"
 
-local Background = Instance.new("ImageLabel")
-Background.Size = UDim2.fromScale(1, 1)
-Background.BackgroundTransparency = 1
-Background.ImageTransparency = 0.72
-Background.ScaleType = Enum.ScaleType.Crop
-Background.ZIndex = 0
-Background.Parent = Main
-
-Instance.new("UICorner", Background).CornerRadius = UDim.new(0, 14)
-
---==========================================================
--- HEADER
---==========================================================
-
-local Header = Instance.new("Frame")
-Header.Size = UDim2.new(1, 0, 0, 48)
-Header.BackgroundColor3 = Theme.Sidebar
-Header.BorderSizePixel = 0
-Header.ZIndex = 2
-Header.Parent = Main
-
-Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 14)
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(0.55, 0, 1, 0)
-Title.Position = UDim2.new(0, 14, 0, 0)
-Title.BackgroundTransparency = 1
-Title.Text = "🛡️ KIANBEST HUB V9.6"
-Title.TextColor3 = Theme.Accent
-Title.Font = Enum.Font.FredokaOne
-Title.TextSize = 16
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.ZIndex = 3
-Title.Parent = Header
-
-local StatsLabel = Instance.new("TextLabel")
-StatsLabel.Size = UDim2.new(0.35, 0, 1, 0)
-StatsLabel.Position = UDim2.new(0.47, 0, 0, 0)
-StatsLabel.BackgroundTransparency = 1
-StatsLabel.Text = "FPS: -- | Ping: --"
-StatsLabel.TextColor3 = Theme.Text
-StatsLabel.Font = Enum.Font.SourceSansBold
-StatsLabel.TextSize = 11
-StatsLabel.TextXAlignment = Enum.TextXAlignment.Right
-StatsLabel.ZIndex = 3
-StatsLabel.Parent = Header
-
-local Close = Instance.new("TextButton")
-Close.Size = UDim2.new(0, 30, 0, 30)
-Close.Position = UDim2.new(1, -38, 0, 9)
-Close.Text = "✕"
-Close.TextColor3 = Color3.fromRGB(255, 110, 130)
-Close.TextSize = 15
-Close.Font = Enum.Font.SourceSansBold
-Close.BackgroundColor3 = Theme.Button
-Close.BorderSizePixel = 0
-Close.ZIndex = 4
-Close.Parent = Header
-
-Instance.new("UICorner", Close).CornerRadius = UDim.new(0, 8)
-
---==========================================================
--- SIDEBAR
---==========================================================
-
-local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0, 125, 1, -48)
-Sidebar.Position = UDim2.new(0, 0, 0, 48)
-Sidebar.BackgroundColor3 = Theme.Sidebar
-Sidebar.BackgroundTransparency = 0.15
-Sidebar.BorderSizePixel = 0
-Sidebar.ZIndex = 2
-Sidebar.Parent = Main
-
-local SidebarLayout = Instance.new("UIListLayout")
-SidebarLayout.Padding = UDim.new(0, 7)
-SidebarLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-SidebarLayout.Parent = Sidebar
-
-local SidebarPadding = Instance.new("UIPadding")
-SidebarPadding.PaddingTop = UDim.new(0, 10)
-SidebarPadding.Parent = Sidebar
-
---==========================================================
--- CONTENT
---==========================================================
-
-local Content = Instance.new("Frame")
-Content.Size = UDim2.new(1, -140, 1, -63)
-Content.Position = UDim2.new(0, 135, 0, 55)
-Content.BackgroundTransparency = 1
-Content.ZIndex = 2
-Content.Parent = Main
-
-local Pages = {}
-
-local function CreatePage(name)
-    local Page = Instance.new("ScrollingFrame")
-    Page.Name = name
-    Page.Size = UDim2.fromScale(1, 1)
-    Page.BackgroundTransparency = 1
-    Page.BorderSizePixel = 0
-    Page.ScrollBarThickness = 3
-    Page.Visible = false
-    Page.CanvasSize = UDim2.new(0, 0, 0, 0)
-    Page.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    Page.ZIndex = 3
-    Page.Parent = Content
-
-    local Layout = Instance.new("UIListLayout")
-    Layout.Padding = UDim.new(0, 8)
-    Layout.Parent = Page
-
-    Pages[name] = Page
-
-    return Page
-end
-
-local CombatPage = CreatePage("Combat")
-local VisualPage = CreatePage("Visual")
-local MovementPage = CreatePage("Movement")
-local FixPage = CreatePage("FixLag")
-local SettingsPage = CreatePage("Settings")
-
-CombatPage.Visible = true
-
---==========================================================
--- TAB CREATOR
---==========================================================
-
-local Tabs = {}
-
-local function CreateTab(text, page)
-    local Button = Instance.new("TextButton")
-    Button.Size = UDim2.new(1, -12, 0, 36)
-    Button.Text = text
-    Button.TextColor3 = Theme.Text
-    Button.Font = Enum.Font.SourceSansBold
-    Button.TextSize = 13
-    Button.TextXAlignment = Enum.TextXAlignment.Left
-    Button.BackgroundColor3 = Theme.Button
-    Button.BorderSizePixel = 0
-    Button.ZIndex = 3
-    Button.Parent = Sidebar
-
-    Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 8)
-
-    table.insert(Tabs, Button)
-
-    Button.MouseButton1Click:Connect(function()
-        for _, p in pairs(Pages) do
-            p.Visible = false
-        end
-
-        for _, b in ipairs(Tabs) do
-            b.BackgroundColor3 = Theme.Button
-        end
-
-        page.Visible = true
-        Button.BackgroundColor3 = Theme.Accent
-    end)
-
-    return Button
-end
-
-local CombatTab = CreateTab("⚔️  Combat", CombatPage)
-CreateTab("👁️  Visual", VisualPage)
-CreateTab("⚡  Movement", MovementPage)
-CreateTab("🚀  Fix Lag", FixPage)
-CreateTab("⚙️  Settings", SettingsPage)
-
-CombatTab.BackgroundColor3 = Theme.Accent
-
---==========================================================
--- UI HELPERS
---==========================================================
-
-local function CreateButton(parent, text, callback)
-    local Button = Instance.new("TextButton")
-    Button.Size = UDim2.new(1, -8, 0, 38)
-    Button.BackgroundColor3 = Theme.Button
-    Button.BorderSizePixel = 0
-    Button.Text = text
-    Button.TextColor3 = Theme.Text
-    Button.Font = Enum.Font.SourceSansBold
-    Button.TextSize = 13
-    Button.ZIndex = 4
-    Button.Parent = parent
-
-    Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 8)
-
-    Button.MouseButton1Click:Connect(callback)
-
-    return Button
-end
-
-local function CreateToggle(parent, text, default, callback)
-    local Button = CreateButton(parent, text, function()
-        default = not default
-
-        Button.BackgroundColor3 =
-            default and Theme.Accent or Theme.Button
-
-        callback(default)
-    end)
-
-    Button.BackgroundColor3 =
-        default and Theme.Accent or Theme.Button
-
-    return Button
-end
-
---==========================================================
--- COMBAT PAGE
---==========================================================
-
-CreateButton(CombatPage, "ℹ️ Combat Demo", function()
-    Notify("Combat", "Trang này dành cho chức năng trong game của bạn.")
-end)
-
-CreateButton(CombatPage, "🎯 Target Info", function()
-    Notify(
-        "Target",
-        "Selected: " .. LocalPlayer.DisplayName
-    )
-end)
-
---==========================================================
--- VISUAL PAGE
---==========================================================
-
-CreateToggle(
-    VisualPage,
-    "👁️ Highlight Character",
-    false,
-    function(enabled)
-        local Character = LocalPlayer.Character
-
-        if not Character then
-            return
-        end
-
-        local Highlight = Character:FindFirstChild("KianHighlight")
-
-        if enabled then
-            if not Highlight then
-                Highlight = Instance.new("Highlight")
-                Highlight.Name = "KianHighlight"
-                Highlight.FillTransparency = 0.75
-                Highlight.OutlineTransparency = 0
-                Highlight.Parent = Character
+            if type(data) == "table"
+                and data.Reason
+            then
+                reason = data.Reason
             end
 
-            Highlight.OutlineColor = Theme.Accent
-        else
-            if Highlight then
-                Highlight:Destroy()
-            end
-        end
-    end
-)
-
-CreateToggle(
-    VisualPage,
-    "🏷️ Display Name",
-    false,
-    function(enabled)
-        local Character = LocalPlayer.Character
-
-        if not Character then
-            return
-        end
-
-        local Head = Character:FindFirstChild("Head")
-
-        if not Head then
-            return
-        end
-
-        local old = Head:FindFirstChild("KianName")
-
-        if enabled then
-            if not old then
-                local Billboard = Instance.new("BillboardGui")
-                Billboard.Name = "KianName"
-                Billboard.Size = UDim2.new(0, 180, 0, 40)
-                Billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-                Billboard.AlwaysOnTop = true
-                Billboard.Parent = Head
-
-                local Label = Instance.new("TextLabel")
-                Label.Size = UDim2.fromScale(1, 1)
-                Label.BackgroundTransparency = 1
-                Label.Text = LocalPlayer.DisplayName
-                Label.TextColor3 = Theme.Accent
-                Label.TextStrokeTransparency = 0.3
-                Label.Font = Enum.Font.SourceSansBold
-                Label.TextSize = 16
-                Label.Parent = Billboard
-            end
-        elseif old then
-            old:Destroy()
-        end
-    end
-)
-
---==========================================================
--- MOVEMENT PAGE
---==========================================================
-
-CreateButton(MovementPage, "📱 Mobile Movement", function()
-    Notify(
-        "Movement",
-        "Dùng Humanoid/Controls của game để điều khiển."
-    )
-end)
-
-CreateButton(MovementPage, "🏃 Reset WalkSpeed", function()
-    local Character = LocalPlayer.Character
-    local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
-
-    if Humanoid then
-        Humanoid.WalkSpeed = 16
-        Notify("Movement", "WalkSpeed đã reset.")
-    end
-end)
-
---==========================================================
--- FIX LAG PAGE
---==========================================================
-
-CreateButton(FixPage, "🚀 Performance Mode", function()
-    local Lighting = game:GetService("Lighting")
-
-    Lighting.GlobalShadows = false
-    Lighting.FogEnd = 100000
-
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("ParticleEmitter") then
-            obj.Enabled = false
-        elseif obj:IsA("Trail") then
-            obj.Enabled = false
-        end
-    end
-
-    Notify("Fix Lag", "Đã bật Performance Mode.")
-end)
-
-CreateButton(FixPage, "✨ Restore Effects", function()
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("ParticleEmitter") then
-            obj.Enabled = true
-        elseif obj:IsA("Trail") then
-            obj.Enabled = true
-        end
-    end
-
-    Notify("Fix Lag", "Đã khôi phục Effect.")
-end)
-
---==========================================================
--- SETTINGS
---==========================================================
-
-CreateButton(SettingsPage, "🎨 Đổi Theme", function()
-    Config.CurrentTheme += 1
-
-    if Config.CurrentTheme > #Themes then
-        Config.CurrentTheme = 1
-    end
-
-    Theme = Themes[Config.CurrentTheme]
-
-    Main.BackgroundColor3 = Theme.Bg
-    MainStroke.Color = Theme.Accent
-    Title.TextColor3 = Theme.Accent
-
-    Notify(
-        "Theme",
-        "Đã đổi sang " .. Theme.Name
-    )
-end)
-
-CreateButton(SettingsPage, "🖼️ Đổi Anime Background", function()
-    Config.CurrentBackground += 1
-
-    if Config.CurrentBackground > #Backgrounds then
-        Config.CurrentBackground = 1
-    end
-
-    Background.Image = Backgrounds[Config.CurrentBackground]
-
-    Notify(
-        "Background",
-        "Anime Background #" ..
-            Config.CurrentBackground
-    )
-end)
-
-CreateToggle(
-    SettingsPage,
-    "💤 Anti-AFK",
-    Config.AntiAFK,
-    function(enabled)
-        Config.AntiAFK = enabled
-
-        Notify(
-            "Anti-AFK",
-            enabled and "Đã bật" or "Đã tắt"
-        )
-    end
-)
-
-CreateButton(SettingsPage, "🧹 Cleanup GUI", function()
-    Gui:Destroy()
-end)
-
---==========================================================
--- TOGGLE BUTTON
---==========================================================
-
-local Toggle = Instance.new("TextButton")
-Toggle.Name = "KianToggle"
-Toggle.Size = UDim2.new(0, 58, 0, 58)
-Toggle.Position = UDim2.new(0, 15, 0.45, 0)
-Toggle.BackgroundColor3 = Theme.Sidebar
-Toggle.Text = "KIAN"
-Toggle.TextColor3 = Theme.Accent
-Toggle.Font = Enum.Font.FredokaOne
-Toggle.TextSize = 14
-Toggle.BorderSizePixel = 0
-Toggle.ZIndex = 100
-Toggle.Parent = Gui
-
-Instance.new("UICorner", Toggle).CornerRadius = UDim.new(1, 0)
-
-local ToggleStroke = Instance.new("UIStroke")
-ToggleStroke.Color = Theme.Accent
-ToggleStroke.Thickness = 2
-ToggleStroke.Parent = Toggle
-
-local function ToggleMenu()
-    Config.MenuOpen = not Config.MenuOpen
-
-    if Config.MenuOpen then
-        Main.Visible = true
-
-        Main.Size = UDim2.new(0.92, 0, 0, 0)
-
-        TweenService:Create(
-            Main,
-            TweenInfo.new(.3, Enum.EasingStyle.Back),
-            {Size = UDim2.new(0.92, 0, 0, 390)}
-        ):Play()
-    else
-        local Tween = TweenService:Create(
-            Main,
-            TweenInfo.new(.2),
-            {Size = UDim2.new(0.92, 0, 0, 0)}
-        )
-
-        Tween:Play()
-
-        Tween.Completed:Connect(function()
-            if not Config.MenuOpen then
-                Main.Visible = false
-            end
+            player:Kick(
+                "You are banned.\nReason: "
+                .. tostring(reason)
+            )
         end)
+
+        return
+    end
+
+    player.CharacterAdded:Connect(
+        function(character)
+            setupCharacter(
+                player,
+                character
+            )
+        end
+    )
+
+    if player.Character then
+        setupCharacter(
+            player,
+            player.Character
+        )
+    end
+end)
+
+--------------------------------------------------
+-- PLAYER LEAVE
+--------------------------------------------------
+
+Players.PlayerRemoving:Connect(function(player)
+
+    PlayerState[player] = nil
+
+end)
+
+--------------------------------------------------
+-- SERVER LOOP
+--------------------------------------------------
+
+task.spawn(function()
+
+    while true do
+
+        task.wait(
+            CONFIG.Detection.CheckInterval
+        )
+
+        if not CONFIG.Detection.Enabled then
+            continue
+        end
+
+        for _, player in ipairs(
+            Players:GetPlayers()
+        ) do
+
+            updateStrikeDecay(player)
+
+        end
+    end
+
+end)
+
+print(
+    "[Kianbest Anti-Cheat] V3 Part 1 loaded."
+)
+--------------------------------------------------
+-- KIANBEST ANTI-CHEAT V3
+-- PART 2/5
+-- MOVEMENT PROTECTION
+--------------------------------------------------
+
+local function isExempt(player)
+    local state = getState(player)
+
+    if not state then
+        return false
+    end
+
+    return os.clock() < state.ExemptUntil
+end
+
+--------------------------------------------------
+-- TEMPORARY EXEMPTION
+--------------------------------------------------
+
+local function exemptPlayer(player, duration)
+    local state = getState(player)
+
+    if not state then
+        return
+    end
+
+    duration = tonumber(duration) or 3
+
+    state.ExemptUntil =
+        math.max(
+            state.ExemptUntil,
+            os.clock() + duration
+        )
+
+    debugPrint(
+        player.Name,
+        "movement exemption:",
+        duration
+    )
+end
+
+--------------------------------------------------
+-- ALLOW LEGITIMATE TELEPORT
+--------------------------------------------------
+
+local function allowTeleport(player, duration)
+    if not player then
+        return
+    end
+
+    exemptPlayer(
+        player,
+        duration or 5
+    )
+
+    local state = getState(player)
+
+    if state then
+        local character =
+            player.Character
+
+        local root =
+            character
+            and character:FindFirstChild(
+                "HumanoidRootPart"
+            )
+
+        if root then
+            state.LastPosition =
+                root.Position
+        end
     end
 end
 
-Toggle.MouseButton1Click:Connect(ToggleMenu)
-Close.MouseButton1Click:Connect(ToggleMenu)
+--------------------------------------------------
+-- MOVEMENT INFORMATION
+--------------------------------------------------
 
-UserInputService.InputBegan:Connect(function(input, processed)
-    if processed then
+local function getCharacterInfo(player)
+
+    local character =
+        player.Character
+
+    if not character then
+        return nil
+    end
+
+    local humanoid =
+        character:FindFirstChildOfClass(
+            "Humanoid"
+        )
+
+    local root =
+        character:FindFirstChild(
+            "HumanoidRootPart"
+        )
+
+    if not humanoid or not root then
+        return nil
+    end
+
+    return character, humanoid, root
+end
+
+--------------------------------------------------
+-- SPEED CHECK
+--------------------------------------------------
+
+local function validateWalkSpeed(
+    player,
+    humanoid
+)
+
+    if isExempt(player) then
         return
     end
 
-    if input.KeyCode == Config.ToggleKey then
-        ToggleMenu()
+    if humanoid.WalkSpeed >
+        CONFIG.Detection.MaxWalkSpeed
+    then
+
+        addStrike(
+            player,
+            "Abnormal WalkSpeed: "
+            .. tostring(
+                math.floor(
+                    humanoid.WalkSpeed
+                )
+            )
+        )
+
+        humanoid.WalkSpeed =
+            CONFIG.Detection.MaxWalkSpeed
+
+        debugPrint(
+            player.Name,
+            "WalkSpeed corrected"
+        )
     end
-end)
+end
 
---==========================================================
--- DRAG SUPPORT
---==========================================================
+--------------------------------------------------
+-- JUMP CHECK
+--------------------------------------------------
 
-local dragging = false
-local dragStart
-local startPosition
+local function validateJump(
+    player,
+    humanoid
+)
 
-Header.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-
-        dragging = true
-        dragStart = input.Position
-        startPosition = Main.Position
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if not dragging then
+    if isExempt(player) then
         return
     end
 
-    if input.UserInputType == Enum.UserInputType.MouseMovement
-        or input.UserInputType == Enum.UserInputType.Touch then
+    if humanoid.UseJumpPower then
 
-        local delta = input.Position - dragStart
+        if humanoid.JumpPower >
+            CONFIG.Detection.MaxJumpPower
+        then
 
-        Main.Position = UDim2.new(
-            startPosition.X.Scale,
-            startPosition.X.Offset + delta.X,
-            startPosition.Y.Scale,
-            startPosition.Y.Offset + delta.Y
-        )
+            addStrike(
+                player,
+                "Abnormal JumpPower: "
+                .. tostring(
+                    math.floor(
+                        humanoid.JumpPower
+                    )
+                )
+            )
+
+            humanoid.JumpPower =
+                CONFIG.Detection.MaxJumpPower
+        end
+
+    else
+
+        local maxJumpHeight = 15
+
+        if humanoid.JumpHeight >
+            maxJumpHeight
+        then
+
+            addStrike(
+                player,
+                "Abnormal JumpHeight: "
+                .. tostring(
+                    math.floor(
+                        humanoid.JumpHeight
+                    )
+                )
+            )
+
+            humanoid.JumpHeight =
+                maxJumpHeight
+        end
     end
-end)
+end
 
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
+--------------------------------------------------
+-- SERVER MOVEMENT CHECK
+--------------------------------------------------
 
-        dragging = false
+local function validateMovement(
+    player,
+    root,
+    humanoid
+)
+
+    local state =
+        getState(player)
+
+    if not state then
+        return
     end
-end)
 
---==========================================================
--- FPS / PING
---==========================================================
+    local now =
+        os.clock()
 
-local Last = os.clock()
-local Frames = 0
+    local previous =
+        state.LastPosition
 
-RunService.RenderStepped:Connect(function()
-    Frames += 1
+    state.LastPosition =
+        root.Position
 
-    local now = os.clock()
+    if not previous then
+        return
+    end
 
-    if now - Last >= 1 then
-        local FPS = math.floor(
-            Frames / (now - Last)
+    if isExempt(player) then
+        return
+    end
+
+    ------------------------------------------------
+    -- SPAWN GRACE
+    ------------------------------------------------
+
+    if now - state.SpawnTime
+        < CONFIG.Detection.SpawnGraceTime
+    then
+        return
+    end
+
+    ------------------------------------------------
+    -- DELTA TIME
+    ------------------------------------------------
+
+    local dt =
+        now - state.LastCheck
+
+    state.LastCheck = now
+
+    if dt <= 0 then
+        return
+    end
+
+    if dt > 1 then
+        return
+    end
+
+    ------------------------------------------------
+    -- DISTANCE
+    ------------------------------------------------
+
+    local distance =
+        (
+            root.Position
+            - previous
+        ).Magnitude
+
+    ------------------------------------------------
+    -- EXPECTED MOVEMENT
+    ------------------------------------------------
+
+    local walkSpeed =
+        math.max(
+            humanoid.WalkSpeed,
+            0
         )
 
-        local Ping = 0
+    local expected =
+        walkSpeed * dt
+
+    ------------------------------------------------
+    -- EXTRA PHYSICS TOLERANCE
+    ------------------------------------------------
+
+    local tolerance =
+        math.max(
+            8,
+            expected * 1.5
+        )
+
+    local maximum =
+        math.max(
+            tolerance,
+            CONFIG.Detection.MaxMovementSpeed
+            * dt
+            + 10
+        )
+
+    ------------------------------------------------
+    -- TELEPORT DISTANCE
+    ------------------------------------------------
+
+    if distance >
+        CONFIG.Detection.TeleportDistance
+    then
+
+        addStrike(
+            player,
+            "Abnormal teleport distance: "
+            .. tostring(
+                math.floor(distance)
+            )
+        )
+
+        root.CFrame =
+            CFrame.new(previous)
+
+        return
+    end
+
+    ------------------------------------------------
+    -- HIGH SPEED MOVEMENT
+    ------------------------------------------------
+
+    if distance > maximum then
+
+        addStrike(
+            player,
+            "Abnormal movement speed: "
+            .. tostring(
+                math.floor(
+                    distance / dt
+                )
+            )
+        )
+
+        root.CFrame =
+            CFrame.new(previous)
+
+        return
+    end
+end
+
+--------------------------------------------------
+-- RAYCAST PARAMETERS
+--------------------------------------------------
+
+local function createRaycastParams(
+    character
+)
+
+    local params =
+        RaycastParams.new()
+
+    params.FilterType =
+        Enum.RaycastFilterType.Exclude
+
+    params.FilterDescendantsInstances = {
+        character
+    }
+
+    params.IgnoreWater = true
+
+    return params
+end
+
+--------------------------------------------------
+-- NOCLIP CHECK
+--------------------------------------------------
+
+local function validateNoclip(
+    player,
+    character,
+    root,
+    previousPosition
+)
+
+    if isExempt(player) then
+        return
+    end
+
+    if not previousPosition then
+        return
+    end
+
+    local movement =
+        root.Position
+        - previousPosition
+
+    local distance =
+        movement.Magnitude
+
+    if distance < 3 then
+        return
+    end
+
+    local direction =
+        movement.Unit
+
+    local params =
+        createRaycastParams(
+            character
+        )
+
+    local result =
+        workspace:Raycast(
+            previousPosition,
+            direction * distance,
+            params
+        )
+
+    if not result then
+        return
+    end
+
+    local hit =
+        result.Instance
+
+    if not hit then
+        return
+    end
+
+    ------------------------------------------------
+    -- IGNORE NON-COLLIDABLE OBJECTS
+    ------------------------------------------------
+
+    if not hit.CanCollide then
+        return
+    end
+
+    ------------------------------------------------
+    -- IGNORE TRANSPARENT EFFECTS
+    ------------------------------------------------
+
+    if hit.Transparency >= 0.95 then
+        return
+    end
+
+    ------------------------------------------------
+    -- POSSIBLE NOCLIP
+    ------------------------------------------------
+
+    addStrike(
+        player,
+        "Possible noclip: "
+        .. hit:GetFullName()
+    )
+
+end
+
+--------------------------------------------------
+-- HUMANOID STATE CHECK
+--------------------------------------------------
+
+local function validateHumanoidState(
+    player,
+    humanoid
+)
+
+    if isExempt(player) then
+        return
+    end
+
+    local state =
+        humanoid:GetState()
+
+    ------------------------------------------------
+    -- SEATED IS LEGITIMATE
+    ------------------------------------------------
+
+    if state ==
+        Enum.HumanoidStateType.Seated
+    then
+        return
+    end
+
+    ------------------------------------------------
+    -- SWIMMING IS LEGITIMATE
+    ------------------------------------------------
+
+    if state ==
+        Enum.HumanoidStateType.Swimming
+    then
+        return
+    end
+
+    ------------------------------------------------
+    -- CLIMBING IS LEGITIMATE
+    ------------------------------------------------
+
+    if state ==
+        Enum.HumanoidStateType.Climbing
+    then
+        return
+    end
+
+end
+
+--------------------------------------------------
+-- MOVEMENT HEARTBEAT
+--------------------------------------------------
+
+local movementAccumulator = 0
+
+RunService.Heartbeat:Connect(
+    function(deltaTime)
+
+        movementAccumulator +=
+            deltaTime
+
+        if movementAccumulator <
+            CONFIG.Detection.CheckInterval
+        then
+            return
+        end
+
+        movementAccumulator = 0
+
+        for _, player in ipairs(
+            Players:GetPlayers()
+        ) do
+
+            if isAdmin(player) then
+                continue
+            end
+
+            local character,
+                humanoid,
+                root =
+                getCharacterInfo(player)
+
+            if not character
+                or not humanoid
+                or not root
+            then
+                continue
+            end
+
+            local state =
+                getState(player)
+
+            if not state then
+                continue
+            end
+
+            local previousPosition =
+                state.LastPosition
+
+            ------------------------------------------------
+            -- BASIC CHECKS
+            ------------------------------------------------
+
+            validateWalkSpeed(
+                player,
+                humanoid
+            )
+
+            validateJump(
+                player,
+                humanoid
+            )
+
+            validateHumanoidState(
+                player,
+                humanoid
+            )
+
+            ------------------------------------------------
+            -- NOCLIP FIRST
+            ------------------------------------------------
+
+            validateNoclip(
+                player,
+                character,
+                root,
+                previousPosition
+            )
+
+            ------------------------------------------------
+            -- MOVEMENT
+            ------------------------------------------------
+
+            validateMovement(
+                player,
+                root,
+                humanoid
+            )
+
+        end
+    end
+)
+
+--------------------------------------------------
+-- SERVER TELEPORT API
+--------------------------------------------------
+
+local TeleportEvent =
+    RootFolder:FindFirstChild(
+        "AllowTeleport"
+    )
+
+if not TeleportEvent then
+
+    TeleportEvent =
+        Instance.new("BindableEvent")
+
+    TeleportEvent.Name =
+        "AllowTeleport"
+
+    TeleportEvent.Parent =
+        RootFolder
+end
+
+TeleportEvent.Event:Connect(
+    function(player, duration)
+
+        if typeof(player) ~= "Instance"
+            or not player:IsA("Player")
+        then
+            return
+        end
+
+        allowTeleport(
+            player,
+            duration
+        )
+
+    end
+)
+
+--------------------------------------------------
+-- SERVER EXEMPTION API
+--------------------------------------------------
+
+local ExemptEvent =
+    RootFolder:FindFirstChild(
+        "ExemptPlayer"
+    )
+
+if not ExemptEvent then
+
+    ExemptEvent =
+        Instance.new("BindableEvent")
+
+    ExemptEvent.Name =
+        "ExemptPlayer"
+
+    ExemptEvent.Parent =
+        RootFolder
+end
+
+ExemptEvent.Event:Connect(
+    function(player, duration)
+
+        if typeof(player) ~= "Instance"
+            or not player:IsA("Player")
+        then
+            return
+        end
+
+        exemptPlayer(
+            player,
+            duration
+        )
+
+    end
+)
+
+--------------------------------------------------
+-- MOVEMENT API READY
+--------------------------------------------------
+
+debugPrint(
+    "Movement protection enabled."
+)
+
+print(
+    "[Kianbest Anti-Cheat] V3 Part 2 loaded."
+)
+--------------------------------------------------
+-- KIANBEST ANTI-CHEAT V3
+-- PART 3/5
+-- REMOTE SECURITY
+--------------------------------------------------
+
+local RemoteState = {}
+
+local RemoteConfig = {
+    DefaultLimit = 15,
+    DefaultWindow = 1,
+
+    MaxStringLength = 500,
+    MaxTableDepth = 5,
+    MaxTableItems = 100,
+
+    KickOnExtremeSpam = false,
+}
+
+--------------------------------------------------
+-- REMOTE IDENTIFIER
+--------------------------------------------------
+
+local function getRemoteId(remote)
+
+    if not remote then
+        return "Unknown"
+    end
+
+    return remote:GetFullName()
+
+end
+
+--------------------------------------------------
+-- PLAYER REMOTE STATE
+--------------------------------------------------
+
+local function getRemotePlayerState(
+    player
+)
+
+    if not RemoteState[player] then
+
+        RemoteState[player] = {}
+
+    end
+
+    return RemoteState[player]
+
+end
+
+--------------------------------------------------
+-- RESET REMOTE STATE
+--------------------------------------------------
+
+local function resetRemoteState(
+    player
+)
+
+    RemoteState[player] = nil
+
+end
+
+--------------------------------------------------
+-- CLEAN REMOTE HISTORY
+--------------------------------------------------
+
+local function cleanRemoteHistory(
+    data,
+    now,
+    window
+)
+
+    local timestamps =
+        data.Timestamps
+
+    if not timestamps then
+        data.Timestamps = {}
+        return
+    end
+
+    local newList = {}
+
+    for _, timestamp in ipairs(
+        timestamps
+    ) do
+
+        if now - timestamp <= window then
+
+            table.insert(
+                newList,
+                timestamp
+            )
+
+        end
+    end
+
+    data.Timestamps =
+        newList
+
+end
+
+--------------------------------------------------
+-- REMOTE RATE CHECK
+--------------------------------------------------
+
+local function checkRemoteRate(
+    player,
+    remote,
+    limit,
+    window
+)
+
+    if isAdmin(player) then
+        return true
+    end
+
+    local playerData =
+        getRemotePlayerState(
+            player
+        )
+
+    local id =
+        getRemoteId(remote)
+
+    local data =
+        playerData[id]
+
+    if not data then
+
+        data = {
+            Timestamps = {},
+            Violations = 0,
+        }
+
+        playerData[id] = data
+
+    end
+
+    local now =
+        os.clock()
+
+    cleanRemoteHistory(
+        data,
+        now,
+        window
+    )
+
+    table.insert(
+        data.Timestamps,
+        now
+    )
+
+    if #data.Timestamps <= limit then
+        return true
+    end
+
+    data.Violations += 1
+
+    debugPrint(
+        player.Name,
+        "Remote spam:",
+        id,
+        #data.Timestamps,
+        "/",
+        limit
+    )
+
+    ------------------------------------------------
+    -- REMOVE OLD REQUEST
+    ------------------------------------------------
+
+    while #data.Timestamps > limit do
+
+        table.remove(
+            data.Timestamps,
+            1
+        )
+
+    end
+
+    ------------------------------------------------
+    -- STRIKE
+    ------------------------------------------------
+
+    addStrike(
+        player,
+        "Remote spam: "
+        .. remote.Name
+    )
+
+    ------------------------------------------------
+    -- OPTIONAL EXTREME ACTION
+    ------------------------------------------------
+
+    if RemoteConfig.KickOnExtremeSpam
+        and data.Violations >= 10
+    then
+
+        banPlayer(
+            player,
+            "Extreme remote spam"
+        )
+
+        return false
+    end
+
+    return false
+
+end
+
+--------------------------------------------------
+-- REMOTE ARGUMENT VALIDATOR
+--------------------------------------------------
+
+local function validateValue(
+    value,
+    depth
+)
+
+    depth =
+        depth or 0
+
+    if depth >
+        RemoteConfig.MaxTableDepth
+    then
+        return false,
+            "table depth too large"
+    end
+
+    local valueType =
+        typeof(value)
+
+    ------------------------------------------------
+    -- SAFE PRIMITIVES
+    ------------------------------------------------
+
+    if valueType == "nil" then
+        return true
+    end
+
+    if valueType == "boolean" then
+        return true
+    end
+
+    if valueType == "number" then
+
+        if value ~= value then
+            return false,
+                "NaN detected"
+        end
+
+        if value == math.huge
+            or value == -math.huge
+        then
+            return false,
+                "infinite number"
+        end
+
+        return true
+    end
+
+    ------------------------------------------------
+    -- STRING
+    ------------------------------------------------
+
+    if valueType == "string" then
+
+        if #value >
+            RemoteConfig.MaxStringLength
+        then
+
+            return false,
+                "string too long"
+        end
+
+        return true
+    end
+
+    ------------------------------------------------
+    -- INSTANCE
+    ------------------------------------------------
+
+    if valueType == "Instance" then
+
+        if not value.Parent then
+
+            return false,
+                "destroyed instance"
+        end
+
+        return true
+    end
+
+    ------------------------------------------------
+    -- VECTOR
+    ------------------------------------------------
+
+    if valueType == "Vector3" then
+
+        if value.X ~= value.X
+            or value.Y ~= value.Y
+            or value.Z ~= value.Z
+        then
+
+            return false,
+                "invalid Vector3"
+        end
+
+        return true
+    end
+
+    ------------------------------------------------
+    -- CFRAME
+    ------------------------------------------------
+
+    if valueType == "CFrame" then
+
+        local position =
+            value.Position
+
+        if position.X ~= position.X
+            or position.Y ~= position.Y
+            or position.Z ~= position.Z
+        then
+
+            return false,
+                "invalid CFrame"
+        end
+
+        return true
+    end
+
+    ------------------------------------------------
+    -- TABLE
+    ------------------------------------------------
+
+    if valueType == "table" then
+
+        local count = 0
+
+        for key, child in pairs(value) do
+
+            count += 1
+
+            if count >
+                RemoteConfig.MaxTableItems
+            then
+
+                return false,
+                    "table too large"
+            end
+
+            local keyValid =
+                validateValue(
+                    key,
+                    depth + 1
+                )
+
+            if not keyValid then
+
+                return false,
+                    "invalid table key"
+            end
+
+            local childValid,
+                childReason =
+                validateValue(
+                    child,
+                    depth + 1
+                )
+
+            if not childValid then
+
+                return false,
+                    childReason
+            end
+
+        end
+
+        return true
+    end
+
+    ------------------------------------------------
+    -- UNSUPPORTED TYPE
+    ------------------------------------------------
+
+    return false,
+        "unsupported value type: "
+        .. tostring(valueType)
+
+end
+
+--------------------------------------------------
+-- VALIDATE REMOTE ARGUMENTS
+--------------------------------------------------
+
+local function validateArguments(
+    player,
+    remote,
+    arguments
+)
+
+    for index, value in ipairs(
+        arguments
+    ) do
+
+        local valid,
+            reason =
+            validateValue(
+                value,
+                0
+            )
+
+        if not valid then
+
+            addStrike(
+                player,
+                "Invalid remote argument: "
+                .. remote.Name
+                .. " ["
+                .. tostring(index)
+                .. "] "
+                .. tostring(reason)
+            )
+
+            return false
+        end
+    end
+
+    return true
+
+end
+
+--------------------------------------------------
+-- PROTECT REMOTE EVENT
+--------------------------------------------------
+
+local ProtectedRemotes = {}
+
+local function registerRemote(
+    remote,
+    limit,
+    window
+)
+
+    if not remote then
+        return
+    end
+
+    if not (
+        remote:IsA("RemoteEvent")
+        or remote:IsA("RemoteFunction")
+    ) then
+
+        return
+    end
+
+    ProtectedRemotes[remote] = {
+        Limit =
+            tonumber(limit)
+            or RemoteConfig.DefaultLimit,
+
+        Window =
+            tonumber(window)
+            or RemoteConfig.DefaultWindow,
+    }
+
+    debugPrint(
+        "Protected remote:",
+        remote:GetFullName()
+    )
+
+end
+
+--------------------------------------------------
+-- AUTOMATIC REMOTE DISCOVERY
+--------------------------------------------------
+
+local function scanRemote(
+    instance
+)
+
+    if not (
+        instance:IsA("RemoteEvent")
+        or instance:IsA("RemoteFunction")
+    ) then
+
+        return
+    end
+
+    ------------------------------------------------
+    -- IMPORTANT
+    -- We only register the remote here.
+    -- We do NOT replace OnServerInvoke.
+    ------------------------------------------------
+
+    registerRemote(
+        instance,
+        RemoteConfig.DefaultLimit,
+        RemoteConfig.DefaultWindow
+    )
+
+end
+
+for _, instance in ipairs(
+    game:GetDescendants()
+) do
+
+    scanRemote(instance)
+
+end
+
+--------------------------------------------------
+-- NEW REMOTE DETECTION
+--------------------------------------------------
+
+game.DescendantAdded:Connect(
+    function(instance)
+
+        scanRemote(instance)
+
+    end
+)
+
+--------------------------------------------------
+-- SERVER VALIDATION API
+--------------------------------------------------
+
+local ValidateRemote =
+    RootFolder:FindFirstChild(
+        "ValidateRemote"
+    )
+
+if not ValidateRemote then
+
+    ValidateRemote =
+        Instance.new("BindableFunction")
+
+    ValidateRemote.Name =
+        "ValidateRemote"
+
+    ValidateRemote.Parent =
+        RootFolder
+
+end
+
+ValidateRemote.OnInvoke =
+    function(
+        player,
+        remote,
+        ...
+    )
+
+        if typeof(player) ~= "Instance"
+            or not player:IsA("Player")
+        then
+
+            return false
+        end
+
+        if typeof(remote) ~= "Instance"
+            or not (
+                remote:IsA("RemoteEvent")
+                or remote:IsA("RemoteFunction")
+            )
+        then
+
+            return false
+        end
+
+        local config =
+            ProtectedRemotes[remote]
+
+        if not config then
+
+            config = {
+                Limit =
+                    RemoteConfig.DefaultLimit,
+
+                Window =
+                    RemoteConfig.DefaultWindow,
+            }
+
+        end
+
+        local rateOK =
+            checkRemoteRate(
+                player,
+                remote,
+                config.Limit,
+                config.Window
+            )
+
+        if not rateOK then
+            return false
+        end
+
+        local args = {
+            ...
+        }
+
+        local argsOK =
+            validateArguments(
+                player,
+                remote,
+                args
+            )
+
+        if not argsOK then
+            return false
+        end
+
+        return true
+
+    end
+
+--------------------------------------------------
+-- REMOTE REGISTRATION API
+--------------------------------------------------
+
+local ProtectRemote =
+    RootFolder:FindFirstChild(
+        "ProtectRemote"
+    )
+
+if not ProtectRemote then
+
+    ProtectRemote =
+        Instance.new("BindableFunction")
+
+    ProtectRemote.Name =
+        "ProtectRemote"
+
+    ProtectRemote.Parent =
+        RootFolder
+
+end
+
+ProtectRemote.OnInvoke =
+    function(
+        remote,
+        limit,
+        window
+    )
+
+        if typeof(remote) ~= "Instance" then
+            return false
+        end
+
+        if not (
+            remote:IsA("RemoteEvent")
+            or remote:IsA("RemoteFunction")
+        ) then
+
+            return false
+        end
+
+        registerRemote(
+            remote,
+            limit,
+            window
+        )
+
+        return true
+
+    end
+
+--------------------------------------------------
+-- PLAYER CLEANUP
+--------------------------------------------------
+
+Players.PlayerRemoving:Connect(
+    function(player)
+
+        resetRemoteState(player)
+
+    end
+)
+
+--------------------------------------------------
+-- REMOTE SECURITY READY
+--------------------------------------------------
+
+print(
+    "[Kianbest Anti-Cheat] "
+    .. "V3 Part 3 loaded."
+)
+--------------------------------------------------
+-- KIANBEST ANTI-CHEAT V3
+-- PART 4/5
+-- COMBAT VALIDATION
+--------------------------------------------------
+
+local CombatConfig = {
+
+    MaxAttackDistance = 35,
+
+    MaxProjectileDistance = 500,
+
+    DefaultCooldown = 0.15,
+
+    RequireAliveAttacker = true,
+
+    RequireAliveTarget = true,
+
+    RequireLineOfSight = false,
+
+    IgnoreForceField = true,
+
+    MaxTargetsPerRequest = 10,
+
+    Debug = false,
+}
+
+--------------------------------------------------
+-- COMBAT STATE
+--------------------------------------------------
+
+local CombatState = {}
+
+local function getCombatState(player)
+
+    if not CombatState[player] then
+
+        CombatState[player] = {
+            Cooldowns = {},
+            LastTarget = nil,
+            LastAttack = 0,
+        }
+
+    end
+
+    return CombatState[player]
+
+end
+
+--------------------------------------------------
+-- CLEAN COMBAT STATE
+--------------------------------------------------
+
+Players.PlayerRemoving:Connect(
+    function(player)
+
+        CombatState[player] = nil
+
+    end
+)
+
+--------------------------------------------------
+-- CHARACTER VALIDATION
+--------------------------------------------------
+
+local function getLivingCharacter(
+    player
+)
+
+    if not player then
+        return nil
+    end
+
+    local character =
+        player.Character
+
+    if not character then
+        return nil
+    end
+
+    local humanoid =
+        character:FindFirstChildOfClass(
+            "Humanoid"
+        )
+
+    local root =
+        character:FindFirstChild(
+            "HumanoidRootPart"
+        )
+
+    if not humanoid or not root then
+        return nil
+    end
+
+    if humanoid.Health <= 0 then
+        return nil
+    end
+
+    return character,
+        humanoid,
+        root
+
+end
+
+--------------------------------------------------
+-- TARGET CHARACTER VALIDATION
+--------------------------------------------------
+
+local function getTargetCharacter(
+    target
+)
+
+    if not target then
+        return nil
+    end
+
+    local character
+
+    if target:IsA("Player") then
+
+        character =
+            target.Character
+
+    elseif target:IsA("Model") then
+
+        character = target
+
+    elseif target:IsA("BasePart") then
+
+        character =
+            target:FindFirstAncestorOfClass(
+                "Model"
+            )
+
+    else
+
+        return nil
+
+    end
+
+    if not character then
+        return nil
+    end
+
+    local humanoid =
+        character:FindFirstChildOfClass(
+            "Humanoid"
+        )
+
+    local root =
+        character:FindFirstChild(
+            "HumanoidRootPart"
+        )
+
+    if not humanoid or not root then
+        return nil
+    end
+
+    if humanoid.Health <= 0 then
+        return nil
+    end
+
+    return character,
+        humanoid,
+        root
+
+end
+
+--------------------------------------------------
+-- DISTANCE CHECK
+--------------------------------------------------
+
+local function isWithinRange(
+    attackerRoot,
+    targetRoot,
+    maxDistance
+)
+
+    if not attackerRoot
+        or not targetRoot
+    then
+
+        return false
+
+    end
+
+    local distance =
+        (
+            attackerRoot.Position
+            - targetRoot.Position
+        ).Magnitude
+
+    return distance <= maxDistance
+
+end
+
+--------------------------------------------------
+-- LINE OF SIGHT
+--------------------------------------------------
+
+local function hasLineOfSight(
+    attackerCharacter,
+    attackerRoot,
+    targetCharacter,
+    targetRoot
+)
+
+    local direction =
+        targetRoot.Position
+        - attackerRoot.Position
+
+    local distance =
+        direction.Magnitude
+
+    if distance <= 0 then
+        return true
+    end
+
+    local params =
+        RaycastParams.new()
+
+    params.FilterType =
+        Enum.RaycastFilterType.Exclude
+
+    params.FilterDescendantsInstances = {
+        attackerCharacter,
+        targetCharacter,
+    }
+
+    params.IgnoreWater = true
+
+    local result =
+        workspace:Raycast(
+            attackerRoot.Position,
+            direction,
+            params
+        )
+
+    if not result then
+        return true
+    end
+
+    local hit =
+        result.Instance
+
+    if not hit then
+        return true
+    end
+
+    return hit:IsDescendantOf(
+        targetCharacter
+    )
+
+end
+
+--------------------------------------------------
+-- TARGET IS ENEMY
+--------------------------------------------------
+
+local function isValidEnemy(
+    attacker,
+    targetPlayer
+)
+
+    if not targetPlayer then
+        return false
+    end
+
+    if attacker == targetPlayer then
+        return false
+    end
+
+    ------------------------------------------------
+    -- TEAM CHECK
+    ------------------------------------------------
+
+    if attacker.Team
+        and targetPlayer.Team
+        and attacker.Team ==
+            targetPlayer.Team
+    then
+
+        return false
+
+    end
+
+    return true
+
+end
+
+--------------------------------------------------
+-- COOLDOWN CHECK
+--------------------------------------------------
+
+local function checkCombatCooldown(
+    player,
+    action,
+    cooldown
+)
+
+    local state =
+        getCombatState(player)
+
+    local now =
+        os.clock()
+
+    local last =
+        state.Cooldowns[action]
+
+    if last
+        and now - last < cooldown
+    then
+
+        addStrike(
+            player,
+            "Combat cooldown violation: "
+            .. tostring(action)
+        )
+
+        return false
+
+    end
+
+    state.Cooldowns[action] =
+        now
+
+    state.LastAttack =
+        now
+
+    return true
+
+end
+
+--------------------------------------------------
+-- FORCEFIELD CHECK
+--------------------------------------------------
+
+local function hasForceField(
+    character
+)
+
+    if not character then
+        return false
+    end
+
+    return character:FindFirstChild(
+        "ForceField"
+    ) ~= nil
+
+end
+
+--------------------------------------------------
+-- VALIDATE ATTACK
+--------------------------------------------------
+
+local function validateAttack(
+    player,
+    target,
+    options
+)
+
+    options =
+        options or {}
+
+    local attackerCharacter,
+        attackerHumanoid,
+        attackerRoot =
+        getLivingCharacter(
+            player
+        )
+
+    if CombatConfig.RequireAliveAttacker
+        and not attackerCharacter
+    then
+
+        return false,
+            "attacker_not_alive"
+
+    end
+
+    if not attackerCharacter then
+        return false,
+            "invalid_attacker"
+    end
+
+    ------------------------------------------------
+    -- TARGET
+    ------------------------------------------------
+
+    local targetCharacter,
+        targetHumanoid,
+        targetRoot =
+        getTargetCharacter(
+            target
+        )
+
+    if CombatConfig.RequireAliveTarget
+        and not targetCharacter
+    then
+
+        return false,
+            "target_not_alive"
+
+    end
+
+    if not targetCharacter then
+        return false,
+            "invalid_target"
+    end
+
+    ------------------------------------------------
+    -- TARGET PLAYER
+    ------------------------------------------------
+
+    local targetPlayer =
+        Players:GetPlayerFromCharacter(
+            targetCharacter
+        )
+
+    if targetPlayer then
+
+        if not isValidEnemy(
+            player,
+            targetPlayer
+        ) then
+
+            return false,
+                "invalid_enemy"
+
+        end
+
+    end
+
+    ------------------------------------------------
+    -- FORCEFIELD
+    ------------------------------------------------
+
+    if CombatConfig.IgnoreForceField
+        and hasForceField(
+            targetCharacter
+        )
+    then
+
+        return false,
+            "target_protected"
+
+    end
+
+    ------------------------------------------------
+    -- RANGE
+    ------------------------------------------------
+
+    local maxDistance =
+        tonumber(
+            options.MaxDistance
+        )
+        or CombatConfig.MaxAttackDistance
+
+    if not isWithinRange(
+        attackerRoot,
+        targetRoot,
+        maxDistance
+    ) then
+
+        addStrike(
+            player,
+            "Attack range violation"
+        )
+
+        return false,
+            "target_too_far"
+
+    end
+
+    ------------------------------------------------
+    -- LINE OF SIGHT
+    ------------------------------------------------
+
+    local requireLOS =
+        options.RequireLineOfSight
+
+    if requireLOS == nil then
+
+        requireLOS =
+            CombatConfig.RequireLineOfSight
+
+    end
+
+    if requireLOS then
+
+        if not hasLineOfSight(
+            attackerCharacter,
+            attackerRoot,
+            targetCharacter,
+            targetRoot
+        ) then
+
+            return false,
+                "no_line_of_sight"
+
+        end
+
+    end
+
+    ------------------------------------------------
+    -- COOLDOWN
+    ------------------------------------------------
+
+    local action =
+        tostring(
+            options.Action
+            or "DefaultAttack"
+        )
+
+    local cooldown =
+        tonumber(
+            options.Cooldown
+        )
+        or CombatConfig.DefaultCooldown
+
+    if not checkCombatCooldown(
+        player,
+        action,
+        cooldown
+    ) then
+
+        return false,
+            "cooldown"
+
+    end
+
+    ------------------------------------------------
+    -- SAVE TARGET
+    ------------------------------------------------
+
+    local state =
+        getCombatState(player)
+
+    state.LastTarget =
+        targetCharacter
+
+    ------------------------------------------------
+    -- SUCCESS
+    ------------------------------------------------
+
+    return true,
+        "valid"
+
+end
+
+--------------------------------------------------
+-- VALIDATE TARGET ONLY
+--------------------------------------------------
+
+local function validateTarget(
+    player,
+    target,
+    maxDistance
+)
+
+    local attackerCharacter,
+        attackerHumanoid,
+        attackerRoot =
+        getLivingCharacter(
+            player
+        )
+
+    if not attackerCharacter then
+        return false
+    end
+
+    local targetCharacter,
+        targetHumanoid,
+        targetRoot =
+        getTargetCharacter(
+            target
+        )
+
+    if not targetCharacter then
+        return false
+    end
+
+    if not isWithinRange(
+        attackerRoot,
+        targetRoot,
+        maxDistance
+            or CombatConfig.MaxAttackDistance
+    ) then
+
+        return false
+
+    end
+
+    return true
+
+end
+
+--------------------------------------------------
+-- DAMAGE LIMIT
+--------------------------------------------------
+
+local function validateDamage(
+    player,
+    target,
+    damage,
+    maxDamage
+)
+
+    if typeof(damage) ~= "number" then
+        return false,
+            "invalid_damage"
+    end
+
+    if damage ~= damage then
+        return false,
+            "invalid_damage"
+    end
+
+    if damage <= 0 then
+        return false,
+            "invalid_damage"
+    end
+
+    maxDamage =
+        tonumber(maxDamage)
+        or 1000
+
+    if damage > maxDamage then
+
+        addStrike(
+            player,
+            "Abnormal damage: "
+            .. tostring(damage)
+        )
+
+        return false,
+            "damage_too_high"
+
+    end
+
+    local targetCharacter,
+        targetHumanoid =
+        getTargetCharacter(
+            target
+        )
+
+    if not targetCharacter
+        or not targetHumanoid
+    then
+
+        return false,
+            "invalid_target"
+
+    end
+
+    return true,
+        "valid"
+
+end
+
+--------------------------------------------------
+-- COMBAT API
+--------------------------------------------------
+
+local ValidateAttack =
+    RootFolder:FindFirstChild(
+        "ValidateAttack"
+    )
+
+if not ValidateAttack then
+
+    ValidateAttack =
+        Instance.new("BindableFunction")
+
+    ValidateAttack.Name =
+        "ValidateAttack"
+
+    ValidateAttack.Parent =
+        RootFolder
+
+end
+
+ValidateAttack.OnInvoke =
+    function(
+        player,
+        target,
+        options
+    )
+
+        return validateAttack(
+            player,
+            target,
+            options
+        )
+
+    end
+
+--------------------------------------------------
+-- TARGET API
+--------------------------------------------------
+
+local ValidateTarget =
+    RootFolder:FindFirstChild(
+        "ValidateTarget"
+    )
+
+if not ValidateTarget then
+
+    ValidateTarget =
+        Instance.new("BindableFunction")
+
+    ValidateTarget.Name =
+        "ValidateTarget"
+
+    ValidateTarget.Parent =
+        RootFolder
+
+end
+
+ValidateTarget.OnInvoke =
+    function(
+        player,
+        target,
+        maxDistance
+    )
+
+        return validateTarget(
+            player,
+            target,
+            maxDistance
+        )
+
+    end
+
+--------------------------------------------------
+-- DAMAGE API
+--------------------------------------------------
+
+local ValidateDamage =
+    RootFolder:FindFirstChild(
+        "ValidateDamage"
+    )
+
+if not ValidateDamage then
+
+    ValidateDamage =
+        Instance.new("BindableFunction")
+
+    ValidateDamage.Name =
+        "ValidateDamage"
+
+    ValidateDamage.Parent =
+        RootFolder
+
+end
+
+ValidateDamage.OnInvoke =
+    function(
+        player,
+        target,
+        damage,
+        maxDamage
+    )
+
+        return validateDamage(
+            player,
+            target,
+            damage,
+            maxDamage
+        )
+
+    end
+
+--------------------------------------------------
+-- LINE OF SIGHT API
+--------------------------------------------------
+
+local LineOfSight =
+    RootFolder:FindFirstChild(
+        "HasLineOfSight"
+    )
+
+if not LineOfSight then
+
+    LineOfSight =
+        Instance.new("BindableFunction")
+
+    LineOfSight.Name =
+        "HasLineOfSight"
+
+    LineOfSight.Parent =
+        RootFolder
+
+end
+
+LineOfSight.OnInvoke =
+    function(
+        player,
+        target
+    )
+
+        local attackerCharacter,
+            attackerHumanoid,
+            attackerRoot =
+            getLivingCharacter(
+                player
+            )
+
+        if not attackerCharacter then
+            return false
+        end
+
+        local targetCharacter,
+            targetHumanoid,
+            targetRoot =
+            getTargetCharacter(
+                target
+            )
+
+        if not targetCharacter then
+            return false
+        end
+
+        return hasLineOfSight(
+            attackerCharacter,
+            attackerRoot,
+            targetCharacter,
+            targetRoot
+        )
+
+    end
+
+--------------------------------------------------
+-- COMBAT DEBUG
+--------------------------------------------------
+
+if CombatConfig.Debug then
+
+    print(
+        "[Kianbest Anti-Cheat] "
+        .. "Combat validation enabled."
+    )
+
+end
+
+print(
+    "[Kianbest Anti-Cheat] "
+    .. "V3 Part 4 loaded."
+)
+--------------------------------------------------
+-- KIANBEST ANTI-CHEAT V3
+-- PART 5/5
+-- ADMIN / BAN / STATUS / FINALIZATION
+--------------------------------------------------
+
+--------------------------------------------------
+-- ADMIN BAN API
+--------------------------------------------------
+
+local AdminBan =
+    RootFolder:FindFirstChild(
+        "AdminBan"
+    )
+
+if not AdminBan then
+
+    AdminBan =
+        Instance.new("BindableFunction")
+
+    AdminBan.Name =
+        "AdminBan"
+
+    AdminBan.Parent =
+        RootFolder
+
+end
+
+AdminBan.OnInvoke =
+    function(
+        admin,
+        target,
+        reason
+    )
+
+        ------------------------------------------------
+        -- CHECK ADMIN
+        ------------------------------------------------
+
+        if not admin
+            or not admin:IsA("Player")
+        then
+
+            return false,
+                "invalid_admin"
+
+        end
+
+        if not isAdmin(admin) then
+
+            return false,
+                "not_admin"
+
+        end
+
+        ------------------------------------------------
+        -- FIND TARGET
+        ------------------------------------------------
+
+        local targetPlayer = nil
+
+        if typeof(target) == "Instance"
+            and target:IsA("Player")
+        then
+
+            targetPlayer = target
+
+        elseif typeof(target) == "number" then
+
+            targetPlayer =
+                Players:GetPlayerByUserId(
+                    target
+                )
+
+        elseif typeof(target) == "string" then
+
+            for _, player in ipairs(
+                Players:GetPlayers()
+            ) do
+
+                if string.lower(
+                    player.Name
+                ) == string.lower(
+                    target
+                ) then
+
+                    targetPlayer =
+                        player
+
+                    break
+
+                end
+
+            end
+
+        end
+
+        if not targetPlayer then
+
+            return false,
+                "target_not_found"
+
+        end
+
+        ------------------------------------------------
+        -- PROTECT OTHER ADMINS
+        ------------------------------------------------
+
+        if isAdmin(targetPlayer) then
+
+            return false,
+                "target_is_admin"
+
+        end
+
+        ------------------------------------------------
+        -- BAN
+        ------------------------------------------------
+
+        banPlayer(
+            targetPlayer,
+            reason
+                or "Admin ban"
+        )
+
+        return true,
+            "banned"
+
+    end
+
+--------------------------------------------------
+-- ADMIN UNBAN API
+--------------------------------------------------
+
+local AdminUnban =
+    RootFolder:FindFirstChild(
+        "AdminUnban"
+    )
+
+if not AdminUnban then
+
+    AdminUnban =
+        Instance.new("BindableFunction")
+
+    AdminUnban.Name =
+        "AdminUnban"
+
+    AdminUnban.Parent =
+        RootFolder
+
+end
+
+AdminUnban.OnInvoke =
+    function(
+        admin,
+        userId
+    )
+
+        ------------------------------------------------
+        -- CHECK ADMIN
+        ------------------------------------------------
+
+        if not admin
+            or not admin:IsA("Player")
+        then
+
+            return false,
+                "invalid_admin"
+
+        end
+
+        if not isAdmin(admin) then
+
+            return false,
+                "not_admin"
+
+        end
+
+        ------------------------------------------------
+        -- USER ID
+        ------------------------------------------------
+
+        userId =
+            tonumber(userId)
+
+        if not userId then
+
+            return false,
+                "invalid_user_id"
+
+        end
+
+        ------------------------------------------------
+        -- REMOVE BAN
+        ------------------------------------------------
+
+        local success,
+            errorMessage =
+            pcall(function()
+
+                BanStore:RemoveAsync(
+                    getBanKey(userId)
+                )
+
+            end)
+
+        if not success then
+
+            warn(
+                "[Kianbest Anti-Cheat] "
+                .. "Unban failed:",
+                errorMessage
+            )
+
+            return false,
+                "datastore_error"
+
+        end
+
+        return true,
+            "unbanned"
+
+    end
+
+--------------------------------------------------
+-- MANUAL BAN EVENT
+--------------------------------------------------
+
+local BanEvent =
+    RootFolder:FindFirstChild(
+        "BanPlayer"
+    )
+
+if not BanEvent then
+
+    BanEvent =
+        Instance.new("BindableEvent")
+
+    BanEvent.Name =
+        "BanPlayer"
+
+    BanEvent.Parent =
+        RootFolder
+
+end
+
+BanEvent.Event:Connect(
+    function(
+        player,
+        reason
+    )
+
+        if typeof(player) ~= "Instance"
+            or not player:IsA("Player")
+        then
+
+            return
+
+        end
+
+        banPlayer(
+            player,
+            reason
+                or "Manual ban"
+        )
+
+    end
+)
+
+--------------------------------------------------
+-- MANUAL UNBAN EVENT
+--------------------------------------------------
+
+local UnbanEvent =
+    RootFolder:FindFirstChild(
+        "UnbanPlayer"
+    )
+
+if not UnbanEvent then
+
+    UnbanEvent =
+        Instance.new("BindableEvent")
+
+    UnbanEvent.Name =
+        "UnbanPlayer"
+
+    UnbanEvent.Parent =
+        RootFolder
+
+end
+
+UnbanEvent.Event:Connect(
+    function(userId)
+
+        userId =
+            tonumber(userId)
+
+        if not userId then
+            return
+        end
 
         pcall(function()
-            Ping = math.floor(
-                Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
+
+            BanStore:RemoveAsync(
+                getBanKey(userId)
             )
+
         end)
 
-        StatsLabel.Text =
-            "FPS: " .. FPS ..
-            " | Ping: " .. Ping .. "ms"
-
-        Frames = 0
-        Last = now
     end
-end)
+)
 
---==========================================================
--- START
---==========================================================
+--------------------------------------------------
+-- RESET STRIKES
+--------------------------------------------------
 
-Notify(
-    "Kianbest Hub V9.6",
-    "Menu đã khởi động thành công!"
+local ResetStrikes =
+    RootFolder:FindFirstChild(
+        "ResetStrikes"
+    )
+
+if not ResetStrikes then
+
+    ResetStrikes =
+        Instance.new("BindableFunction")
+
+    ResetStrikes.Name =
+        "ResetStrikes"
+
+    ResetStrikes.Parent =
+        RootFolder
+
+end
+
+ResetStrikes.OnInvoke =
+    function(
+        admin,
+        target
+    )
+
+        if not admin
+            or not admin:IsA("Player")
+        then
+
+            return false,
+                "invalid_admin"
+
+        end
+
+        if not isAdmin(admin) then
+
+            return false,
+                "not_admin"
+
+        end
+
+        local targetPlayer = nil
+
+        if typeof(target) == "Instance"
+            and target:IsA("Player")
+        then
+
+            targetPlayer = target
+
+        elseif typeof(target) == "number" then
+
+            targetPlayer =
+                Players:GetPlayerByUserId(
+                    target
+                )
+
+        end
+
+        if not targetPlayer then
+
+            return false,
+                "target_not_found"
+
+        end
+
+        local state =
+            getState(targetPlayer)
+
+        if not state then
+
+            return false,
+                "state_not_found"
+
+        end
+
+        state.Strikes = 0
+        state.LastStrikeReason = ""
+        state.LastStrikeTime = 0
+
+        return true,
+            "reset"
+
+    end
+
+--------------------------------------------------
+-- GET PLAYER STATUS
+--------------------------------------------------
+
+local GetStatus =
+    RootFolder:FindFirstChild(
+        "GetStatus"
+    )
+
+if not GetStatus then
+
+    GetStatus =
+        Instance.new("BindableFunction")
+
+    GetStatus.Name =
+        "GetStatus"
+
+    GetStatus.Parent =
+        RootFolder
+
+end
+
+GetStatus.OnInvoke =
+    function(
+        admin,
+        target
+    )
+
+        if not admin
+            or not admin:IsA("Player")
+        then
+
+            return nil,
+                "invalid_admin"
+
+        end
+
+        if not isAdmin(admin) then
+
+            return nil,
+                "not_admin"
+
+        end
+
+        local targetPlayer = nil
+
+        if typeof(target) == "Instance"
+            and target:IsA("Player")
+        then
+
+            targetPlayer = target
+
+        elseif typeof(target) == "number" then
+
+            targetPlayer =
+                Players:GetPlayerByUserId(
+                    target
+                )
+
+        end
+
+        if not targetPlayer then
+
+            return nil,
+                "target_not_found"
+
+        end
+
+        local state =
+            getState(targetPlayer)
+
+        if not state then
+
+            return nil,
+                "state_not_found"
+
+        end
+
+        return {
+            UserId =
+                targetPlayer.UserId,
+
+            Name =
+                targetPlayer.Name,
+
+            DisplayName =
+                targetPlayer.DisplayName,
+
+            Strikes =
+                state.Strikes,
+
+            LastStrikeReason =
+                state.LastStrikeReason,
+
+            LastStrikeTime =
+                state.LastStrikeTime,
+
+            ExemptUntil =
+                state.ExemptUntil,
+
+            IsBanned =
+                state.IsBanned,
+
+        }
+
+    end
+
+--------------------------------------------------
+-- IS ADMIN API
+--------------------------------------------------
+
+local IsAdminFunction =
+    RootFolder:FindFirstChild(
+        "IsAdmin"
+    )
+
+if not IsAdminFunction then
+
+    IsAdminFunction =
+        Instance.new("BindableFunction")
+
+    IsAdminFunction.Name =
+        "IsAdmin"
+
+    IsAdminFunction.Parent =
+        RootFolder
+
+end
+
+IsAdminFunction.OnInvoke =
+    function(player)
+
+        if typeof(player) ~= "Instance"
+            or not player:IsA("Player")
+        then
+
+            return false
+
+        end
+
+        return isAdmin(player)
+
+    end
+
+--------------------------------------------------
+-- CONFIG API
+--------------------------------------------------
+
+local ConfigFolder =
+    RootFolder:FindFirstChild(
+        "Config"
+    )
+
+if not ConfigFolder then
+
+    ConfigFolder =
+        Instance.new("Folder")
+
+    ConfigFolder.Name =
+        "Config"
+
+    ConfigFolder.Parent =
+        RootFolder
+
+end
+
+--------------------------------------------------
+-- CONFIG VALUES
+--------------------------------------------------
+
+local DetectionEnabled =
+    ConfigFolder:FindFirstChild(
+        "DetectionEnabled"
+    )
+
+if not DetectionEnabled then
+
+    DetectionEnabled =
+        Instance.new("BoolValue")
+
+    DetectionEnabled.Name =
+        "DetectionEnabled"
+
+    DetectionEnabled.Value =
+        CONFIG.Detection.Enabled
+
+    DetectionEnabled.Parent =
+        ConfigFolder
+
+end
+
+--------------------------------------------------
+-- STRIKE LIMIT
+--------------------------------------------------
+
+local StrikeLimit =
+    ConfigFolder:FindFirstChild(
+        "StrikeLimit"
+    )
+
+if not StrikeLimit then
+
+    StrikeLimit =
+        Instance.new("IntValue")
+
+    StrikeLimit.Name =
+        "StrikeLimit"
+
+    StrikeLimit.Value =
+        CONFIG.Detection.StrikeLimit
+
+    StrikeLimit.Parent =
+        ConfigFolder
+
+end
+
+--------------------------------------------------
+-- MAX WALK SPEED
+--------------------------------------------------
+
+local MaxWalkSpeed =
+    ConfigFolder:FindFirstChild(
+        "MaxWalkSpeed"
+    )
+
+if not MaxWalkSpeed then
+
+    MaxWalkSpeed =
+        Instance.new("NumberValue")
+
+    MaxWalkSpeed.Name =
+        "MaxWalkSpeed"
+
+    MaxWalkSpeed.Value =
+        CONFIG.Detection.MaxWalkSpeed
+
+    MaxWalkSpeed.Parent =
+        ConfigFolder
+
+end
+
+--------------------------------------------------
+-- MAX JUMP POWER
+--------------------------------------------------
+
+local MaxJumpPower =
+    ConfigFolder:FindFirstChild(
+        "MaxJumpPower"
+    )
+
+if not MaxJumpPower then
+
+    MaxJumpPower =
+        Instance.new("NumberValue")
+
+    MaxJumpPower.Name =
+        "MaxJumpPower"
+
+    MaxJumpPower.Value =
+        CONFIG.Detection.MaxJumpPower
+
+    MaxJumpPower.Parent =
+        ConfigFolder
+
+end
+
+--------------------------------------------------
+-- STATUS EVENT
+--------------------------------------------------
+
+local StatusEvent =
+    RootFolder:FindFirstChild(
+        "AntiCheatStatus"
+    )
+
+if not StatusEvent then
+
+    StatusEvent =
+        Instance.new("BindableEvent")
+
+    StatusEvent.Name =
+        "AntiCheatStatus"
+
+    StatusEvent.Parent =
+        RootFolder
+
+end
+
+local function fireStatus(
+    player,
+    message
+)
+
+    if not player then
+        return
+    end
+
+    StatusEvent:Fire(
+        player,
+        message
+    )
+
+end
+
+--------------------------------------------------
+-- ADMIN STATUS LOG
+--------------------------------------------------
+
+Players.PlayerAdded:Connect(
+    function(player)
+
+        task.delay(
+            2,
+            function()
+
+                if not player.Parent then
+                    return
+                end
+
+                if isAdmin(player) then
+
+                    debugPrint(
+                        "Admin connected:",
+                        player.Name
+                    )
+
+                    fireStatus(
+                        player,
+                        "Anti-Cheat admin detected."
+                    )
+
+                end
+
+            end
+        )
+
+    end
+)
+
+--------------------------------------------------
+-- SERVER SHUTDOWN
+--------------------------------------------------
+
+game:BindToClose(
+    function()
+
+        debugPrint(
+            "Anti-Cheat shutting down."
+        )
+
+        for player, state in pairs(
+            PlayerState
+        ) do
+
+            if player
+                and player.Parent
+            then
+
+                state.LastPosition =
+                    nil
+
+            end
+
+        end
+
+        table.clear(
+            RemoteState
+        )
+
+        table.clear(
+            CombatState
+        )
+
+    end
+)
+
+--------------------------------------------------
+-- FINAL STATUS
+--------------------------------------------------
+
+print(
+    "===================================="
+)
+
+print(
+    "[Kianbest Anti-Cheat V3]"
+)
+
+print(
+    "Movement Protection : ENABLED"
+)
+
+print(
+    "Remote Protection   : ENABLED"
+)
+
+print(
+    "Combat Validation   : ENABLED"
+)
+
+print(
+    "Ban System           : ENABLED"
+)
+
+print(
+    "Admin System         : ENABLED"
+)
+
+print(
+    "Persistent Ban       : ENABLED"
+)
+
+print(
+    "===================================="
+)
+
+print(
+    "[Kianbest Anti-Cheat] "
+    .. "V3 FULL SYSTEM LOADED."
 )
