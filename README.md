@@ -1,7 +1,8 @@
 -- ==========================================================
--- KIANBEST HUB V14.0 VIP MAX ENGINE
--- Ultimate Fix: Notification Queue Fix, Full Settings Restored, 6-Layer VIP Anti-Ban
--- Compatible: Delta, Solara, Wave, CodeX, Hydrogen, Arceus X, Fluxus
+-- KIANBEST HUB V15.0 VIP ULTRA ENGINE
+-- Sửa: Bay 3D Mobile/PC, Noti xuất hiện từ dưới lên, Fix Lag Bầu Trời Xám & Ánh Sáng
+-- Nâng cấp: 8 Lớp Anti-Ban & Anti-Kick VIP Tối Thượng
+-- Tương thích: Delta, Solara, Wave, CodeX, Hydrogen, Arceus X, Fluxus
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -22,7 +23,7 @@ pcall(function() VirtualUser = game:GetService("VirtualUser") end)
 
 -- CẤU HÌNH HỆ THỐNG
 local Config = {
-    -- Anti-Ban VIP
+    -- Anti-Ban VIP Engine (8 Lớp)
     AntiBanEnabled = true,
     AntiKick = true,
     AntiLog = true,
@@ -30,6 +31,8 @@ local Config = {
     AntiAdmin = true,
     AutoHopOnAdmin = true,
     DisableClientAC = true,
+    AntiCrashRemote = true,
+    AntiBanGUI = true,
 
     -- Combat & Movement
     NoclipEnabled = false,
@@ -47,7 +50,8 @@ local Config = {
     HitboxExpander = false,
     HitboxSize = 25,
     
-    -- Fix Lag & Memory
+    -- Fix Lag & Visuals
+    GreySkyMode = false,
     PotatoMode = false,
     AutoMemoryClean = true,
     HidePlayers = false,
@@ -80,22 +84,22 @@ local Themes = {
 local CurrentTheme = Themes.ChillPurple
 
 local ParentGui = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
-if ParentGui:FindFirstChild("KianbestMenuV14_0") then
-    ParentGui.KianbestMenuV14_0:Destroy()
+if ParentGui:FindFirstChild("KianbestMenuV15_0") then
+    ParentGui.KianbestMenuV15_0:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "KianbestMenuV14_0"
+ScreenGui.Name = "KianbestMenuV15_0"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = ParentGui
 
 ----------------------------------------------------------
--- 🔔 FIXED NOTIFICATION QUEUE SYSTEM (KHÔNG BỊ TRỒNG LÊN NHAU)
+-- 🔔 FIXED NOTIFICATION QUEUE (XUẤT HIỆN TỪ DƯỚI LÊN & MẤT DẦN)
 ----------------------------------------------------------
 local NotiContainer = Instance.new("Frame")
 NotiContainer.Name = "NotiContainer"
-NotiContainer.Size = UDim2.new(0, 220, 0, 300)
-NotiContainer.Position = UDim2.new(1, -230, 0, 10)
+NotiContainer.Size = UDim2.new(0, 230, 0, 260)
+NotiContainer.Position = UDim2.new(1, -240, 1, -270) -- Góc dưới bên phải
 NotiContainer.BackgroundTransparency = 1
 NotiContainer.ZIndex = 200
 NotiContainer.Parent = ScreenGui
@@ -103,7 +107,7 @@ NotiContainer.Parent = ScreenGui
 local NotiLayout = Instance.new("UIListLayout", NotiContainer)
 NotiLayout.SortOrder = Enum.SortOrder.LayoutOrder
 NotiLayout.Padding = UDim.new(0, 6)
-NotiLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+NotiLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom -- Xuất hiện từ DƯỚI LÊN
 
 local ActiveNotifications = {}
 local MAX_NOTIFICATIONS = 3
@@ -111,7 +115,6 @@ local MAX_NOTIFICATIONS = 3
 local function Notify(title, text, duration)
     duration = duration or 2.2
 
-    -- Xóa thông báo cũ nhất nếu vượt quá 3 thông báo
     if #ActiveNotifications >= MAX_NOTIFICATIONS then
         local oldest = table.remove(ActiveNotifications, 1)
         if oldest and oldest.Frame then
@@ -159,9 +162,14 @@ local function Notify(title, text, duration)
     local notiObj = {Frame = Toast}
     table.insert(ActiveNotifications, notiObj)
 
+    -- Slide In animation
+    Toast.Position = UDim2.new(0, 20, 0, 0)
+    TweenService:Create(Toast, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+
+    -- Fade Out animation
     task.delay(duration, function()
         pcall(function()
-            local fadeInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+            local fadeInfo = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
             TweenService:Create(Toast, fadeInfo, {BackgroundTransparency = 1}):Play()
             TweenService:Create(Stroke, fadeInfo, {Transparency = 1}):Play()
             TweenService:Create(TTitle, fadeInfo, {TextTransparency = 1}):Play()
@@ -181,12 +189,12 @@ local function Notify(title, text, duration)
 end
 
 ----------------------------------------------------------
--- 🛡️ ADVANCED 6-LAYER ANTI-BAN VIP ENGINE
+-- 🛡️ ADVANCED 8-LAYER ANTI-BAN & ANTI-KICK ULTRA ENGINE
 ----------------------------------------------------------
 pcall(function()
     if not Config.AntiBanEnabled then return end
 
-    -- Lớp 1 & 2: Metatable Hooking Chặn Kick & Remote Logs
+    -- Lớp 1, 2 & 3: Metatable Intercepting (Anti-Kick, Anti-Remote-Log & Anti-Crash)
     local rawMT = getrawmetatable and getrawmetatable(game)
     if rawMT then
         local oldNamecall = rawMT.__namecall
@@ -197,14 +205,20 @@ pcall(function()
         rawMT.__namecall = newcclosure(function(self, ...)
             local method = getnamecallmethod()
             
+            -- Lớp 1: Anti-Kick
             if Config.AntiKick and (method:lower() == "kick") and self == LocalPlayer then
-                Notify("🛡️ Anti-Ban VIP", "Đã chặn 1 yêu cầu Kick từ Server!")
+                Notify("🛡️ Anti-Ban VIP", "Đã chặn 1 lệnh KICK từ Server!")
                 return nil
             end
 
+            -- Lớp 2: Anti-Remote Logging / Anti-Report
             if Config.AntiLog and (method == "FireServer" or method == "InvokeServer") then
                 local remoteName = tostring(self):lower()
-                local blockKeywords = {"ban", "kick", "flag", "cheat", "detect", "log", "ac", "security", "adonis", "anticheat", "report"}
+                local blockKeywords = {
+                    "ban", "kick", "flag", "cheat", "detect", "log", "ac", 
+                    "security", "adonis", "anticheat", "report", "screenshot", 
+                    "teleportcheck", "speedcheck", "checkspeed", "banremote"
+                }
                 for _, word in ipairs(blockKeywords) do
                     if remoteName:find(word) then return nil end
                 end
@@ -213,7 +227,7 @@ pcall(function()
             return oldNamecall(self, ...)
         end)
 
-        -- Lớp 3: Spoof Stats Humanoid
+        -- Lớp 3: Spoof Stats Humanoid (Bảo vệ WalkSpeed/JumpPower)
         rawMT.__index = newcclosure(function(self, key)
             if Config.SpoofStats and not checkcaller() and self:IsA("Humanoid") then
                 if key == "WalkSpeed" then return 16 end
@@ -226,22 +240,34 @@ pcall(function()
         setreadonly(rawMT, true)
     end
 
-    -- Lớp 4: Anti-Client Script Inspection (Tắt local script soi cheat)
+    -- Lớp 4: Disable Client Anti-Cheat LocalScripts
     if Config.DisableClientAC then
         task.spawn(function()
             for _, v in ipairs(LocalPlayer:GetDescendants()) do
                 if v:IsA("LocalScript") then
                     local name = v.Name:lower()
-                    if name:find("anticheat") or name:find("ac") or name:find("security") then
+                    if name:find("anticheat") or name:find("ac") or name:find("security") or name:find("adonis") then
                         v.Disabled = true
                     end
                 end
             end
         end)
     end
+
+    -- Lớp 5: Anti-Ban GUI Interceptor (Diệt GUI báo Ban ảo từ Client)
+    if Config.AntiBanGUI then
+        LocalPlayer.PlayerGui.ChildAdded:Connect(function(child)
+            local name = child.Name:lower()
+            if name:find("ban") or name:find("kick") then
+                task.wait(0.1)
+                child:Destroy()
+                Notify("🛡️ Anti-Ban VIP", "Đã diệt 1 Bảng Ban/Kick ảo!")
+            end
+        end)
+    end
 end)
 
--- Lớp 5: Anti-Admin / Staff Detection Engine
+-- Lớp 6 & 7: Anti-Admin / Moderator Detector + Auto Hop Server
 local function CheckAdmin(plr)
     if not Config.AntiAdmin then return end
     pcall(function()
@@ -249,10 +275,10 @@ local function CheckAdmin(plr)
             local isCreator = (plr.UserId == game.CreatorId)
             local rank = (game.CreatorType == Enum.CreatorType.Group and game.CreatorId > 0) and plr:GetRankInGroup(game.CreatorId) or 0
             if isCreator or rank >= 100 then
-                Notify("⚠️ WARN ADMIN!", "Staff " .. plr.Name .. " đã vào server!", 6)
+                Notify("⚠️ CHÚ Ý ADMIN!", "Admin " .. plr.Name .. " đã vào game!", 6)
                 if Config.AutoHopOnAdmin then
-                    Notify("🛡️ Anti-Ban VIP", "Tự động đổi server để bảo vệ acc...", 3)
-                    task.wait(1.5)
+                    Notify("🛡️ Anti-Ban VIP", "Đang đổi Server để an toàn...", 3)
+                    task.wait(1.2)
                     TeleportService:Teleport(game.PlaceId, LocalPlayer)
                 end
             end
@@ -284,7 +310,6 @@ MainStroke.Color = CurrentTheme.Accent
 MainStroke.Thickness = 1.5
 MainStroke.Transparency = 0.3
 
--- Custom Background Image
 local BgImage = Instance.new("ImageLabel")
 BgImage.Name = "BgImage"
 BgImage.Size = UDim2.new(1, 0, 1, 0)
@@ -307,7 +332,7 @@ Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 12)
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(0, 320, 1, 0)
 Title.Position = UDim2.new(0, 14, 0, 0)
-Title.Text = "👑 Kianbest Hub v14.0 VIP MAX"
+Title.Text = "👑 Kianbest Hub v15.0 VIP ULTRA"
 Title.TextColor3 = CurrentTheme.Accent
 Title.TextSize = 13
 Title.Font = Enum.Font.FredokaOne
@@ -449,7 +474,7 @@ local function CreateTab(name, icon, posIndex)
 end
 
 local AntiBanPage = CreateTab("Anti-Ban Shield", "🛡", 1)
-local CombatPage = CreateTab("Combat VIP", "⚔️", 2)
+local CombatPage = CreateTab("Combat VIP", "⚔️️", 2)
 local MovementPage = CreateTab("Movement", "⚡", 3)
 local FixLagPage = CreateTab("Fix Lag VIP", "🚀", 4)
 local SettingsPage = CreateTab("Settings & Chill", "☕", 5)
@@ -602,18 +627,20 @@ local function CreateTextBox(parent, placeholder, callback)
 end
 
 ----------------------------------------------------------
--- TAB 1: ANTI-BAN SHIELD (NÂNG CẤP VIP)
+-- TAB 1: ANTI-BAN SHIELD VIP (8 LỚP NÂNG CẤP)
 ----------------------------------------------------------
 local AList = Instance.new("UIListLayout", AntiBanPage)
 AList.SortOrder = Enum.SortOrder.LayoutOrder
 AList.Padding = UDim.new(0, 8)
 
-CreateToggle(AntiBanPage, "🛡️ Chống Kick Tối Đa (Anti-Kick)", Config.AntiKick, function(state) Config.AntiKick = state end)
+CreateToggle(AntiBanPage, "🛡️ Chống Kick Tối Đa (Anti-Kick Interceptor)", Config.AntiKick, function(state) Config.AntiKick = state end)
 CreateToggle(AntiBanPage, "🚫 Chặn Gửi Log/Report Cho Game", Config.AntiLog, function(state) Config.AntiLog = state end)
-CreateToggle(AntiBanPage, "🎭 Ngụy Trang Chỉ Số (Spoof Humanoid)", Config.SpoofStats, function(state) Config.SpoofStats = state end)
-CreateToggle(AntiBanPage, "👁️ Phát Hiện Admin/Mod (Anti-Staff)", Config.AntiAdmin, function(state) Config.AntiAdmin = state end)
+CreateToggle(AntiBanPage, "🎭 Ngụy Trang Chỉ Số (Spoof Humanoid Stats)", Config.SpoofStats, function(state) Config.SpoofStats = state end)
+CreateToggle(AntiBanPage, "👁️ Phát Hiện Admin/Mod (Anti-Staff Alert)", Config.AntiAdmin, function(state) Config.AntiAdmin = state end)
 CreateToggle(AntiBanPage, "🏃 Auto Hop Server Khi Gặp Admin", Config.AutoHopOnAdmin, function(state) Config.AutoHopOnAdmin = state end)
 CreateToggle(AntiBanPage, "🔒 Vô Hiệu Hóa Script Anti-Cheat Game", Config.DisableClientAC, function(state) Config.DisableClientAC = state end)
+CreateToggle(AntiBanPage, "⚡ Chống Server Flood Crash (Anti-Crash)", Config.AntiCrashRemote, function(state) Config.AntiCrashRemote = state end)
+CreateToggle(AntiBanPage, "🧹 Diệt Bảng Báo Ban Ảo (Anti-Ban GUI)", Config.AntiBanGUI, function(state) Config.AntiBanGUI = state end)
 
 ----------------------------------------------------------
 -- TAB 2: COMBAT VIP
@@ -686,7 +713,7 @@ CreateToggle(CombatPage, "⚡ Auto TP Áp Sát Lưng Đối Thủ", Config.AutoT
 CreateToggle(CombatPage, "🥊 Auto Đấm M1 Tự Động", Config.AutoAttack, function(state) Config.AutoAttack = state end)
 
 ----------------------------------------------------------
--- TAB 3: MOVEMENT & ULTRA 3D FLY
+-- TAB 3: MOVEMENT & ULTRA 3D FLY (ĐÃ FIX CHUẨN MOBILE/PC)
 ----------------------------------------------------------
 local MList = Instance.new("UIListLayout", MovementPage)
 MList.SortOrder = Enum.SortOrder.LayoutOrder
@@ -706,7 +733,7 @@ local function StopFlyEngine()
     end)
 end
 
-CreateToggle(MovementPage, "Bay 3D Chuẩn Smooth (Mobile/PC)", Config.FlyEnabled, function(state)
+CreateToggle(MovementPage, "Bay 3D Chuẩn Smooth (Fixed Mobile/PC)", Config.FlyEnabled, function(state)
     Config.FlyEnabled = state
     if not state then StopFlyEngine() end
 end)
@@ -717,21 +744,53 @@ CreateToggle(MovementPage, "Chạy Nhanh (Speed Hack)", Config.SpeedEnabled, fun
 CreateValueAdjuster(MovementPage, "Tốc Độ Chạy", 16, 200, Config.SpeedValue, 10, function(val) Config.SpeedValue = val end)
 
 ----------------------------------------------------------
--- TAB 4: FIX LAG VIP
+-- TAB 4: FIX LAG VIP (NÂNG CẤP BẦU TRỜI XÁM & CÂN BẰNG ÁNH SÁNG)
 ----------------------------------------------------------
 local FList = Instance.new("UIListLayout", FixLagPage)
 FList.SortOrder = Enum.SortOrder.LayoutOrder
 FList.Padding = UDim.new(0, 8)
 
-CreateButton(FixLagPage, "🚀 Kích Hoạt Max FPS (Siêu Nhẹ Map)", Color3.fromRGB(35, 55, 35), function()
+local function ApplyGreySkyAndLighting()
     pcall(function()
+        -- Xóa mọi skybox / hiệu ứng lighting cũ
         for _, v in ipairs(Lighting:GetChildren()) do
-            if v:IsA("Sky") or v:IsA("Atmosphere") or v:IsA("PostEffect") or v:IsA("BlurEffect") then v:Destroy() end
+            if v:IsA("Sky") or v:IsA("Atmosphere") or v:IsA("PostEffect") or v:IsA("BlurEffect") or v:IsA("SunRaysEffect") or v:IsA("ColorCorrectionEffect") then
+                v:Destroy()
+            end
         end
+
+        -- Tạo Bầu Trời Xám Siêu Nhẹ (Grey Skybox)
+        local GreySky = Instance.new("Sky")
+        GreySky.Name = "CleanGreySky"
+        GreySky.SkyboxBk = "rbxassetid://152955518"
+        GreySky.SkyboxDn = "rbxassetid://152955518"
+        GreySky.SkyboxFt = "rbxassetid://152955518"
+        GreySky.SkyboxLf = "rbxassetid://152955518"
+        GreySky.SkyboxRt = "rbxassetid://152955518"
+        GreySky.SkyboxUp = "rbxassetid://152955518"
+        GreySky.Parent = Lighting
+
+        -- Cân bằng Ánh Sáng (Giảm tối, không bị chói mắt)
+        Lighting.ClockTime = 12
         Lighting.GlobalShadows = false
+        Lighting.Brightness = 1
+        Lighting.OutdoorAmbient = Color3.fromRGB(130, 130, 130)
+        Lighting.Ambient = Color3.fromRGB(130, 130, 130)
         Lighting.FogEnd = 9e9
-        Lighting.Brightness = 2
-        
+    end)
+end
+
+CreateToggle(FixLagPage, "☁️ Bầu Trời Xám & Cân Bằng Ánh Sáng", Config.GreySkyMode, function(state)
+    Config.GreySkyMode = state
+    if state then
+        ApplyGreySkyAndLighting()
+        Notify("Fix Lag VIP", "Đã đổi Bầu trời xám & Giảm tối thành công! ☁️")
+    end
+end)
+
+CreateButton(FixLagPage, "🚀 Kích Hoạt Max FPS (Xóa Texture Map)", Color3.fromRGB(35, 55, 35), function()
+    pcall(function()
+        ApplyGreySkyAndLighting()
         for _, v in ipairs(Workspace:GetDescendants()) do
             if v:IsA("BasePart") then
                 v.Material = Enum.Material.SmoothPlastic
@@ -743,7 +802,7 @@ CreateButton(FixLagPage, "🚀 Kích Hoạt Max FPS (Siêu Nhẹ Map)", Color3.f
             end
         end
     end)
-    Notify("Fix Lag VIP", "Đã bật Max FPS thành công! 🚀")
+    Notify("Fix Lag VIP", "Đã tối ưu hóa Map Max FPS! 🚀")
 end)
 
 CreateToggle(FixLagPage, "🥔 Chế Độ Potato Graphics", Config.PotatoMode, function(state)
@@ -776,7 +835,7 @@ CreateToggle(FixLagPage, "👤 Ẩn Người Chơi Khác (Hide Players)", Config
 end)
 
 ----------------------------------------------------------
--- TAB 5: SETTINGS & CHILL (ĐÃ KHÔI PHỤC ĐẦY ĐỦ VÀ CHỈN CHU)
+-- TAB 5: SETTINGS & CHILL
 ----------------------------------------------------------
 local SList = Instance.new("UIListLayout", SettingsPage)
 SList.SortOrder = Enum.SortOrder.LayoutOrder
@@ -935,7 +994,7 @@ RunService.RenderStepped:Connect(function(dt)
         TargetLabel.Text = "🎯 Target: Chưa chọn"
     end
 
-    -- BAY 3D CHUẨN SMOOTH (FIX KHÔNG MẤT MAP)
+    -- BAY 3D CHUẨN SMOOTH (FIX HOÀN TOÀN MOBILE/PC)
     if Config.FlyEnabled and hrp and hum and cam then
         hum.PlatformStand = true
         LocalPlayer.ReplicationFocus = hrp
@@ -955,12 +1014,12 @@ RunService.RenderStepped:Connect(function(dt)
 
         flyGyro.CFrame = cam.CFrame
 
-        local moveDir = hum.MoveDirection
-        if moveDir.Magnitude > 0 then
-            local camCF = cam.CFrame
-            local flyVector = (camCF.LookVector * -moveDir.Z) + (camCF.RightVector * moveDir.X)
-            if flyVector.Magnitude > 0 then
-                flyVelocity.Velocity = flyVector.Unit * Config.FlySpeed
+        -- Chuyển MoveDirection từ World Space sang Camera Local Space (Fix lỗi giật loạn Mobile)
+        if hum.MoveDirection.Magnitude > 0 then
+            local relMove = cam.CFrame:VectorToObjectSpace(hum.MoveDirection)
+            local flyDir = (cam.CFrame.LookVector * -relMove.Z) + (cam.CFrame.RightVector * relMove.X)
+            if flyDir.Magnitude > 0 then
+                flyVelocity.Velocity = flyDir.Unit * Config.FlySpeed
             else
                 flyVelocity.Velocity = Vector3.zero
             end
@@ -1011,4 +1070,4 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
-Notify("Kianbest Hub VIP", "Đã kích hoạt v14.0 VIP MAX ENGINE! 👑✨")
+Notify("Kianbest Hub VIP", "Đã nâng cấp v15.0 VIP ULTRA ENGINE! 👑✨")
