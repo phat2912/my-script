@@ -1,6 +1,6 @@
 -- ==========================================================
--- SCRIPT MENU SYSTEM V2.0 PREMIUM (Kianbest)
--- Features: ESP + Movement + FixLag + FPS/Ping + Animations
+-- SCRIPT MENU SYSTEM V3.0 ULTRA (Kianbest)
+-- Upgraded Visuals: Fixed Bugs + Advanced Nametags (Name/HP/Distance) + Tracers
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -9,16 +9,19 @@ local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
+local Stats = game:GetService("Stats")
 local LocalPlayer = Players.LocalPlayer
 
 -- 1. Cấu hình & Trạng thái (Config)
 local Config = {
     ESPEnabled = false,
     ESPNamesEnabled = false,
+    ESPHealthEnabled = false,
+    ESPTracersEnabled = false,
     ESPColor = Color3.fromRGB(0, 255, 150),
     
     SpeedEnabled = false,
-    SpeedValue = 50,
+    SpeedValue = 32,
     
     FlyEnabled = false,
     FlySpeed = 50,
@@ -27,41 +30,21 @@ local Config = {
     ToggleKey = Enum.KeyCode.RightControl
 }
 
--- 2. Bộ chủ đề giao diện (Themes)
+-- 2. Bộ chủ đề giao diện (8 Themes)
 local Themes = {
-    Dark = {
-        Bg = Color3.fromRGB(20, 22, 28),
-        Sidebar = Color3.fromRGB(15, 16, 20),
-        Accent = Color3.fromRGB(0, 170, 255),
-        Button = Color3.fromRGB(30, 34, 42),
-        Text = Color3.fromRGB(240, 240, 240)
-    },
-    Cyan = {
-        Bg = Color3.fromRGB(15, 25, 35),
-        Sidebar = Color3.fromRGB(10, 18, 26),
-        Accent = Color3.fromRGB(0, 210, 255),
-        Button = Color3.fromRGB(22, 38, 52),
-        Text = Color3.fromRGB(240, 240, 240)
-    },
-    Purple = {
-        Bg = Color3.fromRGB(25, 18, 35),
-        Sidebar = Color3.fromRGB(18, 12, 26),
-        Accent = Color3.fromRGB(180, 70, 255),
-        Button = Color3.fromRGB(38, 26, 52),
-        Text = Color3.fromRGB(240, 240, 240)
-    },
-    Red = {
-        Bg = Color3.fromRGB(30, 18, 18),
-        Sidebar = Color3.fromRGB(22, 12, 12),
-        Accent = Color3.fromRGB(255, 70, 70),
-        Button = Color3.fromRGB(48, 26, 26),
-        Text = Color3.fromRGB(240, 240, 240)
-    }
+    Dark = { Bg = Color3.fromRGB(20, 22, 28), Sidebar = Color3.fromRGB(15, 16, 20), Accent = Color3.fromRGB(0, 170, 255), Button = Color3.fromRGB(30, 34, 42), Text = Color3.fromRGB(240, 240, 240) },
+    Cyan = { Bg = Color3.fromRGB(15, 25, 35), Sidebar = Color3.fromRGB(10, 18, 26), Accent = Color3.fromRGB(0, 210, 255), Button = Color3.fromRGB(22, 38, 52), Text = Color3.fromRGB(240, 240, 240) },
+    Purple = { Bg = Color3.fromRGB(25, 18, 35), Sidebar = Color3.fromRGB(18, 12, 26), Accent = Color3.fromRGB(180, 70, 255), Button = Color3.fromRGB(38, 26, 52), Text = Color3.fromRGB(240, 240, 240) },
+    Red = { Bg = Color3.fromRGB(30, 18, 18), Sidebar = Color3.fromRGB(22, 12, 12), Accent = Color3.fromRGB(255, 70, 70), Button = Color3.fromRGB(48, 26, 26), Text = Color3.fromRGB(240, 240, 240) },
+    Emerald = { Bg = Color3.fromRGB(18, 30, 22), Sidebar = Color3.fromRGB(12, 22, 15), Accent = Color3.fromRGB(50, 220, 120), Button = Color3.fromRGB(26, 48, 32), Text = Color3.fromRGB(240, 240, 240) },
+    Gold = { Bg = Color3.fromRGB(30, 28, 18), Sidebar = Color3.fromRGB(22, 20, 12), Accent = Color3.fromRGB(255, 200, 50), Button = Color3.fromRGB(48, 44, 26), Text = Color3.fromRGB(240, 240, 240) },
+    Pink = { Bg = Color3.fromRGB(30, 18, 26), Sidebar = Color3.fromRGB(22, 12, 18), Accent = Color3.fromRGB(255, 100, 200), Button = Color3.fromRGB(48, 26, 40), Text = Color3.fromRGB(240, 240, 240) },
+    Ocean = { Bg = Color3.fromRGB(15, 20, 32), Sidebar = Color3.fromRGB(10, 14, 24), Accent = Color3.fromRGB(30, 140, 255), Button = Color3.fromRGB(20, 32, 50), Text = Color3.fromRGB(240, 240, 240) }
 }
 
 local CurrentTheme = Themes.Dark
 
--- 3. Tạo ScreenGui
+-- 3. Khởi tạo Gui
 local ParentGui = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
 if ParentGui:FindFirstChild("KianbestMenuV2") then
     ParentGui.KianbestMenuV2:Destroy()
@@ -72,21 +55,27 @@ ScreenGui.Name = "KianbestMenuV2"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = ParentGui
 
--- 4. HỆ THỐNG THÔNG BÁO (NOTIFICATION TOAST)
+-- 4. HỆ THỐNG THÔNG BÁO (FADE-IN / FADE-OUT)
 local NotificationFrame = Instance.new("Frame")
 NotificationFrame.Name = "NotificationFrame"
-NotificationFrame.Size = UDim2.new(0, 220, 0, 150)
-NotificationFrame.Position = UDim2.new(1, -230, 1, -160)
+NotificationFrame.Size = UDim2.new(0, 220, 0, 200)
+NotificationFrame.Position = UDim2.new(1, -230, 1, -210)
 NotificationFrame.BackgroundTransparency = 1
 NotificationFrame.ZIndex = 10
 NotificationFrame.Parent = ScreenGui
 
+local NotificationList = Instance.new("UIListLayout", NotificationFrame)
+NotificationList.SortOrder = Enum.SortOrder.LayoutOrder
+NotificationList.Padding = UDim.new(0, 6)
+NotificationList.VerticalAlignment = Enum.VerticalAlignment.Bottom
+
 local function Notify(title, text, duration)
-    duration = duration or 2
+    duration = duration or 2.5
+    
     local Toast = Instance.new("Frame")
-    Toast.Size = UDim2.new(1, 0, 0, 45)
-    Toast.Position = UDim2.new(1, 50, 0, 0)
+    Toast.Size = UDim2.new(1, 0, 0, 46)
     Toast.BackgroundColor3 = CurrentTheme.Sidebar
+    Toast.BackgroundTransparency = 1
     Toast.BorderSizePixel = 0
     Toast.ZIndex = 10
     Toast.Parent = NotificationFrame
@@ -95,12 +84,14 @@ local function Notify(title, text, duration)
     local Stroke = Instance.new("UIStroke", Toast)
     Stroke.Color = CurrentTheme.Accent
     Stroke.Thickness = 1.5
+    Stroke.Transparency = 1
 
     local TTitle = Instance.new("TextLabel")
     TTitle.Size = UDim2.new(1, -10, 0, 18)
     TTitle.Position = UDim2.new(0, 8, 0, 4)
     TTitle.Text = title
     TTitle.TextColor3 = CurrentTheme.Accent
+    TTitle.TextTransparency = 1
     TTitle.Font = Enum.Font.SourceSansBold
     TTitle.TextSize = 13
     TTitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -113,6 +104,7 @@ local function Notify(title, text, duration)
     TText.Position = UDim2.new(0, 8, 0, 22)
     TText.Text = text
     TText.TextColor3 = CurrentTheme.Text
+    TText.TextTransparency = 1
     TText.Font = Enum.Font.SourceSans
     TText.TextSize = 12
     TText.TextXAlignment = Enum.TextXAlignment.Left
@@ -120,14 +112,20 @@ local function Notify(title, text, duration)
     TText.ZIndex = 11
     TText.Parent = Toast
 
-    TweenService:Create(Toast, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+    local fadeInInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    TweenService:Create(Toast, fadeInInfo, {BackgroundTransparency = 0.15}):Play()
+    TweenService:Create(Stroke, fadeInInfo, {Transparency = 0}):Play()
+    TweenService:Create(TTitle, fadeInInfo, {TextTransparency = 0}):Play()
+    TweenService:Create(TText, fadeInInfo, {TextTransparency = 0}):Play()
 
     task.delay(duration, function()
-        local tween = TweenService:Create(Toast, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Position = UDim2.new(1, 50, 0, 0)})
-        tween:Play()
-        tween.Completed:Connect(function()
-            Toast:Destroy()
-        end)
+        local fadeOutInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        TweenService:Create(Toast, fadeOutInfo, {BackgroundTransparency = 1}):Play()
+        TweenService:Create(Stroke, fadeOutInfo, {Transparency = 1}):Play()
+        TweenService:Create(TTitle, fadeOutInfo, {TextTransparency = 1}):Play()
+        local lastTween = TweenService:Create(TText, fadeOutInfo, {TextTransparency = 1})
+        lastTween:Play()
+        lastTween.Completed:Connect(function() Toast:Destroy() end)
     end)
 end
 
@@ -150,7 +148,6 @@ MainStroke.Color = CurrentTheme.Accent
 MainStroke.Thickness = 2
 MainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
--- Ảnh nền Menu
 local MainBgImage = Instance.new("ImageLabel")
 MainBgImage.Name = "MainBgImage"
 MainBgImage.Size = UDim2.new(1, 0, 1, 0)
@@ -173,9 +170,9 @@ Header.Parent = MainFrame
 Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 10)
 
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(0, 150, 1, 0)
+Title.Size = UDim2.new(0, 180, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
-Title.Text = "Kianbest Hub v2.0"
+Title.Text = "Kianbest Hub v3.0"
 Title.TextColor3 = CurrentTheme.Accent
 Title.TextSize = 16
 Title.Font = Enum.Font.SourceSansBold
@@ -184,12 +181,11 @@ Title.BackgroundTransparency = 1
 Title.ZIndex = 3
 Title.Parent = Header
 
--- Hiển thị FPS & Ping
 local StatsLabel = Instance.new("TextLabel")
-StatsLabel.Size = UDim2.new(0, 180, 1, 0)
-StatsLabel.Position = UDim2.new(1, -220, 0, 0)
-StatsLabel.Text = "FPS: 60 | Ping: 0ms"
-StatsLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+StatsLabel.Size = UDim2.new(0, 200, 1, 0)
+StatsLabel.Position = UDim2.new(1, -240, 0, 0)
+StatsLabel.Text = "FPS: -- | Ping: --ms"
+StatsLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 StatsLabel.TextSize = 12
 StatsLabel.Font = Enum.Font.SourceSansBold
 StatsLabel.TextXAlignment = Enum.TextXAlignment.Right
@@ -197,7 +193,6 @@ StatsLabel.BackgroundTransparency = 1
 StatsLabel.ZIndex = 3
 StatsLabel.Parent = Header
 
--- Nút Đóng
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Size = UDim2.new(0, 26, 0, 26)
 CloseBtn.Position = UDim2.new(1, -32, 0, 6)
@@ -211,7 +206,7 @@ CloseBtn.ZIndex = 3
 CloseBtn.Parent = Header
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 
--- 6. NÚT TRÒN MỞ/ĐÓNG MENU (TOGGLE BUTTON)
+-- TOGGLE BUTTON
 local ToggleBtn = Instance.new("ImageButton")
 ToggleBtn.Name = "ToggleButton"
 ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
@@ -227,7 +222,6 @@ Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
 local ButtonStroke = Instance.new("UIStroke", ToggleBtn)
 ButtonStroke.Color = CurrentTheme.Accent
 ButtonStroke.Thickness = 2.5
-ButtonStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 local isMenuOpen = true
 local function ToggleMenu()
@@ -248,13 +242,11 @@ ToggleBtn.MouseButton1Click:Connect(ToggleMenu)
 CloseBtn.MouseButton1Click:Connect(ToggleMenu)
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and input.KeyCode == Config.ToggleKey then
-        ToggleMenu()
-    end
+    if not gameProcessed and input.KeyCode == Config.ToggleKey then ToggleMenu() end
 end)
 
 ----------------------------------------------------------
--- SIDEBAR & TAB CONTAINER SYSTEM
+-- SIDEBAR & TAB SYSTEM
 ----------------------------------------------------------
 local Sidebar = Instance.new("Frame")
 Sidebar.Size = UDim2.new(0, 130, 1, -38)
@@ -290,9 +282,10 @@ local function CreateTab(name, icon, posIndex)
 
     Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 6)
 
-    local Page = Instance.new("Frame")
+    local Page = Instance.new("ScrollingFrame")
     Page.Size = UDim2.new(1, 0, 1, 0)
     Page.BackgroundTransparency = 1
+    Page.ScrollBarThickness = 3
     Page.Visible = (posIndex == 1)
     Page.ZIndex = 2
     Page.Parent = ContentContainer
@@ -308,25 +301,21 @@ local function CreateTab(name, icon, posIndex)
         TabBtn.BackgroundColor3 = CurrentTheme.Accent
     end)
 
-    if posIndex == 1 then
-        TabBtn.BackgroundColor3 = CurrentTheme.Accent
-    end
-
+    if posIndex == 1 then TabBtn.BackgroundColor3 = CurrentTheme.Accent end
     return Page
 end
 
--- TẠO CÁC TAB CÓ BIỂU TƯỢNG (ICONS)
 local VisualsPage = CreateTab("Visuals", "👁️", 1)
 local MovementPage = CreateTab("Movement", "⚡", 2)
 local FixLagPage = CreateTab("Fix Lag", "🚀", 3)
 local SettingsPage = CreateTab("Settings", "⚙️", 4)
 
 ----------------------------------------------------------
--- HELPER CREATORS (UI CREATION UTILS)
+-- UI UTILS
 ----------------------------------------------------------
 local function CreateToggle(parent, text, defaultState, callback)
     local Btn = Instance.new("TextButton")
-    Btn.Size = UDim2.new(1, 0, 0, 34)
+    Btn.Size = UDim2.new(1, -6, 0, 34)
     Btn.Text = "  " .. text
     Btn.TextColor3 = CurrentTheme.Text
     Btn.Font = Enum.Font.SourceSansBold
@@ -358,8 +347,71 @@ local function CreateToggle(parent, text, defaultState, callback)
     return Btn
 end
 
+local function CreateValueAdjuster(parent, title, minVal, maxVal, defaultVal, step, callback)
+    local Container = Instance.new("Frame")
+    Container.Size = UDim2.new(1, -6, 0, 36)
+    Container.BackgroundColor3 = CurrentTheme.Button
+    Container.BorderSizePixel = 0
+    Container.ZIndex = 3
+    Container.Parent = parent
+
+    Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 6)
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0.5, 0, 1, 0)
+    Label.Position = UDim2.new(0, 10, 0, 0)
+    Label.Text = title .. ": " .. tostring(defaultVal)
+    Label.TextColor3 = CurrentTheme.Text
+    Label.Font = Enum.Font.SourceSansBold
+    Label.TextSize = 13
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.BackgroundTransparency = 1
+    Label.ZIndex = 4
+    Label.Parent = Container
+
+    local current = defaultVal
+
+    local MinusBtn = Instance.new("TextButton")
+    MinusBtn.Size = UDim2.new(0, 28, 0, 24)
+    MinusBtn.Position = UDim2.new(1, -66, 0.5, -12)
+    MinusBtn.Text = "-"
+    MinusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    MinusBtn.Font = Enum.Font.SourceSansBold
+    MinusBtn.TextSize = 16
+    MinusBtn.BackgroundColor3 = Color3.fromRGB(50, 55, 65)
+    MinusBtn.BorderSizePixel = 0
+    MinusBtn.ZIndex = 4
+    MinusBtn.Parent = Container
+    Instance.new("UICorner", MinusBtn).CornerRadius = UDim.new(0, 4)
+
+    local PlusBtn = Instance.new("TextButton")
+    PlusBtn.Size = UDim2.new(0, 28, 0, 24)
+    PlusBtn.Position = UDim2.new(1, -34, 0.5, -12)
+    PlusBtn.Text = "+"
+    PlusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    PlusBtn.Font = Enum.Font.SourceSansBold
+    PlusBtn.TextSize = 16
+    PlusBtn.BackgroundColor3 = CurrentTheme.Accent
+    PlusBtn.BorderSizePixel = 0
+    PlusBtn.ZIndex = 4
+    PlusBtn.Parent = Container
+    Instance.new("UICorner", PlusBtn).CornerRadius = UDim.new(0, 4)
+
+    MinusBtn.MouseButton1Click:Connect(function()
+        current = math.max(minVal, current - step)
+        Label.Text = title .. ": " .. tostring(current)
+        callback(current)
+    end)
+
+    PlusBtn.MouseButton1Click:Connect(function()
+        current = math.min(maxVal, current + step)
+        Label.Text = title .. ": " .. tostring(current)
+        callback(current)
+    end)
+end
+
 ----------------------------------------------------------
--- TAB 1: VISUALS (ESP)
+-- TAB 1: VISUALS (NÂNG CẤP HOÀN TOÀN TÍNH NĂNG ESP)
 ----------------------------------------------------------
 local VList = Instance.new("UIListLayout", VisualsPage)
 VList.SortOrder = Enum.SortOrder.LayoutOrder
@@ -367,23 +419,17 @@ VList.Padding = UDim.new(0, 8)
 
 CreateToggle(VisualsPage, "ESP Highlight (Xuyên Tường)", Config.ESPEnabled, function(state)
     Config.ESPEnabled = state
-    Notify("Visuals", state and "Đã bật ESP Highlight" or "Đã tắt ESP Highlight")
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("ESPHighlight") then
-            p.Character.ESPHighlight.Enabled = Config.ESPEnabled
-        end
-    end
+    Notify("Visuals", state and "Đã BẬT ESP Highlight" or "Đã TẮT ESP Highlight")
 end)
 
-CreateToggle(VisualsPage, "ESP Name & Tên Khoảng Cách (Studs)", Config.ESPNamesEnabled, function(state)
+CreateToggle(VisualsPage, "ESP Name (Tên Người Chơi Trực Quan)", Config.ESPNamesEnabled, function(state)
     Config.ESPNamesEnabled = state
-    Notify("Visuals", state and "Đã bật ESP Tên & Khoảng cách" or "Đã tắt ESP Tên")
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-            local bbg = p.Character.Head:FindFirstChild("ESPNameTag")
-            if bbg then bbg.Enabled = Config.ESPNamesEnabled end
-        end
-    end
+    Notify("Visuals", state and "Đã BẬT Tên trên đầu" or "Đã TẮT Tên trên đầu")
+end)
+
+CreateToggle(VisualsPage, "ESP Health Bar (Thanh Máu Người Chơi)", Config.ESPHealthEnabled, function(state)
+    Config.ESPHealthEnabled = state
+    Notify("Visuals", state and "Đã BẬT Thanh Máu trên đầu" or "Đã TẮT Thanh Máu")
 end)
 
 ----------------------------------------------------------
@@ -399,6 +445,10 @@ CreateToggle(MovementPage, "Chạy Nhanh (Speed Hack)", Config.SpeedEnabled, fun
     if not Config.SpeedEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
         LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 16
     end
+end)
+
+CreateValueAdjuster(MovementPage, "Tốc Độ Chạy", 16, 250, Config.SpeedValue, 10, function(val)
+    Config.SpeedValue = val
 end)
 
 CreateToggle(MovementPage, "Chế độ Bay (Fly Mode)", Config.FlyEnabled, function(state)
@@ -421,24 +471,28 @@ CreateToggle(MovementPage, "Chế độ Bay (Fly Mode)", Config.FlyEnabled, func
     end
 end)
 
+CreateValueAdjuster(MovementPage, "Tốc Độ Bay", 20, 300, Config.FlySpeed, 15, function(val)
+    Config.FlySpeed = val
+end)
+
 CreateToggle(MovementPage, "Đi Trên Không (Air Walk)", Config.AirWalkEnabled, function(state)
     Config.AirWalkEnabled = state
     Notify("Movement", state and "Đã BẬT Air Walk" or "Đã TẮT Air Walk")
 end)
 
 ----------------------------------------------------------
--- TAB 3: FIX LAG & BOOST FPS
+-- TAB 3: FIX LAG
 ----------------------------------------------------------
 local FList = Instance.new("UIListLayout", FixLagPage)
 FList.SortOrder = Enum.SortOrder.LayoutOrder
 FList.Padding = UDim.new(0, 8)
 
 local BoostBtn = Instance.new("TextButton")
-BoostBtn.Size = UDim2.new(1, 0, 0, 40)
-BoostBtn.Text = "🚀 BẬT TỐI ƯU FPS / FIX LAG CỰC ĐẠI"
+BoostBtn.Size = UDim2.new(1, -6, 0, 42)
+BoostBtn.Text = "🚀 BẬT FIX LAG + XÓA BẦU TRỜI (GRAY SKY)"
 BoostBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 BoostBtn.Font = Enum.Font.SourceSansBold
-BoostBtn.TextSize = 14
+BoostBtn.TextSize = 13
 BoostBtn.BackgroundColor3 = Color3.fromRGB(0, 160, 220)
 BoostBtn.BorderSizePixel = 0
 BoostBtn.ZIndex = 3
@@ -447,9 +501,16 @@ BoostBtn.Parent = FixLagPage
 Instance.new("UICorner", BoostBtn).CornerRadius = UDim.new(0, 6)
 
 BoostBtn.MouseButton1Click:Connect(function()
+    for _, v in ipairs(Lighting:GetChildren()) do
+        if v:IsA("Sky") or v:IsA("Atmosphere") or v:IsA("PostEffect") then
+            v:Destroy()
+        end
+    end
     Lighting.GlobalShadows = false
     Lighting.FogEnd = 9e9
-    
+    Lighting.OutdoorAmbient = Color3.fromRGB(120, 120, 120)
+    Lighting.Ambient = Color3.fromRGB(120, 120, 120)
+
     local Terrain = workspace:FindFirstChildOfClass('Terrain')
     if Terrain then
         Terrain.WaterWaveSize = 0
@@ -469,8 +530,8 @@ BoostBtn.MouseButton1Click:Connect(function()
         end
     end
     
-    Notify("Fix Lag", "Đã dọn dẹp Đồ Họa & Tăng FPS!")
-    BoostBtn.Text = "✔ ĐÃ TỐI ƯU HÓA THÀNH CÔNG!"
+    Notify("Fix Lag", "Đã xóa bầu trời & Tối ưu hóa FPS!")
+    BoostBtn.Text = "✔ ĐÃ XÓA BẦU TRỜI & TỐI ƯU FPS!"
     BoostBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 80)
 end)
 
@@ -483,7 +544,7 @@ SList.Padding = UDim.new(0, 6)
 
 local ThemeLabel = Instance.new("TextLabel")
 ThemeLabel.Size = UDim2.new(1, 0, 0, 18)
-ThemeLabel.Text = "Đổi Màu Theme:"
+ThemeLabel.Text = "Chọn Chủ Đề Màu Sắc (8 Themes):"
 ThemeLabel.TextColor3 = CurrentTheme.Text
 ThemeLabel.Font = Enum.Font.SourceSansBold
 ThemeLabel.TextSize = 13
@@ -493,20 +554,23 @@ ThemeLabel.ZIndex = 3
 ThemeLabel.Parent = SettingsPage
 
 local ThemeGrid = Instance.new("Frame")
-ThemeGrid.Size = UDim2.new(1, 0, 0, 30)
+ThemeGrid.Size = UDim2.new(1, -6, 0, 65)
 ThemeGrid.BackgroundTransparency = 1
 ThemeGrid.ZIndex = 3
 ThemeGrid.Parent = SettingsPage
 
-local themeNames = {"Dark", "Cyan", "Purple", "Red"}
-for i, name in ipairs(themeNames) do
+local themeList = {"Dark", "Cyan", "Purple", "Red", "Emerald", "Gold", "Pink", "Ocean"}
+for i, name in ipairs(themeList) do
+    local row = math.floor((i - 1) / 4)
+    local col = (i - 1) % 4
+
     local TBtn = Instance.new("TextButton")
-    TBtn.Size = UDim2.new(0, 85, 0, 26)
-    TBtn.Position = UDim2.new(0, (i - 1) * 92, 0, 0)
+    TBtn.Size = UDim2.new(0, 80, 0, 26)
+    TBtn.Position = UDim2.new(0, col * 86, 0, row * 32)
     TBtn.Text = name
     TBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     TBtn.Font = Enum.Font.SourceSansBold
-    TBtn.TextSize = 12
+    TBtn.TextSize = 11
     TBtn.BackgroundColor3 = Themes[name].Accent
     TBtn.BorderSizePixel = 0
     TBtn.ZIndex = 4
@@ -525,66 +589,130 @@ for i, name in ipairs(themeNames) do
     end)
 end
 
--- Ô ĐỔI ẢNH NỀN
-local ImgLabel = Instance.new("TextLabel")
-ImgLabel.Size = UDim2.new(1, 0, 0, 18)
-ImgLabel.Text = "Nhập ID Ảnh Nền (Roblox Decal ID):"
-ImgLabel.TextColor3 = CurrentTheme.Text
-ImgLabel.Font = Enum.Font.SourceSansBold
-ImgLabel.TextSize = 13
-ImgLabel.TextXAlignment = Enum.TextXAlignment.Left
-ImgLabel.BackgroundTransparency = 1
-ImgLabel.ZIndex = 3
-ImgLabel.Parent = SettingsPage
+----------------------------------------------------------
+-- HỆ THỐNG XỬ LÝ NAMETAG & VISUALS KHÔNG LỖI
+----------------------------------------------------------
+local function CreateNameTag(char, plr)
+    if not char then return end
+    local head = char:WaitForChild("Head", 5)
+    if not head then return end
 
-local ImageBox = Instance.new("TextBox")
-ImageBox.Size = UDim2.new(1, 0, 0, 30)
-ImageBox.PlaceholderText = "Nhập ID Ảnh tại đây (Ví dụ: 6031075931)..."
-ImageBox.Text = ""
-ImageBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-ImageBox.BackgroundColor3 = CurrentTheme.Button
-ImageBox.Font = Enum.Font.SourceSans
-ImageBox.TextSize = 13
-ImageBox.BorderSizePixel = 0
-ImageBox.ZIndex = 3
-ImageBox.Parent = SettingsPage
-Instance.new("UICorner", ImageBox).CornerRadius = UDim.new(0, 4)
+    -- Xóa Tag cũ nếu bị lặp
+    local oldTag = head:FindFirstChild("ESPNameTag")
+    if oldTag then oldTag:Destroy() end
 
-ImageBox.FocusLost:Connect(function(enter)
-    if enter then
-        local cleanID = string.match(ImageBox.Text, "%d+")
-        if cleanID then
-            MainBgImage.Image = "rbxassetid://" .. cleanID
-            ToggleBtn.Image = "rbxassetid://" .. cleanID
-            Notify("Background", "Đổi ảnh nền thành công!")
-            ImageBox.Text = ""
-        end
+    local bbg = Instance.new("BillboardGui")
+    bbg.Name = "ESPNameTag"
+    bbg.Adornee = head
+    bbg.Size = UDim2.new(0, 180, 0, 40)
+    bbg.StudsOffset = Vector3.new(0, 3, 0)
+    bbg.AlwaysOnTop = true
+    bbg.Enabled = false
+    bbg.Parent = head
+
+    -- Tên người chơi
+    local nameTxt = Instance.new("TextLabel")
+    nameTxt.Name = "NameLabel"
+    nameTxt.Size = UDim2.new(1, 0, 0, 18)
+    nameTxt.Position = UDim2.new(0, 0, 0, 0)
+    nameTxt.BackgroundTransparency = 1
+    nameTxt.Text = plr.DisplayName .. " (@" .. plr.Name .. ")"
+    nameTxt.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameTxt.TextStrokeTransparency = 0.2
+    nameTxt.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    nameTxt.Font = Enum.Font.SourceSansBold
+    nameTxt.TextSize = 13
+    nameTxt.Parent = bbg
+
+    -- Khoảng cách
+    local distTxt = Instance.new("TextLabel")
+    distTxt.Name = "DistLabel"
+    distTxt.Size = UDim2.new(1, 0, 0, 14)
+    distTxt.Position = UDim2.new(0, 0, 0, 16)
+    distTxt.BackgroundTransparency = 1
+    distTxt.Text = "0 Studs"
+    distTxt.TextColor3 = Color3.fromRGB(0, 230, 255)
+    distTxt.TextStrokeTransparency = 0.3
+    distTxt.Font = Enum.Font.SourceSans
+    distTxt.TextSize = 11
+    distTxt.Parent = bbg
+
+    -- Khung Thanh Máu
+    local hpBg = Instance.new("Frame")
+    hpBg.Name = "HPBackground"
+    hpBg.Size = UDim2.new(0, 100, 0, 5)
+    hpBg.Position = UDim2.new(0.5, -50, 0, 32)
+    hpBg.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    hpBg.BorderSizePixel = 0
+    hpBg.Visible = false
+    hpBg.Parent = bbg
+    Instance.new("UICorner", hpBg).CornerRadius = UDim.new(1, 0)
+
+    local hpBar = Instance.new("Frame")
+    hpBar.Name = "HPBar"
+    hpBar.Size = UDim2.new(1, 0, 1, 0)
+    hpBar.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+    hpBar.BorderSizePixel = 0
+    hpBar.Parent = hpBg
+    Instance.new("UICorner", hpBar).CornerRadius = UDim.new(1, 0)
+end
+
+local function SetupPlayerESP(plr)
+    if plr == LocalPlayer then return end
+
+    local function OnCharacter(char)
+        if not char then return end
+
+        -- Create Highlight (Chams)
+        local highlight = char:FindFirstChild("ESPHighlight") or Instance.new("Highlight")
+        highlight.Name = "ESPHighlight"
+        highlight.Adornee = char
+        highlight.FillColor = Config.ESPColor
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.FillTransparency = 0.4
+        highlight.Enabled = Config.ESPEnabled
+        highlight.Parent = char
+
+        CreateNameTag(char, plr)
     end
-end)
+
+    if plr.Character then OnCharacter(plr.Character) end
+    plr.CharacterAdded:Connect(OnCharacter)
+end
+
+for _, p in ipairs(Players:GetPlayers()) do SetupPlayerESP(p) end
+Players.PlayerAdded:Connect(SetupPlayerESP)
 
 ----------------------------------------------------------
--- LOGIC ESP, RUNSERVICE, RENDER LOOPS
+-- REALTIME RENDER LOOP
 ----------------------------------------------------------
-local FrameCount = 0
-local LastUpdate = tick()
+local lastTime = tick()
+local frameCount = 0
 
-RunService.RenderStepped:Connect(function()
-    -- Tính FPS & Ping
-    FrameCount = FrameCount + 1
-    if tick() - LastUpdate >= 1 then
-        local fps = math.floor(FrameCount / (tick() - LastUpdate))
-        local ping = math.floor(workspace:GetRealPhysicalResponseTime() * 1000)
-        StatsLabel.Text = "FPS: " .. fps .. " | Ping: " .. ping .. "ms"
-        FrameCount = 0
-        LastUpdate = tick()
+local function GetPing()
+    local pingVal = 0
+    pcall(function() pingVal = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
+    if pingVal == 0 then
+        pcall(function() pingVal = math.floor(workspace:GetRealPhysicalResponseTime() * 1000) end)
+    end
+    return pingVal
+end
+
+RunService.RenderStepped:Connect(function(dt)
+    -- Calculate FPS/Ping
+    frameCount = frameCount + 1
+    if tick() - lastTime >= 1 then
+        local currentFPS = math.floor(frameCount / (tick() - lastTime))
+        StatsLabel.Text = "FPS: " .. currentFPS .. " | Ping: " .. GetPing() .. "ms"
+        frameCount = 0
+        lastTime = tick()
     end
 
-    -- Update Speed
+    -- Update Speed & Fly
     if Config.SpeedEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
         LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = Config.SpeedValue
     end
 
-    -- Update Fly
     if Config.FlyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local cam = workspace.CurrentCamera
         local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
@@ -608,71 +736,54 @@ RunService.RenderStepped:Connect(function()
         local hrp = LocalPlayer.Character.HumanoidRootPart
         airPlatform.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y - 3.5, hrp.Position.Z)
     else
-        if airPlatform then
-            airPlatform:Destroy()
-            airPlatform = nil
-        end
+        if airPlatform then airPlatform:Destroy() airPlatform = nil end
     end
 
-    -- Update ESP Names & Distance
-    if Config.ESPNamesEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local myPos = LocalPlayer.Character.HumanoidRootPart.Position
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") and p.Character:FindFirstChild("HumanoidRootPart") then
-                local bbg = p.Character.Head:FindFirstChild("ESPNameTag")
-                if bbg and bbg:FindFirstChild("TextLabel") then
-                    local dist = math.floor((p.Character.HumanoidRootPart.Position - myPos).Magnitude)
-                    bbg.TextLabel.Text = p.Name .. " [" .. tostring(dist) .. " Studs]"
+    -- SAFELY UPDATE VISUALS (NAMETAGS & HEALTH BARS)
+    local myChar = LocalPlayer.Character
+    local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
+
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then
+            local char = p.Character
+            local head = char:FindFirstChild("Head")
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            local hl = char:FindFirstChild("ESPHighlight")
+
+            -- Update Highlight
+            if hl then hl.Enabled = Config.ESPEnabled end
+
+            -- Update Nametag
+            if head then
+                local bbg = head:FindFirstChild("ESPNameTag")
+                if bbg then
+                    bbg.Enabled = Config.ESPNamesEnabled
+
+                    if Config.ESPNamesEnabled then
+                        local distLabel = bbg:FindFirstChild("DistLabel")
+                        if distLabel and myHRP then
+                            local dist = math.floor((head.Position - myHRP.Position).Magnitude)
+                            distLabel.Text = tostring(dist) .. " Studs"
+                        end
+
+                        local hpBg = bbg:FindFirstChild("HPBackground")
+                        if hpBg then
+                            hpBg.Visible = Config.ESPHealthEnabled
+                            if Config.ESPHealthEnabled and hum then
+                                local hpBar = hpBg:FindFirstChild("HPBar")
+                                if hpBar then
+                                    local ratio = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+                                    hpBar.Size = UDim2.new(ratio, 0, 1, 0)
+                                    -- Gradient màu máu từ Xanh -> Vàng -> Đỏ
+                                    hpBar.BackgroundColor3 = Color3.fromRGB(255 * (1 - ratio), 255 * ratio, 0)
+                                end
+                            end
+                        end
+                    end
                 end
             end
         end
     end
 end)
 
--- SETUP ESP PLAYER
-local function SetupESP(player)
-    if player == LocalPlayer then return end
-
-    local function CharacterAdded(char)
-        if not char then return end
-        
-        local highlight = char:FindFirstChild("ESPHighlight") or Instance.new("Highlight")
-        highlight.Name = "ESPHighlight"
-        highlight.Adornee = char
-        highlight.FillColor = Config.ESPColor
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-        highlight.FillTransparency = 0.4
-        highlight.Enabled = Config.ESPEnabled
-        highlight.Parent = char
-
-        local head = char:WaitForChild("Head", 5)
-        if head then
-            local bbg = head:FindFirstChild("ESPNameTag") or Instance.new("BillboardGui")
-            bbg.Name = "ESPNameTag"
-            bbg.Adornee = head
-            bbg.Size = UDim2.new(0, 150, 0, 30)
-            bbg.StudsOffset = Vector3.new(0, 2.5, 0)
-            bbg.AlwaysOnTop = true
-            bbg.Enabled = Config.ESPNamesEnabled
-            bbg.Parent = head
-
-            local txt = bbg:FindFirstChild("TextLabel") or Instance.new("TextLabel")
-            txt.Name = "TextLabel"
-            txt.Size = UDim2.new(1, 0, 1, 0)
-            txt.BackgroundTransparency = 1
-            txt.TextColor3 = Color3.fromRGB(255, 255, 255)
-            txt.TextStrokeTransparency = 0
-            txt.Font = Enum.Font.SourceSansBold
-            txt.TextSize = 13
-            txt.Parent = bbg
-        end
-    end
-
-    if player.Character then CharacterAdded(player.Character) end
-    player.CharacterAdded:Connect(CharacterAdded)
-end
-
-for _, p in ipairs(Players:GetPlayers()) do SetupESP(p) end
-Players.PlayerAdded:Connect(SetupESP)
-
-Notify("Kianbest Hub", "Đã tải thành công v2.0 Premium!")
+Notify("Kianbest Hub", "Đã cập nhật Visuals v3.0 Ultra!")
