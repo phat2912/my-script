@@ -1,6 +1,7 @@
 -- ==========================================================
--- SCRIPT MENU SYSTEM V7.5 VIP (Kianbest Hub)
--- Features: Cute Anime BG + Super High M1 Damage (One-Shot) + Fixed Noclip + Anti-VFX
+-- SCRIPT MENU SYSTEM V8.0 ULTIMATE VIP (Kianbest Hub)
+-- Fix: Perfect Circle Button, Real Anime Girl BG, Custom Image ID, Theme Switcher,
+-- Hitbox Expander + Super M1 Damage, Full Fix Lag & Settings Suite.
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -15,12 +16,11 @@ local TeleportService = game:GetService("TeleportService")
 local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 
--- 1. Cấu hình & Trạng thái (Config)
+-- 1. CẤU HÌNH HỆ THỐNG (CONFIG)
 local Config = {
     ESPEnabled = false,
     ESPNamesEnabled = false,
     ESPHealthEnabled = false,
-    ESPColor = Color3.fromRGB(255, 130, 180),
     
     NoclipEnabled = false,
     SpeedEnabled = false,
@@ -31,51 +31,57 @@ local Config = {
     FlyUp = false,
     FlyDown = false,
     
-    AirWalkEnabled = false,
     RemoveVFX = false,
+    RemoveTextures = false,
+    HidePlayers = false,
     
-    -- Combat / Super Damage Config
+    -- Combat & Hitbox Super M1 Config
     SelectedTarget = nil,
     AutoTPTarget = false,
     AutoAttack = false,
-    SuperM1Damage = false,     -- Tính năng Dame Siêu To
-    DamageMultiplier = 30,      -- Số lần nhân đòn đánh (1-100x)
+    SuperM1Damage = false,
+    DamageMultiplier = 40,
+    HitboxExpander = false,
+    HitboxSize = 15,
     AutoSkills = false,
     KillAura = false,
-    KillAuraRange = 15,
+    KillAuraRange = 20,
     
     AntiAFK = false,
-    CrosshairEnabled = false,
-    FOVValue = 70,
+    AnimeImageID = "rbxassetid://7074718961", -- ID Anime Girl HD Cute
     BgTransparency = 0.35,
+    FrameTransparency = 0.15,
     ToggleKey = Enum.KeyCode.RightControl
 }
 
--- 2. Bộ chủ đề màu sắc Pink Cute / Obsidian
+-- 2. BỘ CHỦ ĐỀ MÀU SẮC (THEMES)
 local Themes = {
-    CutePink = { Bg = Color3.fromRGB(25, 18, 24), Sidebar = Color3.fromRGB(18, 12, 17), Accent = Color3.fromRGB(255, 120, 170), Button = Color3.fromRGB(36, 24, 32), Text = Color3.fromRGB(255, 240, 245) }
+    CutePink = { Name = "Cute Pink 🌸", Bg = Color3.fromRGB(25, 18, 24), Sidebar = Color3.fromRGB(18, 12, 17), Accent = Color3.fromRGB(255, 120, 170), Button = Color3.fromRGB(38, 24, 34), Text = Color3.fromRGB(255, 240, 245) },
+    CyberBlue = { Name = "Cyber Blue 💎", Bg = Color3.fromRGB(15, 22, 32), Sidebar = Color3.fromRGB(10, 15, 24), Accent = Color3.fromRGB(0, 195, 255), Button = Color3.fromRGB(20, 32, 48), Text = Color3.fromRGB(235, 245, 255) },
+    BloodRed = { Name = "Blood Red 🩸", Bg = Color3.fromRGB(28, 15, 15), Sidebar = Color3.fromRGB(18, 9, 9), Accent = Color3.fromRGB(255, 60, 60), Button = Color3.fromRGB(42, 20, 20), Text = Color3.fromRGB(255, 235, 235) },
+    DarkPurple = { Name = "Dark Purple 🔮", Bg = Color3.fromRGB(22, 15, 30), Sidebar = Color3.fromRGB(14, 9, 20), Accent = Color3.fromRGB(180, 100, 255), Button = Color3.fromRGB(34, 20, 48), Text = Color3.fromRGB(245, 235, 255) }
 }
 
 local CurrentTheme = Themes.CutePink
 
--- 3. Khởi tạo ScreenGui
+-- 3. KHỞI TẠO SCREENGUI
 local ParentGui = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
-if ParentGui:FindFirstChild("KianbestMenuV7") then
-    ParentGui.KianbestMenuV7:Destroy()
+if ParentGui:FindFirstChild("KianbestMenuV8") then
+    ParentGui.KianbestMenuV8:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "KianbestMenuV7"
+ScreenGui.Name = "KianbestMenuV8"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = ParentGui
 
--- 4. HỆ THỐNG THÔNG BÁO (TOAST NOTIFICATION)
+-- 4. NOTIFICATION TOAST
 local NotificationFrame = Instance.new("Frame")
 NotificationFrame.Name = "NotificationFrame"
-NotificationFrame.Size = UDim2.new(0, 220, 0, 200)
-NotificationFrame.Position = UDim2.new(1, -230, 1, -210)
+NotificationFrame.Size = UDim2.new(0, 230, 0, 200)
+NotificationFrame.Position = UDim2.new(1, -240, 1, -210)
 NotificationFrame.BackgroundTransparency = 1
-NotificationFrame.ZIndex = 20
+NotificationFrame.ZIndex = 50
 NotificationFrame.Parent = ScreenGui
 
 local NotificationList = Instance.new("UIListLayout", NotificationFrame)
@@ -88,28 +94,26 @@ local function Notify(title, text, duration)
     local Toast = Instance.new("Frame")
     Toast.Size = UDim2.new(1, 0, 0, 46)
     Toast.BackgroundColor3 = CurrentTheme.Sidebar
-    Toast.BackgroundTransparency = 1
+    Toast.BackgroundTransparency = 0.2
     Toast.BorderSizePixel = 0
-    Toast.ZIndex = 20
+    Toast.ZIndex = 51
     Toast.Parent = NotificationFrame
 
-    Instance.new("UICorner", Toast).CornerRadius = UDim.new(0, 6)
+    Instance.new("UICorner", Toast).CornerRadius = UDim.new(0, 8)
     local Stroke = Instance.new("UIStroke", Toast)
     Stroke.Color = CurrentTheme.Accent
-    Stroke.Thickness = 1.2
-    Stroke.Transparency = 1
+    Stroke.Thickness = 1.5
 
     local TTitle = Instance.new("TextLabel")
     TTitle.Size = UDim2.new(1, -10, 0, 18)
     TTitle.Position = UDim2.new(0, 8, 0, 4)
     TTitle.Text = title
     TTitle.TextColor3 = CurrentTheme.Accent
-    TTitle.TextTransparency = 1
     TTitle.Font = Enum.Font.SourceSansBold
     TTitle.TextSize = 13
     TTitle.TextXAlignment = Enum.TextXAlignment.Left
     TTitle.BackgroundTransparency = 1
-    TTitle.ZIndex = 21
+    TTitle.ZIndex = 52
     TTitle.Parent = Toast
 
     local TText = Instance.new("TextLabel")
@@ -117,19 +121,12 @@ local function Notify(title, text, duration)
     TText.Position = UDim2.new(0, 8, 0, 22)
     TText.Text = text
     TText.TextColor3 = CurrentTheme.Text
-    TText.TextTransparency = 1
     TText.Font = Enum.Font.SourceSans
     TText.TextSize = 12
     TText.TextXAlignment = Enum.TextXAlignment.Left
     TText.BackgroundTransparency = 1
-    TText.ZIndex = 21
+    TText.ZIndex = 52
     TText.Parent = Toast
-
-    local fadeInInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    TweenService:Create(Toast, fadeInInfo, {BackgroundTransparency = 0.15}):Play()
-    TweenService:Create(Stroke, fadeInInfo, {Transparency = 0}):Play()
-    TweenService:Create(TTitle, fadeInInfo, {TextTransparency = 0}):Play()
-    TweenService:Create(TText, fadeInInfo, {TextTransparency = 0}):Play()
 
     task.delay(duration, function()
         local fadeOutInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
@@ -142,12 +139,13 @@ local function Notify(title, text, duration)
     end)
 end
 
--- 5. MAIN FRAME MENU
+-- 5. MAIN FRAME
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 540, 0, 350)
 MainFrame.Position = UDim2.new(0.5, -270, 0.5, -175)
 MainFrame.BackgroundColor3 = CurrentTheme.Bg
+MainFrame.BackgroundTransparency = Config.FrameTransparency
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
@@ -158,16 +156,16 @@ Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
 local MainStroke = Instance.new("UIStroke", MainFrame)
 MainStroke.Color = CurrentTheme.Accent
-MainStroke.Thickness = 1.8
+MainStroke.Thickness = 2
 
--- HÌNH NỀN ANIME GÁI CUTE DỄ THƯƠNG
+-- HÌNH NỀN ANIME NỮ chuẩn HD
 local MainBgImage = Instance.new("ImageLabel")
-MainBgImage.Name = "MainBgAnimeCute"
+MainBgImage.Name = "MainBgAnimeGirl"
 MainBgImage.Size = UDim2.new(1, 0, 1, 0)
 MainBgImage.BackgroundTransparency = 1
 MainBgImage.ImageTransparency = Config.BgTransparency
 MainBgImage.ScaleType = Enum.ScaleType.Crop
-MainBgImage.Image = "rbxassetid://11414436906" -- ID Ảnh Anime Cute Girl Aesthetic
+MainBgImage.Image = Config.AnimeImageID
 MainBgImage.ZIndex = 1
 MainBgImage.Parent = MainFrame
 
@@ -175,7 +173,7 @@ MainBgImage.Parent = MainFrame
 local Header = Instance.new("Frame")
 Header.Size = UDim2.new(1, 0, 0, 38)
 Header.BackgroundColor3 = CurrentTheme.Sidebar
-Header.BackgroundTransparency = 0.15
+Header.BackgroundTransparency = 0.2
 Header.BorderSizePixel = 0
 Header.ZIndex = 3
 Header.Parent = MainFrame
@@ -185,7 +183,7 @@ Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 10)
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(0, 260, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
-Title.Text = "🌸 Kianbest Hub v7.5 Cute VIP"
+Title.Text = "🌸 Kianbest Hub v8.0 ULTIMATE"
 Title.TextColor3 = CurrentTheme.Accent
 Title.TextSize = 15
 Title.Font = Enum.Font.FredokaOne
@@ -198,7 +196,7 @@ local StatsLabel = Instance.new("TextLabel")
 StatsLabel.Size = UDim2.new(0, 200, 1, 0)
 StatsLabel.Position = UDim2.new(1, -240, 0, 0)
 StatsLabel.Text = "FPS: -- | Ping: --ms"
-StatsLabel.TextColor3 = Color3.fromRGB(230, 200, 220)
+StatsLabel.TextColor3 = Color3.fromRGB(230, 210, 230)
 StatsLabel.TextSize = 12
 StatsLabel.Font = Enum.Font.SourceSansBold
 StatsLabel.TextXAlignment = Enum.TextXAlignment.Right
@@ -213,28 +211,33 @@ CloseBtn.Text = "✕"
 CloseBtn.TextColor3 = Color3.fromRGB(255, 100, 120)
 CloseBtn.TextSize = 13
 CloseBtn.Font = Enum.Font.SourceSansBold
-CloseBtn.BackgroundColor3 = Color3.fromRGB(40, 25, 35)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(40, 22, 32)
 CloseBtn.BorderSizePixel = 0
 CloseBtn.ZIndex = 4
 CloseBtn.Parent = Header
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 
--- NÚT TRÒN TOGGLE CHỮ "KIAN"
+-- NÚT TRÒN TOGGLE CHỮ "KIAN" (ĐÃ FIX HOÀN HẢO KHÔNG BỊ MÉO)
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Name = "KianToggleButton"
 ToggleBtn.Size = UDim2.new(0, 52, 0, 52)
 ToggleBtn.Position = UDim2.new(0, 15, 0.4, 0)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(30, 20, 28)
+ToggleBtn.BackgroundColor3 = CurrentTheme.Sidebar
 ToggleBtn.Text = "KIAN"
 ToggleBtn.TextColor3 = CurrentTheme.Accent
 ToggleBtn.Font = Enum.Font.FredokaOne
-ToggleBtn.TextSize = 15
+ToggleBtn.TextSize = 14
 ToggleBtn.Active = true
 ToggleBtn.Draggable = true
 ToggleBtn.ZIndex = 100
 ToggleBtn.Parent = ScreenGui
 
 Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
+
+-- Cố định tỉ lệ 1:1 giữ nút luôn tròn xoe
+local ButtonAspect = Instance.new("UIAspectRatioConstraint", ToggleBtn)
+ButtonAspect.AspectRatio = 1
+ButtonAspect.AspectType = Enum.AspectType.FitWithinMaxSize
 
 local ButtonStroke = Instance.new("UIStroke", ToggleBtn)
 ButtonStroke.Color = CurrentTheme.Accent
@@ -263,55 +266,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 ----------------------------------------------------------
--- NÚT ĐIỀU KHIỂN BAY CHO MOBILE
-----------------------------------------------------------
-local FlyControlsFrame = Instance.new("Frame")
-FlyControlsFrame.Name = "FlyControls"
-FlyControlsFrame.Size = UDim2.new(0, 50, 0, 110)
-FlyControlsFrame.Position = UDim2.new(1, -65, 0.5, -55)
-FlyControlsFrame.BackgroundTransparency = 1
-FlyControlsFrame.Visible = false
-FlyControlsFrame.ZIndex = 90
-FlyControlsFrame.Parent = ScreenGui
-
-local FlyUpBtn = Instance.new("TextButton")
-FlyUpBtn.Size = UDim2.new(0, 48, 0, 48)
-FlyUpBtn.Position = UDim2.new(0, 0, 0, 0)
-FlyUpBtn.Text = "▲"
-FlyUpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-FlyUpBtn.Font = Enum.Font.SourceSansBold
-FlyUpBtn.TextSize = 20
-FlyUpBtn.BackgroundColor3 = Color3.fromRGB(35, 25, 35)
-FlyUpBtn.BorderSizePixel = 0
-FlyUpBtn.ZIndex = 91
-FlyUpBtn.Parent = FlyControlsFrame
-Instance.new("UICorner", FlyUpBtn).CornerRadius = UDim.new(0, 10)
-local UpStroke = Instance.new("UIStroke", FlyUpBtn)
-UpStroke.Color = CurrentTheme.Accent
-UpStroke.Thickness = 1.5
-
-local FlyDownBtn = Instance.new("TextButton")
-FlyDownBtn.Size = UDim2.new(0, 48, 0, 48)
-FlyDownBtn.Position = UDim2.new(0, 0, 0, 58)
-FlyDownBtn.Text = "▼"
-FlyDownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-FlyDownBtn.Font = Enum.Font.SourceSansBold
-FlyDownBtn.TextSize = 20
-FlyDownBtn.BackgroundColor3 = Color3.fromRGB(35, 25, 35)
-FlyDownBtn.BorderSizePixel = 0
-FlyDownBtn.ZIndex = 91
-FlyDownBtn.Parent = FlyControlsFrame
-Instance.new("UICorner", FlyDownBtn).CornerRadius = UDim.new(0, 10)
-local DownStroke = Instance.new("UIStroke", FlyDownBtn)
-DownStroke.Color = CurrentTheme.Accent
-DownStroke.Thickness = 1.5
-
-FlyUpBtn.MouseButton1Down:Connect(function() Config.FlyUp = true end)
-FlyUpBtn.MouseButton1Up:Connect(function() Config.FlyUp = false end)
-FlyDownBtn.MouseButton1Down:Connect(function() Config.FlyDown = true end)
-FlyDownBtn.MouseButton1Up:Connect(function() Config.FlyDown = false end)
-
-----------------------------------------------------------
 -- SIDEBAR & TAB SYSTEM
 ----------------------------------------------------------
 local Sidebar = Instance.new("Frame")
@@ -331,6 +285,7 @@ ContentContainer.ZIndex = 3
 ContentContainer.Parent = MainFrame
 
 local Pages = {}
+local TabButtons = {}
 
 local function CreateTab(name, icon, posIndex)
     local TabBtn = Instance.new("TextButton")
@@ -357,6 +312,7 @@ local function CreateTab(name, icon, posIndex)
     Page.Parent = ContentContainer
 
     Pages[name] = {Button = TabBtn, Page = Page}
+    table.insert(TabButtons, TabBtn)
 
     TabBtn.MouseButton1Click:Connect(function()
         for _, tab in pairs(Pages) do
@@ -378,8 +334,10 @@ local FixLagPage = CreateTab("Fix Lag", "🚀", 4)
 local SettingsPage = CreateTab("Settings", "⚙️", 5)
 
 ----------------------------------------------------------
--- UI UTILS
+-- UI CREATORS
 ----------------------------------------------------------
+local RegisteredToggles = {}
+
 local function CreateToggle(parent, text, defaultState, callback)
     local Btn = Instance.new("TextButton")
     Btn.Size = UDim2.new(1, -6, 0, 34)
@@ -398,7 +356,7 @@ local function CreateToggle(parent, text, defaultState, callback)
     local StatusInd = Instance.new("Frame")
     StatusInd.Size = UDim2.new(0, 28, 0, 15)
     StatusInd.Position = UDim2.new(1, -36, 0.5, -7.5)
-    StatusInd.BackgroundColor3 = defaultState and Color3.fromRGB(255, 100, 160) or Color3.fromRGB(60, 65, 75)
+    StatusInd.BackgroundColor3 = defaultState and CurrentTheme.Accent or Color3.fromRGB(60, 65, 75)
     StatusInd.BorderSizePixel = 0
     StatusInd.ZIndex = 5
     StatusInd.Parent = Btn
@@ -408,9 +366,11 @@ local function CreateToggle(parent, text, defaultState, callback)
     local state = defaultState
     Btn.MouseButton1Click:Connect(function()
         state = not state
-        StatusInd.BackgroundColor3 = state and Color3.fromRGB(255, 100, 160) or Color3.fromRGB(60, 65, 75)
+        StatusInd.BackgroundColor3 = state and CurrentTheme.Accent or Color3.fromRGB(60, 65, 75)
         callback(state)
     end)
+
+    table.insert(RegisteredToggles, {Btn = Btn, Indicator = StatusInd, GetState = function() return state end})
     return Btn
 end
 
@@ -494,8 +454,50 @@ local function CreateButton(parent, text, bgColor, callback)
     return Btn
 end
 
+local function CreateInputBox(parent, title, placeholder, callback)
+    local Container = Instance.new("Frame")
+    Container.Size = UDim2.new(1, -6, 0, 40)
+    Container.BackgroundColor3 = CurrentTheme.Button
+    Container.BorderSizePixel = 0
+    Container.ZIndex = 4
+    Container.Parent = parent
+    Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 6)
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0.4, 0, 1, 0)
+    Label.Position = UDim2.new(0, 10, 0, 0)
+    Label.Text = title
+    Label.TextColor3 = CurrentTheme.Text
+    Label.Font = Enum.Font.SourceSansBold
+    Label.TextSize = 12
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.BackgroundTransparency = 1
+    Label.ZIndex = 5
+    Label.Parent = Container
+
+    local Box = Instance.new("TextBox")
+    Box.Size = UDim2.new(0.55, -10, 0, 26)
+    Box.Position = UDim2.new(0.45, 0, 0.5, -13)
+    Box.PlaceholderText = placeholder
+    Box.Text = ""
+    Box.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Box.BackgroundColor3 = Color3.fromRGB(25, 20, 28)
+    Box.BorderSizePixel = 0
+    Box.Font = Enum.Font.SourceSans
+    Box.TextSize = 12
+    Box.ZIndex = 5
+    Box.Parent = Container
+    Instance.new("UICorner", Box).CornerRadius = UDim.new(0, 4)
+
+    Box.FocusLost:Connect(function(enterPressed)
+        if enterPressed and Box.Text ~= "" then
+            callback(Box.Text)
+        end
+    end)
+end
+
 ----------------------------------------------------------
--- TAB 1: COMBAT VIP & SÁT THƯƠNG M1 SIÊU TO (ONE-SHOT)
+-- TAB 1: COMBAT VIP & SÁT THƯƠNG M1 SIÊU TO (ONE-SHOT + HITBOX)
 ----------------------------------------------------------
 local CList = Instance.new("UIListLayout", CombatPage)
 CList.SortOrder = Enum.SortOrder.LayoutOrder
@@ -511,7 +513,7 @@ TargetLabel.BackgroundTransparency = 1
 TargetLabel.ZIndex = 4
 TargetLabel.Parent = CombatPage
 
-local SelectTargetBtn = CreateButton(CombatPage, "🎯 Chọn Mục Tiêu (Bấm đổi Player)", Color3.fromRGB(50, 30, 45), function()
+CreateButton(CombatPage, "🎯 Chọn Mục Tiêu (Bấm đổi Player)", Color3.fromRGB(45, 25, 40), function()
     local plrs = Players:GetPlayers()
     local currentIndex = 1
     for i, p in ipairs(plrs) do
@@ -530,34 +532,38 @@ local SelectTargetBtn = CreateButton(CombatPage, "🎯 Chọn Mục Tiêu (Bấm
     end
 end)
 
--- TÍNH NĂNG MỚI: SÁT THƯƠNG M1 SIÊU TO / ONE-SHOT
-CreateToggle(CombatPage, "💥 Sát Thương M1 Siêu To (Multi-Hit/One-Shot)", Config.SuperM1Damage, function(state)
+CreateToggle(CombatPage, "💥 Sát Thương M1 Siêu To (Multi-Hit One-Shot)", Config.SuperM1Damage, function(state)
     Config.SuperM1Damage = state
-    Notify("Combat VIP", state and "Đã BẬT Dame M1 Siêu To (One-Shot Mode)!" or "Đã TẮT Dame Siêu To")
+    Notify("Combat VIP", state and "Đã BẬT Sát Thương M1 Siêu To!" or "Đã TẮT Sát Thương Siêu To")
 end)
 
-CreateValueAdjuster(CombatPage, "Bội Số Dame M1 (Gấp bao nhiêu lần)", 5, 100, Config.DamageMultiplier, 5, function(val)
+CreateValueAdjuster(CombatPage, "Số Lần Nhân Dame M1 (Multi-Hit)", 10, 100, Config.DamageMultiplier, 10, function(val)
     Config.DamageMultiplier = val
+end)
+
+CreateToggle(CombatPage, "📦 Mở Rộng Hitbox Kẻ Địch (Phóng To Body)", Config.HitboxExpander, function(state)
+    Config.HitboxExpander = state
+    Notify("Combat VIP", state and "Đã BẬT Phóng To Hitbox Kẻ Địch!" or "Đã TẮT Hitbox Expander")
+end)
+
+CreateValueAdjuster(CombatPage, "Kích Thước Hitbox", 5, 30, Config.HitboxSize, 5, function(val)
+    Config.HitboxSize = val
 end)
 
 CreateToggle(CombatPage, "⚡ Auto TP Áp Sát Lưng Đối Thủ", Config.AutoTPTarget, function(state)
     Config.AutoTPTarget = state
-    Notify("Combat VIP", state and "Đã BẬT Auto TP áp sát!" or "Đã TẮT Auto TP")
 end)
 
 CreateToggle(CombatPage, "🥊 Auto Đấm Thường M1", Config.AutoAttack, function(state)
     Config.AutoAttack = state
-    Notify("Combat VIP", state and "Đã BẬT Auto Đánh!" or "Đã TẮT Auto Đánh")
 end)
 
 CreateToggle(CombatPage, "🔥 Auto Skill Combo (Z, X, C, V)", Config.AutoSkills, function(state)
     Config.AutoSkills = state
-    Notify("Combat VIP", state and "Đã BẬT Auto Skill!" or "Đã TẮT Auto Skill")
 end)
 
 CreateToggle(CombatPage, "💥 Kill Aura (Xả Dame Xung Quanh)", Config.KillAura, function(state)
     Config.KillAura = state
-    Notify("Combat VIP", state and "Đã BẬT Kill Aura!" or "Đã TẮT Kill Aura")
 end)
 
 ----------------------------------------------------------
@@ -567,20 +573,12 @@ local VList = Instance.new("UIListLayout", VisualsPage)
 VList.SortOrder = Enum.SortOrder.LayoutOrder
 VList.Padding = UDim.new(0, 8)
 
-CreateToggle(VisualsPage, "ESP Highlight (Xuyên Tường)", Config.ESPEnabled, function(state)
-    Config.ESPEnabled = state
-end)
-
-CreateToggle(VisualsPage, "ESP Name (Tên Tên Đầu)", Config.ESPNamesEnabled, function(state)
-    Config.ESPNamesEnabled = state
-end)
-
-CreateToggle(VisualsPage, "ESP Health Bar (Thanh Máu)", Config.ESPHealthEnabled, function(state)
-    Config.ESPHealthEnabled = state
-end)
+CreateToggle(VisualsPage, "ESP Highlight (Xuyên Tường)", Config.ESPEnabled, function(state) Config.ESPEnabled = state end)
+CreateToggle(VisualsPage, "ESP Name (Hiện Tên)", Config.ESPNamesEnabled, function(state) Config.ESPNamesEnabled = state end)
+CreateToggle(VisualsPage, "ESP Health Bar (Thanh Máu)", Config.ESPHealthEnabled, function(state) Config.ESPHealthEnabled = state end)
 
 ----------------------------------------------------------
--- TAB 3: MOVEMENT (FIXED NOCLIP)
+-- TAB 3: MOVEMENT
 ----------------------------------------------------------
 local MList = Instance.new("UIListLayout", MovementPage)
 MList.SortOrder = Enum.SortOrder.LayoutOrder
@@ -590,7 +588,6 @@ local bodyVel, bodyGyro
 
 CreateToggle(MovementPage, "Bay 3D Chuẩn (Fly WASD/Joystick)", Config.FlyEnabled, function(state)
     Config.FlyEnabled = state
-    FlyControlsFrame.Visible = state
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
@@ -609,17 +606,10 @@ CreateToggle(MovementPage, "Bay 3D Chuẩn (Fly WASD/Joystick)", Config.FlyEnabl
     end
 end)
 
-CreateValueAdjuster(MovementPage, "Tốc Độ Bay", 20, 300, Config.FlySpeed, 10, function(val)
-    Config.FlySpeed = val
-end)
-
-CreateToggle(MovementPage, "Đi Trên Không 2.0 (Air Walk)", Config.AirWalkEnabled, function(state)
-    Config.AirWalkEnabled = state
-end)
+CreateValueAdjuster(MovementPage, "Tốc Độ Bay", 20, 300, Config.FlySpeed, 10, function(val) Config.FlySpeed = val end)
 
 CreateToggle(MovementPage, "Đi Xuyên Tường (Noclip Fix Rơi Map)", Config.NoclipEnabled, function(state)
     Config.NoclipEnabled = state
-    Notify("Movement", state and "Đã BẬT Noclip (Đã fix không bị rơi map)!" or "Đã TẮT Noclip!")
 end)
 
 CreateToggle(MovementPage, "Chạy Nhanh (Speed Hack)", Config.SpeedEnabled, function(state)
@@ -629,18 +619,16 @@ CreateToggle(MovementPage, "Chạy Nhanh (Speed Hack)", Config.SpeedEnabled, fun
     end
 end)
 
-CreateValueAdjuster(MovementPage, "Tốc Độ Chạy", 16, 250, Config.SpeedValue, 10, function(val)
-    Config.SpeedValue = val
-end)
+CreateValueAdjuster(MovementPage, "Tốc Độ Chạy", 16, 250, Config.SpeedValue, 10, function(val) Config.SpeedValue = val end)
 
 ----------------------------------------------------------
--- TAB 4: FIX LAG & ANTI-VFX SKILL
+-- TAB 4: FIX LAG HOÀN CHỈNH
 ----------------------------------------------------------
 local FList = Instance.new("UIListLayout", FixLagPage)
 FList.SortOrder = Enum.SortOrder.LayoutOrder
 FList.Padding = UDim.new(0, 8)
 
-CreateButton(FixLagPage, "🚀 Super FPS Boost (1-Click)", Color3.fromRGB(45, 30, 50), function()
+CreateButton(FixLagPage, "🚀 Super FPS Boost (Tối Ưu 1-Click)", Color3.fromRGB(35, 45, 35), function()
     for _, v in ipairs(Lighting:GetChildren()) do
         if v:IsA("Sky") or v:IsA("Atmosphere") or v:IsA("PostEffect") then v:Destroy() end
     end
@@ -657,35 +645,83 @@ CreateButton(FixLagPage, "🚀 Super FPS Boost (1-Click)", Color3.fromRGB(45, 30
             v.Enabled = false
         end
     end
-    Notify("Fix Lag", "Đã tối ưu mượt map thành công!")
+    Notify("Fix Lag", "Đã siêu tối ưu mượt map!")
 end)
 
-CreateToggle(FixLagPage, "🚫 Xóa Effect Chiêu Thức (Anti-VFX Skill)", Config.RemoveVFX, function(state)
+CreateToggle(FixLagPage, "🚫 Xóa Effect Chiêu Thức (Anti-VFX)", Config.RemoveVFX, function(state)
     Config.RemoveVFX = state
     Notify("Fix Lag", state and "Đã XÓA Effect Chiêu Thức!" or "Đã mở lại Effect")
 end)
 
-CreateToggle(FixLagPage, "Xóa Textures Map (Smooth Plastic)", false, function(state)
+CreateToggle(FixLagPage, "🎨 Xóa Textures & Decals Map", Config.RemoveTextures, function(state)
+    Config.RemoveTextures = state
     for _, v in ipairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") then
-            v.Material = state and Enum.Material.SmoothPlastic or Enum.Material.Plastic
+        if v:IsA("Decal") or v:IsA("Texture") then
+            v.Transparency = state and 1 or 0
         end
     end
 end)
 
+CreateToggle(FixLagPage, "👤 Ẩn Người Chơi Khác (Hide Players)", Config.HidePlayers, function(state)
+    Config.HidePlayers = state
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then
+            for _, part in ipairs(p.Character:GetDescendants()) do
+                if part:IsA("BasePart") or part:IsA("Decal") then
+                    part.Transparency = state and 1 or 0
+                end
+            end
+        end
+    end
+    Notify("Fix Lag", state and "Đã ẨN tất cả người chơi khác!" or "Đã HIỆN lại người chơi")
+end)
+
 ----------------------------------------------------------
--- TAB 5: SETTINGS
+-- TAB 5: SETTINGS & ĐỔI MÀU BACKGROUND
 ----------------------------------------------------------
 local SList = Instance.new("UIListLayout", SettingsPage)
 SList.SortOrder = Enum.SortOrder.LayoutOrder
 SList.Padding = UDim.new(0, 8)
 
-CreateToggle(SettingsPage, "Chống Treo Máy (Anti-AFK 24/7)", Config.AntiAFK, function(state)
-    Config.AntiAFK = state
+-- ĐỔI MÀU CHỦ ĐỀ MENU
+CreateButton(SettingsPage, "🎨 Đổi Màu Chủ Đề (Pink/Blue/Red/Purple)", Color3.fromRGB(45, 30, 45), function()
+    if CurrentTheme == Themes.CutePink then CurrentTheme = Themes.CyberBlue
+    elseif CurrentTheme == Themes.CyberBlue then CurrentTheme = Themes.BloodRed
+    elseif CurrentTheme == Themes.BloodRed then CurrentTheme = Themes.DarkPurple
+    else CurrentTheme = Themes.CutePink end
+
+    MainFrame.BackgroundColor3 = CurrentTheme.Bg
+    Header.BackgroundColor3 = CurrentTheme.Sidebar
+    Sidebar.BackgroundColor3 = CurrentTheme.Sidebar
+    Title.TextColor3 = CurrentTheme.Accent
+    MainStroke.Color = CurrentTheme.Accent
+    ToggleBtn.BackgroundColor3 = CurrentTheme.Sidebar
+    ToggleBtn.TextColor3 = CurrentTheme.Accent
+    ButtonStroke.Color = CurrentTheme.Accent
+    TargetLabel.TextColor3 = CurrentTheme.Accent
+
+    for _, btn in ipairs(TabButtons) do btn.BackgroundColor3 = CurrentTheme.Button end
+    Notify("Settings", "Đã chuyển theme: " .. CurrentTheme.Name)
 end)
 
-CreateValueAdjuster(SettingsPage, "Độ Mờ Ảnh Nền Anime Cute", 0, 10, 3, 1, function(val)
+-- NHẬP ID CẢNH ANIME TUỲ CHỈNH
+CreateInputBox(SettingsPage, "🖼️ Dán ID Ảnh Anime Custom:", "Ví dụ: 7074718961", function(text)
+    local formatted = text:find("rbxassetid://") and text or "rbxassetid://" .. text
+    Config.AnimeImageID = formatted
+    MainBgImage.Image = formatted
+    Notify("Settings", "Đã đổi ảnh nền Anime mới!")
+end)
+
+CreateValueAdjuster(SettingsPage, "Độ Mờ Ảnh Nền Anime", 0, 10, 3, 1, function(val)
     MainBgImage.ImageTransparency = val / 10
+end)
+
+CreateValueAdjuster(SettingsPage, "Độ Mờ Khung Menu Main", 0, 10, 2, 1, function(val)
+    MainFrame.BackgroundTransparency = val / 10
+end)
+
+CreateToggle(SettingsPage, "Chống Treo Máy (Anti-AFK 24/7)", Config.AntiAFK, function(state)
+    Config.AntiAFK = state
 end)
 
 CreateButton(SettingsPage, "🔄 Vào Lại Server (Rejoin)", Color3.fromRGB(50, 30, 45), function()
@@ -693,28 +729,16 @@ CreateButton(SettingsPage, "🔄 Vào Lại Server (Rejoin)", Color3.fromRGB(50,
 end)
 
 ----------------------------------------------------------
--- ANTI VFX LISTENER (XÓA CHIÊU THỨC NGƯỜI CHƠI)
+-- CHỨC NĂNG SÁT THƯƠNG M1 SIÊU TO + FAST ATTACK
 ----------------------------------------------------------
-workspace.DescendantAdded:Connect(function(descendant)
-    if Config.RemoveVFX then
-        if descendant:IsA("ParticleEmitter") or descendant:IsA("Beam") or descendant:IsA("Trail") or descendant:IsA("Explosion") or descendant:IsA("Fire") or descendant:IsA("Smoke") then
-            task.wait()
-            descendant:Destroy()
-        end
-    end
-end)
-
-----------------------------------------------------------
--- FUNCTION THỰC THI SÁT THƯƠNG M1 SIÊU TO
-----------------------------------------------------------
-local function DoSuperDamageAttack()
+local function TriggerSuperDamageM1()
     local char = LocalPlayer.Character
     local cam = workspace.CurrentCamera
     local tool = char and char:FindFirstChildOfClass("Tool")
 
-    local repeatCount = Config.SuperM1Damage and Config.DamageMultiplier or 1
+    local count = Config.SuperM1Damage and Config.DamageMultiplier or 1
 
-    for i = 1, repeatCount do
+    for i = 1, count do
         VirtualUser:Button1Down(Vector2.new(0,0), cam.CFrame)
         VirtualUser:Button1Up(Vector2.new(0,0), cam.CFrame)
         if tool then
@@ -724,22 +748,19 @@ local function DoSuperDamageAttack()
 end
 
 ----------------------------------------------------------
--- RENDER LOOP & NOCLIP + COMBAT LOGIC
+-- RENDER LOOP (HITBOX, COMBAT, NOCLIP, FLY)
 ----------------------------------------------------------
 local lastTime = tick()
 local frameCount = 0
 local noclipPlatform = nil
-local airPlatform = nil
 local skillTimer = 0
 
 RunService.Stepped:Connect(function()
-    -- FIX NOCLIP RƠI MAP
+    -- FIX NOCLIP
     if Config.NoclipEnabled and LocalPlayer.Character then
         local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
+            if part:IsA("BasePart") then part.CanCollide = false end
         end
 
         if hrp then
@@ -773,33 +794,40 @@ RunService.RenderStepped:Connect(function(dt)
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChildOfClass("Humanoid")
-    local cam = workspace.CurrentCamera
 
-    -- 1. SPEED HACK
-    if Config.SpeedEnabled and hum then
-        hum.WalkSpeed = Config.SpeedValue
+    -- 1. HITBOX EXPANDER (PHÓNG TO BODY KẺ ĐỊCH)
+    if Config.HitboxExpander then
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                local eHRP = p.Character:FindFirstChild("HumanoidRootPart")
+                if eHRP then
+                    eHRP.Size = Vector3.new(Config.HitboxSize, Config.HitboxSize, Config.HitboxSize)
+                    eHRP.Transparency = 0.7
+                    eHRP.Color = CurrentTheme.Accent
+                    eHRP.Material = Enum.Material.Neon
+                    eHRP.CanCollide = false
+                end
+            end
+        end
     end
 
-    -- 2. COMBAT VIP: AUTO TP & HIGH DAMAGE M1
+    -- 2. COMBAT TARGET & SUPER DAMAGE M1
     if Config.SelectedTarget and Config.SelectedTarget.Character then
-        local targetHRP = Config.SelectedTarget.Character:FindFirstChild("HumanoidRootPart")
-        local targetHum = Config.SelectedTarget.Character:FindFirstChildOfClass("Humanoid")
+        local tHRP = Config.SelectedTarget.Character:FindFirstChild("HumanoidRootPart")
+        local tHum = Config.SelectedTarget.Character:FindFirstChildOfClass("Humanoid")
 
-        if targetHRP and targetHum and targetHum.Health > 0 and hrp then
-            -- Auto TP Lưng
+        if tHRP and tHum and tHum.Health > 0 and hrp then
             if Config.AutoTPTarget then
-                hrp.CFrame = targetHRP.CFrame * CFrame.new(0, 0, 2.5)
+                hrp.CFrame = tHRP.CFrame * CFrame.new(0, 0, 2.5)
             end
 
-            -- Auto M1 + Super Damage
             if Config.AutoAttack or Config.SuperM1Damage then
-                DoSuperDamageAttack()
+                TriggerSuperDamageM1()
             end
 
-            -- Auto Skills Combo
             if Config.AutoSkills then
                 skillTimer = skillTimer + dt
-                if skillTimer >= 0.3 then
+                if skillTimer >= 0.25 then
                     skillTimer = 0
                     local keys = {Enum.KeyCode.Z, Enum.KeyCode.X, Enum.KeyCode.C, Enum.KeyCode.V}
                     for _, key in ipairs(keys) do
@@ -812,62 +840,19 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    -- 3. KILL AURA (XẢ DAME MULTI-HIT)
-    if Config.KillAura and hrp then
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character then
-                local eHRP = p.Character:FindFirstChild("HumanoidRootPart")
-                local eHum = p.Character:FindFirstChildOfClass("Humanoid")
-                if eHRP and eHum and eHum.Health > 0 then
-                    local dist = (eHRP.Position - hrp.Position).Magnitude
-                    if dist <= Config.KillAuraRange then
-                        DoSuperDamageAttack()
-                    end
-                end
-            end
-        end
-    end
-
-    -- 4. FLY 3D
-    if Config.FlyEnabled and hrp and hum and cam then
-        if not bodyVel or not bodyVel.Parent then
-            bodyVel = Instance.new("BodyVelocity", hrp)
-            bodyVel.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-        end
-        if not bodyGyro or not bodyGyro.Parent then
-            bodyGyro = Instance.new("BodyGyro", hrp)
-            bodyGyro.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
-            bodyGyro.P = 10000
-        end
-
-        bodyGyro.CFrame = cam.CFrame
-        local moveDir = hum.MoveDirection
-        local flyVel = Vector3.zero
-
-        if moveDir.Magnitude > 0 then
-            local camCF = cam.CFrame
-            local flatLook = Vector3.new(camCF.LookVector.X, 0, camCF.LookVector.Z).Unit
-            local flatRight = Vector3.new(camCF.RightVector.X, 0, camCF.RightVector.Z).Unit
-
-            local forwardDot = moveDir:Dot(flatLook)
-            local rightDot = moveDir:Dot(flatRight)
-
-            local flight3D = (camCF.LookVector * forwardDot) + (camCF.RightVector * rightDot)
-            if flight3D.Magnitude > 0 then flight3D = flight3D.Unit end
-
-            flyVel = flight3D * Config.FlySpeed
-        end
-
-        local ySpeed = 0
-        if Config.FlyUp or UserInputService:IsKeyDown(Enum.KeyCode.E) or UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-            ySpeed = ySpeed + Config.FlySpeed
-        end
-        if Config.FlyDown or UserInputService:IsKeyDown(Enum.KeyCode.Q) or UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
-            ySpeed = ySpeed - Config.FlySpeed
-        end
-
-        bodyVel.Velocity = flyVel + Vector3.new(0, ySpeed, 0)
+    -- 3. SPEED HACK
+    if Config.SpeedEnabled and hum then
+        hum.WalkSpeed = Config.SpeedValue
     end
 end)
 
-Notify("Kianbest Hub", "Đã khởi chạy v7.5 VIP Cute Anime & Super Damage!")
+-- ANTI-AFK 24/7
+LocalPlayer.Idled:Connect(function()
+    if Config.AntiAFK then
+        VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+    end
+end)
+
+Notify("Kianbest Hub", "Đã khởi chạy v8.0 ULTIMATE VIP Anime Girl!")
