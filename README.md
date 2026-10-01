@@ -1,7 +1,7 @@
 -- ==========================================================
--- SCRIPT MENU SYSTEM V10.0 ULTRA VIP (Kianbest Hub)
--- Fix: Smooth Noclip + Instant M1 Multi-Hit Execution
--- Preset 10 Anime Girls + 5-Layer Anti-Ban Protection
+-- SCRIPT MENU SYSTEM V9.5 PRO ULTIMATE ANTI-BAN (Kianbest Hub)
+-- Features: Preset 10 Anime Girls + 5-Layer Anti-Ban Bypass
+-- Working Anime BG Presets + Perfectly Round Toggle + Fix Lag
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -32,9 +32,9 @@ local Config = {
     -- Movement
     NoclipEnabled = false,
     SpeedEnabled = false,
-    SpeedValue = 35,
+    SpeedValue = 32,
     FlyEnabled = false,
-    FlySpeed = 75,
+    FlySpeed = 70,
     
     -- Fix Lag
     RemoveVFX = false,
@@ -46,34 +46,35 @@ local Config = {
     AutoTPTarget = false,
     AutoAttack = false,
     SuperM1Damage = false,
-    DamageMultiplier = 40,
+    DamageMultiplier = 35,
     HitboxExpander = false,
-    HitboxSize = 18,
+    HitboxSize = 15,
     AutoSkills = false,
+    KillAura = false,
     
     -- Interface & Anti-AFK
     AntiAFK = true,
-    CurrentAnimeIndex = math.random(1, 10),
+    CurrentAnimeIndex = math.random(1, 10), -- Ngẫu nhiên 1 trong 10 hình khi mở
     BgTransparency = 0.35,
     FrameTransparency = 0.15,
     ToggleKey = Enum.KeyCode.RightControl
 }
 
--- BỘ 10 ANIME GIRL HD PRESETS
+-- BỘ BỘ BẢO TÀNG 10 ẢNH ANIME NỮ CUTE HD PRESETS
 local CuteAnimePresets = {
-    "rbxassetid://11702739401",
-    "rbxassetid://10023403248",
-    "rbxassetid://6071575925",
-    "rbxassetid://11414436906",
-    "rbxassetid://7043825807",
-    "rbxassetid://6985068228",
-    "rbxassetid://7305531980",
-    "rbxassetid://10878580644",
-    "rbxassetid://11414438318",
-    "rbxassetid://6880894541"
+    "rbxassetid://11702739401", -- Cute Anime Girl 1
+    "rbxassetid://10023403248", -- Cute Anime Girl 2
+    "rbxassetid://6071575925",  -- Cute Anime Girl 3
+    "rbxassetid://11414436906", -- Cute Anime Girl 4
+    "rbxassetid://7043825807",  -- Cute Anime Girl 5
+    "rbxassetid://6985068228",  -- Cute Anime Girl 6
+    "rbxassetid://7305531980",  -- Cute Anime Girl 7
+    "rbxassetid://10878580644", -- Cute Anime Girl 8
+    "rbxassetid://11414438318", -- Cute Anime Girl 9
+    "rbxassetid://6880894541"   -- Cute Anime Girl 10
 }
 
--- THEMES MÀU SẮC
+-- BỘ THEMES MÀU SẮC
 local Themes = {
     CutePink = { Name = "Cute Pink 🌸", Bg = Color3.fromRGB(25, 18, 24), Sidebar = Color3.fromRGB(18, 12, 17), Accent = Color3.fromRGB(255, 120, 170), Button = Color3.fromRGB(38, 24, 34), Text = Color3.fromRGB(255, 240, 245) },
     CyberBlue = { Name = "Cyber Blue 💎", Bg = Color3.fromRGB(15, 22, 32), Sidebar = Color3.fromRGB(10, 15, 24), Accent = Color3.fromRGB(0, 195, 255), Button = Color3.fromRGB(20, 32, 48), Text = Color3.fromRGB(235, 245, 255) },
@@ -85,12 +86,12 @@ local CurrentTheme = Themes.CutePink
 
 -- KHỞI TẠO SCREENGUI
 local ParentGui = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
-if ParentGui:FindFirstChild("KianbestMenuV10") then
-    ParentGui.KianbestMenuV10:Destroy()
+if ParentGui:FindFirstChild("KianbestMenuV9") then
+    ParentGui.KianbestMenuV9:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "KianbestMenuV10"
+ScreenGui.Name = "KianbestMenuV9"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = ParentGui
 
@@ -220,7 +221,7 @@ local function InitAntiBanModule()
         DisableClientAntiCheats()
     end)
     
-    Notify("Anti-Ban 🛡️️", "Bảo vệ Anti-Ban v10.0 ULTRA VIP đã sẵn sàng!")
+    Notify("Anti-Ban 🛡️", "Hệ thống bảo vệ Anti-Ban v9.5 đã kích hoạt!")
 end
 
 InitAntiBanModule()
@@ -246,7 +247,7 @@ local MainStroke = Instance.new("UIStroke", MainFrame)
 MainStroke.Color = CurrentTheme.Accent
 MainStroke.Thickness = 2
 
--- HÌNH NỀN ANIME NỮ CUTE HD PRESET
+-- HÌNH NỀN ANIME NỮ HD PRESET AUTOMATIC
 local MainBgImage = Instance.new("ImageLabel")
 MainBgImage.Name = "MainBgAnimeGirl"
 MainBgImage.Size = UDim2.new(1, 0, 1, 0)
@@ -271,7 +272,7 @@ Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 10)
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(0, 280, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
-Title.Text = "🛡️ Kianbest Hub v10.0 ULTRA VIP"
+Title.Text = "🛡️ Kianbest Hub v9.5 ANTI-BAN"
 Title.TextColor3 = CurrentTheme.Accent
 Title.TextSize = 15
 Title.Font = Enum.Font.FredokaOne
@@ -538,7 +539,7 @@ local function CreateButton(parent, text, bgColor, callback)
 end
 
 ----------------------------------------------------------
--- TAB 1: COMBAT VIP (CƠ CHẾ ĐẤM TỬ THẦN INSTANT M1)
+-- TAB 1: COMBAT VIP
 ----------------------------------------------------------
 local CList = Instance.new("UIListLayout", CombatPage)
 CList.SortOrder = Enum.SortOrder.LayoutOrder
@@ -573,16 +574,16 @@ CreateButton(CombatPage, "🎯 Chọn Mục Tiêu (Đổi Player)", Color3.fromR
     end
 end)
 
-CreateToggle(CombatPage, "⚡ M1 Tử Thần Multi-Hit (Auto Kill Instant)", Config.SuperM1Damage, function(state)
+CreateToggle(CombatPage, "💥 Sát Thương M1 Siêu To (Multi-Hit Safe)", Config.SuperM1Damage, function(state)
     Config.SuperM1Damage = state
-    Notify("Combat VIP", state and "Đã BẬT M1 Tử Thần!" or "Đã TẮT M1")
+    Notify("Combat VIP", state and "Đã BẬT Super M1 Damage!" or "Đã TẮT Super M1")
 end)
 
-CreateValueAdjuster(CombatPage, "Sức Mạnh Multi-Hit M1", 10, 100, Config.DamageMultiplier, 10, function(val) Config.DamageMultiplier = val end)
+CreateValueAdjuster(CombatPage, "Số Hit Nhân Dame M1", 5, 80, Config.DamageMultiplier, 5, function(val) Config.DamageMultiplier = val end)
 CreateToggle(CombatPage, "📦 Phóng To Hitbox Kẻ Địch", Config.HitboxExpander, function(state) Config.HitboxExpander = state end)
-CreateValueAdjuster(CombatPage, "Kích Thước Hitbox", 5, 35, Config.HitboxSize, 5, function(val) Config.HitboxSize = val end)
+CreateValueAdjuster(CombatPage, "Kích Thước Hitbox", 5, 30, Config.HitboxSize, 5, function(val) Config.HitboxSize = val end)
 CreateToggle(CombatPage, "⚡ Auto TP Áp Sát Lưng Đối Thủ", Config.AutoTPTarget, function(state) Config.AutoTPTarget = state end)
-CreateToggle(CombatPage, "🥊 Auto Đấm Liên Hoàn M1", Config.AutoAttack, function(state) Config.AutoAttack = state end)
+CreateToggle(CombatPage, "🥊 Auto Đấm Thường M1", Config.AutoAttack, function(state) Config.AutoAttack = state end)
 CreateToggle(CombatPage, "🔥 Auto Combo Skill (Z, X, C, V)", Config.AutoSkills, function(state) Config.AutoSkills = state end)
 
 ----------------------------------------------------------
@@ -597,7 +598,7 @@ CreateToggle(VisualsPage, "ESP Name (Hiện Tên)", Config.ESPNamesEnabled, func
 CreateToggle(VisualsPage, "ESP Health Bar (Thanh Máu)", Config.ESPHealthEnabled, function(state) Config.ESPHealthEnabled = state end)
 
 ----------------------------------------------------------
--- TAB 3: MOVEMENT (FIX NOCLIP KHÔNG BỊ ĐƠ)
+-- TAB 3: MOVEMENT
 ----------------------------------------------------------
 local MList = Instance.new("UIListLayout", MovementPage)
 MList.SortOrder = Enum.SortOrder.LayoutOrder
@@ -626,14 +627,7 @@ CreateToggle(MovementPage, "Bay 3D Chuẩn (Fly WASD/Joystick)", Config.FlyEnabl
 end)
 
 CreateValueAdjuster(MovementPage, "Tốc Độ Bay", 20, 250, Config.FlySpeed, 10, function(val) Config.FlySpeed = val end)
-
--- FIX HOÀN TOÀN NOCLIP KHÔNG CẦN PART ẢNH HƯỞNG DI CHUYỂN
-CreateToggle(MovementPage, "Đi Xuyên Tường Smooth (Fix Đứng Yên)", Config.NoclipEnabled, function(state)
-    Config.NoclipEnabled = state
-    if state then
-        Notify("Movement", "Đã bật Noclip Siêu Mượt!")
-    end
-end)
+CreateToggle(MovementPage, "Đi Xuyên Tường (Noclip Anti-Fall)", Config.NoclipEnabled, function(state) Config.NoclipEnabled = state end)
 
 CreateToggle(MovementPage, "Chạy Nhanh (Speed Hack)", Config.SpeedEnabled, function(state)
     Config.SpeedEnabled = state
@@ -695,6 +689,7 @@ SList.Padding = UDim.new(0, 8)
 CreateToggle(SettingsPage, "🛡️ Bật Chống Kick (Anti-Kick)", Config.AntiKick, function(state) Config.AntiKick = state end)
 CreateToggle(SettingsPage, "🛡️ Chặn Gửi Log Hack (Anti-Report)", Config.AntiLog, function(state) Config.AntiLog = state end)
 
+-- NÚT ĐỔI 10 NỀN ANIME NỮ CUTE HD DỄ DÀNG
 CreateButton(SettingsPage, "🌸 Đổi Nền Anime Female Cute (1 - 10)", Color3.fromRGB(55, 30, 50), function()
     Config.CurrentAnimeIndex = (Config.CurrentAnimeIndex % #CuteAnimePresets) + 1
     MainBgImage.Image = CuteAnimePresets[Config.CurrentAnimeIndex]
@@ -728,56 +723,61 @@ CreateButton(SettingsPage, "🔄 Vào Lại Server (Rejoin)", Color3.fromRGB(50,
 end)
 
 ----------------------------------------------------------
--- VIP INSTANT M1 MULTI-HIT PUNCH PROTOCOL (CƠ CHẾ ĐẤM CHẾT)
+-- SAFE SUPER M1 DAMAGE TRIGGER
 ----------------------------------------------------------
-local lastM1Tick = 0
-local function ExecuteM1KillProtocol()
-    if tick() - lastM1Tick < 0.03 then return end
-    lastM1Tick = tick()
+local lastM1Time = 0
+local function TriggerSuperDamageM1()
+    if tick() - lastM1Time < 0.05 then return end
+    lastM1Time = tick()
 
     local char = LocalPlayer.Character
-    if not char then return end
-
     local cam = workspace.CurrentCamera
-    local tool = char:FindFirstChildOfClass("Tool")
-    local hits = Config.SuperM1Damage and Config.DamageMultiplier or 1
+    local tool = char and char:FindFirstChildOfClass("Tool")
+    local count = Config.SuperM1Damage and Config.DamageMultiplier or 1
 
-    -- Multi-threaded Attack Simulation
-    task.spawn(function()
-        for i = 1, hits do
-            VirtualUser:Button1Down(Vector2.new(0,0), cam.CFrame)
-            VirtualUser:Button1Up(Vector2.new(0,0), cam.CFrame)
-            
-            if tool then
-                tool:Activate()
-                for _, child in ipairs(tool:GetDescendants()) do
-                    if child:IsA("RemoteEvent") or child:IsA("UnreliableRemoteEvent") then
-                        local rName = child.Name:lower()
-                        if rName:find("attack") or rName:find("hit") or rName:find("m1") or rName:find("swing") or rName:find("punch") or rName:find("damage") then
-                            pcall(function() child:FireServer() end)
-                        end
-                    end
+    for i = 1, count do
+        VirtualUser:Button1Down(Vector2.new(0,0), cam.CFrame)
+        VirtualUser:Button1Up(Vector2.new(0,0), cam.CFrame)
+        
+        if tool then
+            tool:Activate()
+            for _, v in ipairs(tool:GetDescendants()) do
+                if v:IsA("RemoteEvent") and (v.Name:lower():find("attack") or v.Name:lower():find("hit") or v.Name:lower():find("m1") or v.Name:lower():find("swing")) then
+                    pcall(function() v:FireServer() end)
                 end
             end
         end
-    end)
+    end
 end
 
 ----------------------------------------------------------
--- RENDER LOOP (NOCLIP & COMBAT ENGINE)
+-- RENDER LOOP
 ----------------------------------------------------------
 local lastTime = tick()
 local frameCount = 0
+local noclipPlatform = nil
 local skillTimer = 0
 
--- NOCLIP LOOP CHUẨN (KHÔNG BỊ ĐƠ HOẶC KHỰNG)
 RunService.Stepped:Connect(function()
     if Config.NoclipEnabled and LocalPlayer.Character then
-        for _, part in ipairs(LocalPlayer.Character:GetChildren()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
+        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
         end
+
+        if hrp then
+            if not noclipPlatform or not noclipPlatform.Parent then
+                noclipPlatform = Instance.new("Part")
+                noclipPlatform.Name = "NoclipGroundFix"
+                noclipPlatform.Size = Vector3.new(6, 1, 6)
+                noclipPlatform.Transparency = 1
+                noclipPlatform.Anchored = true
+                noclipPlatform.Parent = workspace
+            end
+            noclipPlatform.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y - 3.2, hrp.Position.Z)
+        end
+    else
+        if noclipPlatform then noclipPlatform:Destroy() noclipPlatform = nil end
     end
 end)
 
@@ -812,23 +812,23 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    -- 2. COMBAT TARGET & M1 KILL PROTOCOL
+    -- 2. COMBAT TARGET & SUPER M1
     if Config.SelectedTarget and Config.SelectedTarget.Character then
         local tHRP = Config.SelectedTarget.Character:FindFirstChild("HumanoidRootPart")
         local tHum = Config.SelectedTarget.Character:FindFirstChildOfClass("Humanoid")
 
         if tHRP and tHum and tHum.Health > 0 and hrp then
             if Config.AutoTPTarget then
-                hrp.CFrame = tHRP.CFrame * CFrame.new(0, 0, 2.2)
+                hrp.CFrame = tHRP.CFrame * CFrame.new(0, 0, 2.5)
             end
 
             if Config.AutoAttack or Config.SuperM1Damage then
-                ExecuteM1KillProtocol()
+                TriggerSuperDamageM1()
             end
 
             if Config.AutoSkills then
                 skillTimer = skillTimer + dt
-                if skillTimer >= 0.2 then
+                if skillTimer >= 0.25 then
                     skillTimer = 0
                     local keys = {Enum.KeyCode.Z, Enum.KeyCode.X, Enum.KeyCode.C, Enum.KeyCode.V}
                     for _, key in ipairs(keys) do
@@ -856,4 +856,4 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
-Notify("Kianbest Hub", "Đã kích hoạt v10.0 ULTRA VIP (Fix Noclip & M1 Killer)!")
+Notify("Kianbest Hub", "Đã tải thành công Menu Nền Anime Nữ Cute HD 🌸!")
