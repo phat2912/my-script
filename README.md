@@ -1,523 +1,858 @@
-local Config = {
-    Admins = {
-        [123456789] = true,
-    },
-    Detection = {
-        Enabled = true,
-        MaxWalkSpeed = 24,
-        MaxJumpPower = 70,
-        StrikeLimit = 5,
-        StrikeDecayTime = 30,
-        SpawnGraceTime = 5,
-        TeleportDistance = 100,
-        MaxMovementSpeed = 80,
-        CheckInterval = 0.25,
-    },
-    Ban = {
-        Enabled = true,
-        Permanent = true,
-        Reason = "Anti-Cheat detected",
-    },
-    Remote = {
-        DefaultLimit = 15,
-        DefaultWindow = 1,
-        MaxStringLength = 500,
-        MaxTableDepth = 5,
-        MaxTableItems = 100,
-        KickOnExtremeSpam = false,
-    },
-    Debug = true,
-}
-return Config
-local PlayerState = {}
+-- ==========================================================
+-- SCRIPT MENU SYSTEM V12.5 ULTRA CHILL EDITION (Kianbest Hub)
+-- Features: Fix Image Background, Chill Lo-Fi Glassmorphism, Anti-Ban
+-- Compatibility: Delta, Hydrogen, Fluxus, Solara, Wave, CodeX
+-- ==========================================================
 
-function PlayerState.create(player)
-    PlayerState[player] = {
-        Strikes = 0,
-        LastPosition = nil,
-        LastCheck = os.clock(),
-        SpawnTime = os.clock(),
-        ExemptUntil = 0,
-        IsBanned = false,
-        LastStrikeReason = "",
-        LastStrikeTime = 0,
-    }
-end
-
-function PlayerState.get(player)
-    return PlayerState[player]
-end
-
-function PlayerState.remove(player)
-    PlayerState[player] = nil
-end
-
-return PlayerState
-local DataStoreService = game:GetService("DataStoreService")
-local Config = require(script.Parent.Config)
-local PlayerState = require(script.Parent.PlayerState)
-
-local BanStore = DataStoreService:GetDataStore("Kianbest_AntiCheat_Bans_V3")
-
-local BanSystem = {}
-
-function BanSystem.getKey(userId)
-    return "BAN_" .. tostring(userId)
-end
-
-function BanSystem.check(player)
-    local success, result = pcall(function()
-        return BanStore:GetAsync(BanSystem.getKey(player.UserId))
-    end)
-    if success and result then
-        return true, result
-    end
-    return false, nil
-end
-
-function BanSystem.apply(player, reason)
-    if Config.Admins[player.UserId] then return end
-    reason = reason or Config.Ban.Reason
-    local state = PlayerState.get(player)
-    if state then state.IsBanned = true end
-
-    local banData = {
-        UserId = player.UserId,
-        Name = player.Name,
-        Reason = reason,
-        Time = os.time(),
-        Permanent = Config.Ban.Permanent,
-    }
-    pcall(function()
-        BanStore:SetAsync(BanSystem.getKey(player.UserId), banData)
-    end)
-    player:Kick("You have been banned.\nReason: " .. tostring(reason))
-end
-
-return BanSystem
-local Config = require(script.Parent.Config)
-local PlayerState = require(script.Parent.PlayerState)
-local BanSystem = require(script.Parent.BanSystem)
-
-local StrikeSystem = {}
-
--- Thêm strike cho player
-function StrikeSystem.add(player, reason)
-    local state = PlayerState.get(player)
-    if not state then return end
-    if Config.Admins[player.UserId] then return end
-    if os.clock() < state.ExemptUntil then return end
-
-    state.Strikes += 1
-    state.LastStrikeReason = reason
-    state.LastStrikeTime = os.clock()
-
-    if Config.Debug then
-        print("[AntiCheat] Strike:", player.Name, state.Strikes, reason)
-    end
-
-    if state.Strikes >= Config.Detection.StrikeLimit then
-        BanSystem.apply(player, reason)
-    end
-end
-
--- Giảm strike theo thời gian
-function StrikeSystem.decay(player)
-    local state = PlayerState.get(player)
-    if not state then return end
-    if state.Strikes <= 0 then return end
-
-    if os.clock() - state.LastStrikeTime >= Config.Detection.StrikeDecayTime then
-        state.Strikes = math.max(0, state.Strikes - 1)
-        state.LastStrikeTime = os.clock()
-        if Config.Debug then
-            print("[AntiCheat] Strike decay:", player.Name, state.Strikes)
-        end
-    end
-end
-
-return StrikeSystem
-local Config = require(script.Parent.Config)
-local PlayerState = require(script.Parent.PlayerState)
-local StrikeSystem = require(script.Parent.StrikeSystem)
-
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+local Stats = game:GetService("Stats")
+local TeleportService = game:GetService("TeleportService")
+local Workspace = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
 
-local MovementProtection = {}
+-- Kiểm tra Service an toàn
+local VirtualInputManager, VirtualUser
+pcall(function() VirtualInputManager = game:GetService("VirtualInputManager") end)
+pcall(function() VirtualUser = game:GetService("VirtualUser") end)
 
--- Setup nhân vật khi spawn
-function MovementProtection.setupCharacter(player, character)
-    local state = PlayerState.get(player)
-    if not state then return end
+-- 1. CẤU HÌNH HỆ THỐNG
+local Config = {
+    -- Anti-Ban & Security Settings
+    AntiBanEnabled = true,
+    AntiKick = true,
+    AntiLog = true,
+    SpoofStats = true,
+    DisableClientAC = true,
 
-    state.SpawnTime = os.clock()
-    state.LastPosition = nil
-    state.LastCheck = os.clock()
+    -- ESP & Visuals
+    ESPEnabled = false,
+    ESPNamesEnabled = false,
+    ESPHealthEnabled = false,
+    
+    -- Movement
+    NoclipEnabled = false,
+    SpeedEnabled = false,
+    SpeedValue = 35,
+    FlyEnabled = false,
+    FlySpeed = 75,
+    
+    -- Fix Lag Modes
+    PotatoMode = false,
+    FullBright = false,
+    LowPoly = false,
+    AutoMemoryClean = true,
+    HidePlayers = false,
+    
+    -- Combat VIP
+    SelectedTarget = nil,
+    AutoTPTarget = false,
+    AutoAttack = false,
+    SuperM1Damage = false,
+    DamageMultiplier = 30,
+    HitboxExpander = false,
+    HitboxSize = 18,
+    
+    -- Interface & Chill Background Config
+    AntiAFK = true,
+    CurrentChillIndex = 1,
+    CustomAssetID = "",
+    BgTransparency = 0.45, -- Độ mờ ảnh chill
+    FrameTransparency = 0.25, -- Độ mờ khung glassmorphism
+    ToggleKey = Enum.KeyCode.RightControl
+}
 
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    local root = character:FindFirstChild("HumanoidRootPart")
+-- DANH SÁCH IMAGE ID CHILL LO-FI / AESTHETIC HD (ĐÃ FIX LỖI HIỂN THỊ)
+local ChillPresets = {
+    "rbxassetid://6071575925",  -- Lo-Fi Rainy City Night
+    "rbxassetid://7043825807",  -- Aesthetic Pink Sunset Sky
+    "rbxassetid://6985068228",  -- Chill Anime Room
+    "rbxassetid://11414436906", -- Pastel Purple Clouds
+    "rbxassetid://10023403248", -- Anime Cozy Street
+    "rbxassetid://11702739401"  -- Chill Galaxy Night
+}
 
-    if humanoid then
-        humanoid.WalkSpeed = math.min(humanoid.WalkSpeed, Config.Detection.MaxWalkSpeed)
-        humanoid.JumpPower = math.min(humanoid.JumpPower, Config.Detection.MaxJumpPower)
-    end
+-- THEMES MÀU CHILL PASTEL
+local Themes = {
+    ChillPurple = { Name = "Chill Lavender 🔮", Bg = Color3.fromRGB(20, 16, 28), Sidebar = Color3.fromRGB(14, 10, 20), Accent = Color3.fromRGB(185, 140, 255), Button = Color3.fromRGB(32, 24, 44), Text = Color3.fromRGB(240, 235, 255) },
+    SoftPink = { Name = "Soft Sakura 🌸", Bg = Color3.fromRGB(28, 18, 24), Sidebar = Color3.fromRGB(20, 12, 17), Accent = Color3.fromRGB(255, 150, 190), Button = Color3.fromRGB(42, 26, 36), Text = Color3.fromRGB(255, 240, 248) },
+    OceanBlue = { Name = "Midnight Ocean 🌊", Bg = Color3.fromRGB(14, 22, 32), Sidebar = Color3.fromRGB(9, 15, 24), Accent = Color3.fromRGB(100, 200, 255), Button = Color3.fromRGB(22, 34, 48), Text = Color3.fromRGB(235, 248, 255) },
+    MintGreen = { Name = "Chill Matcha 🍃", Bg = Color3.fromRGB(16, 26, 22), Sidebar = Color3.fromRGB(10, 18, 15), Accent = Color3.fromRGB(130, 230, 175), Button = Color3.fromRGB(24, 40, 33), Text = Color3.fromRGB(235, 255, 242) }
+}
 
-    if root then
-        state.LastPosition = root.Position
-    end
+local CurrentTheme = Themes.ChillPurple
+
+-- KHỞI TẠO SCREENGUI
+local ParentGui = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
+if ParentGui:FindFirstChild("KianbestMenuV12_5") then
+    ParentGui.KianbestMenuV12_5:Destroy()
 end
 
--- Kiểm tra tốc độ đi bộ
-local function validateWalkSpeed(player, humanoid)
-    if humanoid.WalkSpeed > Config.Detection.MaxWalkSpeed then
-        StrikeSystem.add(player, "Abnormal WalkSpeed: " .. humanoid.WalkSpeed)
-        humanoid.WalkSpeed = Config.Detection.MaxWalkSpeed
-    end
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "KianbestMenuV12_5"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = ParentGui
+
+-- NOTIFICATION TOAST SYSTEM
+local NotificationFrame = Instance.new("Frame")
+NotificationFrame.Name = "NotificationFrame"
+NotificationFrame.Size = UDim2.new(0, 240, 0, 220)
+NotificationFrame.Position = UDim2.new(1, -250, 1, -230)
+NotificationFrame.BackgroundTransparency = 1
+NotificationFrame.ZIndex = 50
+NotificationFrame.Parent = ScreenGui
+
+local NotificationList = Instance.new("UIListLayout", NotificationFrame)
+NotificationList.SortOrder = Enum.SortOrder.LayoutOrder
+NotificationList.Padding = UDim.new(0, 6)
+NotificationList.VerticalAlignment = Enum.VerticalAlignment.Bottom
+
+local function Notify(title, text, duration)
+    duration = duration or 2.5
+    local Toast = Instance.new("Frame")
+    Toast.Size = UDim2.new(1, 0, 0, 46)
+    Toast.BackgroundColor3 = CurrentTheme.Sidebar
+    Toast.BackgroundTransparency = 0.2
+    Toast.BorderSizePixel = 0
+    Toast.ZIndex = 51
+    Toast.Parent = NotificationFrame
+
+    Instance.new("UICorner", Toast).CornerRadius = UDim.new(0, 8)
+    local Stroke = Instance.new("UIStroke", Toast)
+    Stroke.Color = CurrentTheme.Accent
+    Stroke.Thickness = 1.5
+
+    local TTitle = Instance.new("TextLabel")
+    TTitle.Size = UDim2.new(1, -10, 0, 18)
+    TTitle.Position = UDim2.new(0, 8, 0, 4)
+    TTitle.Text = title
+    TTitle.TextColor3 = CurrentTheme.Accent
+    TTitle.Font = Enum.Font.SourceSansBold
+    TTitle.TextSize = 13
+    TTitle.TextXAlignment = Enum.TextXAlignment.Left
+    TTitle.BackgroundTransparency = 1
+    TTitle.ZIndex = 52
+    TTitle.Parent = Toast
+
+    local TText = Instance.new("TextLabel")
+    TText.Size = UDim2.new(1, -10, 0, 18)
+    TText.Position = UDim2.new(0, 8, 0, 22)
+    TText.Text = text
+    TText.TextColor3 = CurrentTheme.Text
+    TText.Font = Enum.Font.SourceSans
+    TText.TextSize = 12
+    TText.TextXAlignment = Enum.TextXAlignment.Left
+    TText.BackgroundTransparency = 1
+    TText.ZIndex = 52
+    TText.Parent = Toast
+
+    task.delay(duration, function()
+        pcall(function()
+            local fadeOutInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+            TweenService:Create(Toast, fadeOutInfo, {BackgroundTransparency = 1}):Play()
+            TweenService:Create(Stroke, fadeOutInfo, {Transparency = 1}):Play()
+            TweenService:Create(TTitle, fadeOutInfo, {TextTransparency = 1}):Play()
+            local lastTween = TweenService:Create(TText, fadeOutInfo, {TextTransparency = 1})
+            lastTween:Play()
+            lastTween.Completed:Connect(function() Toast:Destroy() end)
+        end)
+    end)
 end
 
--- Kiểm tra nhảy
-local function validateJump(player, humanoid)
-    if humanoid.UseJumpPower then
-        if humanoid.JumpPower > Config.Detection.MaxJumpPower then
-            StrikeSystem.add(player, "Abnormal JumpPower: " .. humanoid.JumpPower)
-            humanoid.JumpPower = Config.Detection.MaxJumpPower
-        end
+----------------------------------------------------------
+-- 🛡️ ULTRA ANTI-BAN ENGINE
+----------------------------------------------------------
+pcall(function()
+    if not Config.AntiBanEnabled then return end
+
+    if hookfunction then
+        local oldKick
+        oldKick = hookfunction(LocalPlayer.Kick, function(self, ...)
+            if Config.AntiKick and self == LocalPlayer then
+                Notify("🛡️ Anti-Ban", "Đã chặn 1 yêu cầu Kick từ Server!")
+                return nil
+            end
+            return oldKick(self, ...)
+        end)
+    end
+
+    if hookmetamethod then
+        local oldNamecall
+        oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+            local method = getnamecallmethod()
+            if Config.AntiKick and (method:lower() == "kick") and self == LocalPlayer then
+                return nil
+            end
+
+            if Config.AntiLog and (method == "FireServer" or method == "InvokeServer") then
+                local remoteName = tostring(self.Name):lower()
+                local blockKeywords = {"ban", "kick", "flag", "cheat", "detect", "log", "ac", "check", "security", "report"}
+                for _, word in ipairs(blockKeywords) do
+                    if remoteName:find(word) then return nil end
+                end
+            end
+            return oldNamecall(self, ...)
+        end)
+
+        local oldIndex
+        oldIndex = hookmetamethod(game, "__index", function(self, key)
+            if Config.SpoofStats and not checkcaller() and self:IsA("Humanoid") then
+                if key == "WalkSpeed" then return 16 end
+                if key == "JumpPower" then return 50 end
+            end
+            return oldIndex(self, key)
+        end)
+    end
+end)
+
+----------------------------------------------------------
+-- MAIN FRAME & GLASSMORPHISM UI
+----------------------------------------------------------
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 540, 0, 350)
+MainFrame.Position = UDim2.new(0.5, -270, 0.5, -175)
+MainFrame.BackgroundColor3 = CurrentTheme.Bg
+MainFrame.BackgroundTransparency = Config.FrameTransparency
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = CurrentTheme.Accent
+MainStroke.Thickness = 1.5
+MainStroke.Transparency = 0.3
+
+-- BACKGROUND IMAGE CHILL CHILL (MỜ MỜ KÍNH VẠN HOA)
+local MainBgImage = Instance.new("ImageLabel")
+MainBgImage.Name = "MainBgChill"
+MainBgImage.Size = UDim2.new(1, 0, 1, 0)
+MainBgImage.BackgroundTransparency = 1
+MainBgImage.ImageTransparency = Config.BgTransparency
+MainBgImage.ScaleType = Enum.ScaleType.Crop
+MainBgImage.Image = ChillPresets[Config.CurrentChillIndex]
+MainBgImage.ZIndex = 1
+MainBgImage.Parent = MainFrame
+
+-- HIỆU ỨNG DẢI MÀU MỜ LO-FI OVERLAY
+local GlassGradient = Instance.new("UIGradient")
+GlassGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 150, 200))
+})
+GlassGradient.Rotation = 45
+GlassGradient.Parent = MainBgImage
+
+-- HEADER BAR
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 38)
+Header.BackgroundColor3 = CurrentTheme.Sidebar
+Header.BackgroundTransparency = 0.35
+Header.BorderSizePixel = 0
+Header.ZIndex = 3
+Header.Parent = MainFrame
+Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 12)
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(0, 320, 1, 0)
+Title.Position = UDim2.new(0, 12, 0, 0)
+Title.Text = "☕ Kianbest Hub v12.5 ULTRA CHILL"
+Title.TextColor3 = CurrentTheme.Accent
+Title.TextSize = 13
+Title.Font = Enum.Font.FredokaOne
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.BackgroundTransparency = 1
+Title.ZIndex = 4
+Title.Parent = Header
+
+local StatsLabel = Instance.new("TextLabel")
+StatsLabel.Size = UDim2.new(0, 180, 1, 0)
+StatsLabel.Position = UDim2.new(1, -220, 0, 0)
+StatsLabel.Text = "FPS: -- | Ping: --ms"
+StatsLabel.TextColor3 = Color3.fromRGB(220, 210, 235)
+StatsLabel.TextSize = 12
+StatsLabel.Font = Enum.Font.SourceSansBold
+StatsLabel.TextXAlignment = Enum.TextXAlignment.Right
+StatsLabel.BackgroundTransparency = 1
+StatsLabel.ZIndex = 4
+StatsLabel.Parent = Header
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 26, 0, 26)
+CloseBtn.Position = UDim2.new(1, -32, 0, 6)
+CloseBtn.Text = "✕"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 120, 140)
+CloseBtn.TextSize = 13
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.BackgroundColor3 = Color3.fromRGB(40, 22, 32)
+CloseBtn.BorderSizePixel = 0
+CloseBtn.ZIndex = 4
+CloseBtn.Parent = Header
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+
+-- TOGGLE BUTTON
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Name = "KianToggleButton"
+ToggleBtn.Size = UDim2.new(0, 48, 0, 48)
+ToggleBtn.Position = UDim2.new(0, 15, 0.4, 0)
+ToggleBtn.BackgroundColor3 = CurrentTheme.Sidebar
+ToggleBtn.BackgroundTransparency = 0.2
+ToggleBtn.Text = "☕"
+ToggleBtn.TextSize = 20
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+ToggleBtn.ZIndex = 100
+ToggleBtn.Parent = ScreenGui
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
+
+local ButtonStroke = Instance.new("UIStroke", ToggleBtn)
+ButtonStroke.Color = CurrentTheme.Accent
+ButtonStroke.Thickness = 2
+
+local isMenuOpen = true
+local function ToggleMenu()
+    isMenuOpen = not isMenuOpen
+    if isMenuOpen then
+        MainFrame.Visible = true
+        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 540, 0, 350)}):Play()
     else
-        local maxJumpHeight = 15
-        if humanoid.JumpHeight > maxJumpHeight then
-            StrikeSystem.add(player, "Abnormal JumpHeight: " .. humanoid.JumpHeight)
-            humanoid.JumpHeight = maxJumpHeight
-        end
-    end
-end
-
--- Kiểm tra di chuyển bất thường
-local function validateMovement(player, root, humanoid)
-    local state = PlayerState.get(player)
-    if not state then return end
-
-    local now = os.clock()
-    local previous = state.LastPosition
-    state.LastPosition = root.Position
-    if not previous then return end
-
-    if now - state.SpawnTime < Config.Detection.SpawnGraceTime then return end
-
-    local dt = now - state.LastCheck
-    state.LastCheck = now
-    if dt <= 0 or dt > 1 then return end
-
-    local distance = (root.Position - previous).Magnitude
-    local expected = math.max(humanoid.WalkSpeed, 0) * dt
-    local tolerance = math.max(8, expected * 1.5)
-    local maximum = math.max(tolerance, Config.Detection.MaxMovementSpeed * dt + 10)
-
-    if distance > Config.Detection.TeleportDistance then
-        StrikeSystem.add(player, "Abnormal teleport distance: " .. distance)
-        root.CFrame = CFrame.new(previous)
-        return
-    end
-
-    if distance > maximum then
-        StrikeSystem.add(player, "Abnormal movement speed: " .. math.floor(distance / dt))
-        root.CFrame = CFrame.new(previous)
-        return
-    end
-end
-
--- Heartbeat check
-function MovementProtection.checkAll(dt)
-    for _, player in ipairs(game.Players:GetPlayers()) do
-        local character = player.Character
-        if not character then continue end
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        local root = character:FindFirstChild("HumanoidRootPart")
-        if not humanoid or not root then continue end
-
-        validateWalkSpeed(player, humanoid)
-        validateJump(player, humanoid)
-        validateMovement(player, root, humanoid)
-    end
-end
-
-return MovementProtection
-local Config = require(script.Parent.Config)
-local PlayerState = require(script.Parent.PlayerState)
-local StrikeSystem = require(script.Parent.StrikeSystem)
-local BanSystem = require(script.Parent.BanSystem)
-
-local RemoteSecurity = {}
-local RemoteState = {}
-local ProtectedRemotes = {}
-
--- Reset remote state khi player rời game
-function RemoteSecurity.reset(player)
-    RemoteState[player] = nil
-end
-
--- Lấy ID remote
-local function getRemoteId(remote)
-    if not remote then return "Unknown" end
-    return remote:GetFullName()
-end
-
--- Lấy state của player cho remote
-local function getRemotePlayerState(player)
-    if not RemoteState[player] then
-        RemoteState[player] = {}
-    end
-    return RemoteState[player]
-end
-
--- Làm sạch lịch sử remote
-local function cleanRemoteHistory(data, now, window)
-    local timestamps = data.Timestamps or {}
-    local newList = {}
-    for _, t in ipairs(timestamps) do
-        if now - t <= window then
-            table.insert(newList, t)
-        end
-    end
-    data.Timestamps = newList
-end
-
--- Kiểm tra spam remote
-local function checkRemoteRate(player, remote, limit, window)
-    local playerData = getRemotePlayerState(player)
-    local id = getRemoteId(remote)
-    local data = playerData[id]
-
-    if not data then
-        data = { Timestamps = {}, Violations = 0 }
-        playerData[id] = data
-    end
-
-    local now = os.clock()
-    cleanRemoteHistory(data, now, window)
-    table.insert(data.Timestamps, now)
-
-    if #data.Timestamps <= limit then return true end
-
-    data.Violations += 1
-    StrikeSystem.add(player, "Remote spam: " .. remote.Name)
-
-    if Config.Remote.KickOnExtremeSpam and data.Violations >= 10 then
-        BanSystem.apply(player, "Extreme remote spam")
-        return false
-    end
-    return false
-end
-
--- Validate giá trị truyền qua remote
-local function validateValue(value, depth)
-    depth = depth or 0
-    if depth > Config.Remote.MaxTableDepth then return false, "table depth too large" end
-    local t = typeof(value)
-
-    if t == "nil" or t == "boolean" or t == "number" then
-        if value ~= value then return false, "NaN detected" end
-        if value == math.huge or value == -math.huge then return false, "infinite number" end
-        return true
-    elseif t == "string" then
-        if #value > Config.Remote.MaxStringLength then return false, "string too long" end
-        return true
-    elseif t == "Instance" then
-        if not value.Parent then return false, "destroyed instance" end
-        return true
-    elseif t == "Vector3" then
-        if value.X ~= value.X or value.Y ~= value.Y or value.Z ~= value.Z then return false, "invalid Vector3" end
-        return true
-    elseif t == "CFrame" then
-        local pos = value.Position
-        if pos.X ~= pos.X or pos.Y ~= pos.Y or pos.Z ~= pos.Z then return false, "invalid CFrame" end
-        return true
-    elseif t == "table" then
-        local count = 0
-        for k, v in pairs(value) do
-            count += 1
-            if count > Config.Remote.MaxTableItems then return false, "table too large" end
-            local keyValid = validateValue(k, depth + 1)
-            if not keyValid then return false, "invalid table key" end
-            local childValid, reason = validateValue(v, depth + 1)
-            if not childValid then return false, reason end
-        end
-        return true
-    end
-    return false, "unsupported type: " .. tostring(t)
-end
-
--- Validate toàn bộ arguments
-local function validateArguments(player, remote, args)
-    for i, v in ipairs(args) do
-        local valid, reason = validateValue(v, 0)
-        if not valid then
-            StrikeSystem.add(player, "Invalid remote argument: " .. remote.Name .. " [" .. i .. "] " .. reason)
-            return false
-        end
-    end
-    return true
-end
-
--- Đăng ký remote cần bảo vệ
-function RemoteSecurity.register(remote, limit, window)
-    if not remote then return end
-    if not (remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction")) then return end
-    ProtectedRemotes[remote] = {
-        Limit = tonumber(limit) or Config.Remote.DefaultLimit,
-        Window = tonumber(window) or Config.Remote.DefaultWindow,
-    }
-    if Config.Debug then
-        print("[AntiCheat] Protected remote:", remote:GetFullName())
-    end
-end
-
--- Kiểm tra tất cả remote
-function RemoteSecurity.checkAll()
-    for remote, settings in pairs(ProtectedRemotes) do
-        remote.OnServerEvent:Connect(function(player, ...)
-            local args = {...}
-            if not checkRemoteRate(player, remote, settings.Limit, settings.Window) then return end
-            if not validateArguments(player, remote, args) then return end
+        local tween = TweenService:Create(MainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)})
+        tween:Play()
+        tween.Completed:Connect(function()
+            if not isMenuOpen then MainFrame.Visible = false end
         end)
     end
 end
 
-return RemoteSecurity
--- Main AntiCheat Loader
-local ServerStorage = game:GetService("ServerStorage")
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
+ToggleBtn.MouseButton1Click:Connect(ToggleMenu)
+CloseBtn.MouseButton1Click:Connect(ToggleMenu)
+UserInputService.InputBegan:Connect(function(input, gp)
+    if not gp and input.KeyCode == Config.ToggleKey then ToggleMenu() end
+end)
 
--- Import modules
-local Config = require(ServerStorage.KianbestAntiCheat.Config)
-local PlayerState = require(ServerStorage.KianbestAntiCheat.PlayerState)
-local BanSystem = require(ServerStorage.KianbestAntiCheat.BanSystem)
-local StrikeSystem = require(ServerStorage.KianbestAntiCheat.StrikeSystem)
-local MovementProtection = require(ServerStorage.KianbestAntiCheat.MovementProtection)
-local RemoteSecurity = require(ServerStorage.KianbestAntiCheat.RemoteSecurity)
+----------------------------------------------------------
+-- SIDEBAR & TABS CONTAINER
+----------------------------------------------------------
+local Sidebar = Instance.new("Frame")
+Sidebar.Size = UDim2.new(0, 130, 1, -38)
+Sidebar.Position = UDim2.new(0, 0, 0, 38)
+Sidebar.BackgroundColor3 = CurrentTheme.Sidebar
+Sidebar.BackgroundTransparency = 0.45
+Sidebar.BorderSizePixel = 0
+Sidebar.ZIndex = 3
+Sidebar.Parent = MainFrame
 
-print("[Kianbest Anti-Cheat] V3 Loaded")
+local ContentContainer = Instance.new("Frame")
+ContentContainer.Size = UDim2.new(1, -140, 1, -48)
+ContentContainer.Position = UDim2.new(0, 135, 0, 43)
+ContentContainer.BackgroundTransparency = 1
+ContentContainer.ZIndex = 3
+ContentContainer.Parent = MainFrame
 
--- Player join
-Players.PlayerAdded:Connect(function(player)
-    PlayerState.create(player)
-    local banned, data = BanSystem.check(player)
-    if banned then
-        player:Kick("You are banned.\nReason: " .. tostring(data.Reason))
+local Pages = {}
+local TabButtons = {}
+
+local function CreateTab(name, icon, posIndex)
+    local TabBtn = Instance.new("TextButton")
+    TabBtn.Size = UDim2.new(1, -12, 0, 32)
+    TabBtn.Position = UDim2.new(0, 6, 0, 8 + (posIndex - 1) * 38)
+    TabBtn.Text = icon .. "  " .. name
+    TabBtn.TextColor3 = CurrentTheme.Text
+    TabBtn.Font = Enum.Font.SourceSansBold
+    TabBtn.TextSize = 13
+    TabBtn.TextXAlignment = Enum.TextXAlignment.Left
+    TabBtn.BackgroundColor3 = CurrentTheme.Button
+    TabBtn.BackgroundTransparency = 0.3
+    TabBtn.BorderSizePixel = 0
+    TabBtn.ZIndex = 4
+    TabBtn.Parent = Sidebar
+    Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 6)
+
+    local Page = Instance.new("ScrollingFrame")
+    Page.Size = UDim2.new(1, 0, 1, 0)
+    Page.BackgroundTransparency = 1
+    Page.ScrollBarThickness = 3
+    Page.Visible = (posIndex == 1)
+    Page.ZIndex = 3
+    Page.Parent = ContentContainer
+
+    Pages[name] = {Button = TabBtn, Page = Page}
+    table.insert(TabButtons, TabBtn)
+
+    TabBtn.MouseButton1Click:Connect(function()
+        for _, tab in pairs(Pages) do
+            tab.Page.Visible = false
+            tab.Button.BackgroundColor3 = CurrentTheme.Button
+            tab.Button.BackgroundTransparency = 0.3
+        end
+        Page.Visible = true
+        TabBtn.BackgroundColor3 = CurrentTheme.Accent
+        TabBtn.BackgroundTransparency = 0.1
+    end)
+
+    if posIndex == 1 then 
+        TabBtn.BackgroundColor3 = CurrentTheme.Accent 
+        TabBtn.BackgroundTransparency = 0.1
+    end
+    return Page
+end
+
+local AntiBanPage = CreateTab("Anti-Ban Shield", "🛡️", 1)
+local CombatPage = CreateTab("Combat VIP", "⚔️", 2)
+local MovementPage = CreateTab("Movement", "⚡", 3)
+local FixLagPage = CreateTab("Fix Lag VIP", "🚀", 4)
+local SettingsPage = CreateTab("Settings & Chill", "☕", 5)
+
+----------------------------------------------------------
+-- UI BUILDERS WITH GLASS TRANSPARENCY
+----------------------------------------------------------
+local function CreateToggle(parent, text, defaultState, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, -6, 0, 34)
+    Btn.Text = "  " .. text
+    Btn.TextColor3 = CurrentTheme.Text
+    Btn.Font = Enum.Font.SourceSansBold
+    Btn.TextSize = 13
+    Btn.TextXAlignment = Enum.TextXAlignment.Left
+    Btn.BackgroundColor3 = CurrentTheme.Button
+    Btn.BackgroundTransparency = 0.25
+    Btn.BorderSizePixel = 0
+    Btn.ZIndex = 4
+    Btn.Parent = parent
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+
+    local StatusInd = Instance.new("Frame")
+    StatusInd.Size = UDim2.new(0, 28, 0, 15)
+    StatusInd.Position = UDim2.new(1, -36, 0.5, -7.5)
+    StatusInd.BackgroundColor3 = defaultState and CurrentTheme.Accent or Color3.fromRGB(60, 65, 75)
+    StatusInd.BorderSizePixel = 0
+    StatusInd.ZIndex = 5
+    StatusInd.Parent = Btn
+    Instance.new("UICorner", StatusInd).CornerRadius = UDim.new(1, 0)
+
+    local state = defaultState
+    Btn.MouseButton1Click:Connect(function()
+        state = not state
+        StatusInd.BackgroundColor3 = state and CurrentTheme.Accent or Color3.fromRGB(60, 65, 75)
+        callback(state)
+    end)
+    return Btn
+end
+
+local function CreateValueAdjuster(parent, title, minVal, maxVal, defaultVal, step, callback)
+    local Container = Instance.new("Frame")
+    Container.Size = UDim2.new(1, -6, 0, 36)
+    Container.BackgroundColor3 = CurrentTheme.Button
+    Container.BackgroundTransparency = 0.25
+    Container.BorderSizePixel = 0
+    Container.ZIndex = 4
+    Container.Parent = parent
+    Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 6)
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0.55, 0, 1, 0)
+    Label.Position = UDim2.new(0, 10, 0, 0)
+    Label.Text = title .. ": " .. tostring(defaultVal)
+    Label.TextColor3 = CurrentTheme.Text
+    Label.Font = Enum.Font.SourceSansBold
+    Label.TextSize = 13
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.BackgroundTransparency = 1
+    Label.ZIndex = 5
+    Label.Parent = Container
+
+    local current = defaultVal
+    local MinusBtn = Instance.new("TextButton")
+    MinusBtn.Size = UDim2.new(0, 26, 0, 22)
+    MinusBtn.Position = UDim2.new(1, -62, 0.5, -11)
+    MinusBtn.Text = "-"
+    MinusBtn.TextColor3 = Color3.fromRGB(240, 240, 240)
+    MinusBtn.Font = Enum.Font.SourceSansBold
+    MinusBtn.TextSize = 15
+    MinusBtn.BackgroundColor3 = Color3.fromRGB(50, 35, 45)
+    MinusBtn.BorderSizePixel = 0
+    MinusBtn.ZIndex = 5
+    MinusBtn.Parent = Container
+    Instance.new("UICorner", MinusBtn).CornerRadius = UDim.new(0, 4)
+
+    local PlusBtn = Instance.new("TextButton")
+    PlusBtn.Size = UDim2.new(0, 26, 0, 22)
+    PlusBtn.Position = UDim2.new(1, -32, 0.5, -11)
+    PlusBtn.Text = "+"
+    PlusBtn.TextColor3 = Color3.fromRGB(240, 240, 240)
+    PlusBtn.Font = Enum.Font.SourceSansBold
+    PlusBtn.TextSize = 15
+    PlusBtn.BackgroundColor3 = CurrentTheme.Accent
+    PlusBtn.BorderSizePixel = 0
+    PlusBtn.ZIndex = 5
+    PlusBtn.Parent = Container
+    Instance.new("UICorner", PlusBtn).CornerRadius = UDim.new(0, 4)
+
+    MinusBtn.MouseButton1Click:Connect(function()
+        current = math.max(minVal, current - step)
+        Label.Text = title .. ": " .. tostring(current)
+        callback(current)
+    end)
+    PlusBtn.MouseButton1Click:Connect(function()
+        current = math.min(maxVal, current + step)
+        Label.Text = title .. ": " .. tostring(current)
+        callback(current)
+    end)
+end
+
+local function CreateButton(parent, text, bgColor, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, -6, 0, 34)
+    Btn.Text = text
+    Btn.TextColor3 = Color3.fromRGB(245, 245, 245)
+    Btn.Font = Enum.Font.SourceSansBold
+    Btn.TextSize = 13
+    Btn.BackgroundColor3 = bgColor or CurrentTheme.Button
+    Btn.BackgroundTransparency = 0.2
+    Btn.BorderSizePixel = 0
+    Btn.ZIndex = 4
+    Btn.Parent = parent
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+    Btn.MouseButton1Click:Connect(callback)
+    return Btn
+end
+
+----------------------------------------------------------
+-- TAB 1: ANTI-BAN SHIELD
+----------------------------------------------------------
+local AList = Instance.new("UIListLayout", AntiBanPage)
+AList.SortOrder = Enum.SortOrder.LayoutOrder
+AList.Padding = UDim.new(0, 8)
+
+CreateToggle(AntiBanPage, "🛡️ Chống Kick Tối Đa (Anti-Kick)", Config.AntiKick, function(state) Config.AntiKick = state end)
+CreateToggle(AntiBanPage, "🚫 Chặn Gửi Log/Report Cho Game", Config.AntiLog, function(state) Config.AntiLog = state end)
+CreateToggle(AntiBanPage, "🎭 Ngụy Trang Chỉ Số (Spoof Humanoid)", Config.SpoofStats, function(state) Config.SpoofStats = state end)
+CreateToggle(AntiBanPage, "🧹 Khóa Script Anti-Cheat Của Game", Config.DisableClientAC, function(state) Config.DisableClientAC = state end)
+
+----------------------------------------------------------
+-- TAB 2: COMBAT VIP
+----------------------------------------------------------
+local CList = Instance.new("UIListLayout", CombatPage)
+CList.SortOrder = Enum.SortOrder.LayoutOrder
+CList.Padding = UDim.new(0, 8)
+
+local TargetLabel = Instance.new("TextLabel")
+TargetLabel.Size = UDim2.new(1, -6, 0, 22)
+TargetLabel.Text = "Mục tiêu: Chưa chọn"
+TargetLabel.TextColor3 = CurrentTheme.Accent
+TargetLabel.Font = Enum.Font.SourceSansBold
+TargetLabel.TextSize = 13
+TargetLabel.BackgroundTransparency = 1
+TargetLabel.ZIndex = 4
+TargetLabel.Parent = CombatPage
+
+CreateButton(CombatPage, "🎯 Chọn Mục Tiêu (Đổi Player)", Color3.fromRGB(45, 25, 40), function()
+    local plrs = Players:GetPlayers()
+    if #plrs <= 1 then
+        Notify("Combat", "Không có đối thủ khác trong server!")
         return
     end
-    player.CharacterAdded:Connect(function(char)
-        MovementProtection.setupCharacter(player, char)
+    local currentIndex = 1
+    for i, p in ipairs(plrs) do
+        if p == Config.SelectedTarget then currentIndex = i break end
+    end
+    local nextPlr = plrs[(currentIndex % #plrs) + 1]
+    if nextPlr == LocalPlayer then nextPlr = plrs[((currentIndex + 1) % #plrs) + 1] end
+    Config.SelectedTarget = nextPlr
+    if Config.SelectedTarget then
+        TargetLabel.Text = "Mục tiêu: " .. Config.SelectedTarget.DisplayName
+        Notify("Combat VIP", "Đã chọn: " .. Config.SelectedTarget.DisplayName)
+    end
+end)
+
+CreateToggle(CombatPage, "⚡ M1 Multi-Hit Super Damage", Config.SuperM1Damage, function(state) Config.SuperM1Damage = state end)
+CreateValueAdjuster(CombatPage, "Sức Mạnh Nhân Hit M1", 5, 80, Config.DamageMultiplier, 5, function(val) Config.DamageMultiplier = val end)
+CreateToggle(CombatPage, "📦 Phóng To Hitbox Kẻ Địch", Config.HitboxExpander, function(state) Config.HitboxExpander = state end)
+CreateValueAdjuster(CombatPage, "Kích Thước Hitbox", 5, 35, Config.HitboxSize, 5, function(val) Config.HitboxSize = val end)
+CreateToggle(CombatPage, "⚡ Auto TP Áp Sát Lưng Đối Thủ", Config.AutoTPTarget, function(state) Config.AutoTPTarget = state end)
+CreateToggle(CombatPage, "🥊 Auto Đấm M1 Tự Động", Config.AutoAttack, function(state) Config.AutoAttack = state end)
+
+----------------------------------------------------------
+-- TAB 3: MOVEMENT
+----------------------------------------------------------
+local MList = Instance.new("UIListLayout", MovementPage)
+MList.SortOrder = Enum.SortOrder.LayoutOrder
+MList.Padding = UDim.new(0, 8)
+
+local bodyVel, bodyGyro
+CreateToggle(MovementPage, "Bay 3D Chuẩn (Fly WASD)", Config.FlyEnabled, function(state)
+    Config.FlyEnabled = state
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not state then
+        if bodyVel then bodyVel:Destroy() bodyVel = nil end
+        if bodyGyro then bodyGyro:Destroy() bodyGyro = nil end
+    elseif hrp then
+        bodyVel = Instance.new("BodyVelocity", hrp)
+        bodyVel.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+        bodyVel.Velocity = Vector3.zero
+        bodyGyro = Instance.new("BodyGyro", hrp)
+        bodyGyro.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+        bodyGyro.CFrame = hrp.CFrame
+    end
+end)
+CreateValueAdjuster(MovementPage, "Tốc Độ Bay", 20, 250, Config.FlySpeed, 10, function(val) Config.FlySpeed = val end)
+CreateToggle(MovementPage, "Đi Xuyên Tường Smooth (Noclip)", Config.NoclipEnabled, function(state) Config.NoclipEnabled = state end)
+CreateToggle(MovementPage, "Chạy Nhanh (Speed Hack)", Config.SpeedEnabled, function(state) Config.SpeedEnabled = state end)
+CreateValueAdjuster(MovementPage, "Tốc Độ Chạy", 16, 200, Config.SpeedValue, 10, function(val) Config.SpeedValue = val end)
+
+----------------------------------------------------------
+-- TAB 4: FIX LAG VIP
+----------------------------------------------------------
+local FList = Instance.new("UIListLayout", FixLagPage)
+FList.SortOrder = Enum.SortOrder.LayoutOrder
+FList.Padding = UDim.new(0, 8)
+
+CreateButton(FixLagPage, "🚀 Kích Hoạt Max FPS (Siêu Nhẹ Map)", Color3.fromRGB(35, 55, 35), function()
+    pcall(function()
+        for _, v in ipairs(Lighting:GetChildren()) do
+            if v:IsA("Sky") or v:IsA("Atmosphere") or v:IsA("PostEffect") or v:IsA("BlurEffect") then v:Destroy() end
+        end
+        Lighting.GlobalShadows = false
+        Lighting.FogEnd = 9e9
+        Lighting.Brightness = 2
+        
+        for _, v in ipairs(Workspace:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.Material = Enum.Material.SmoothPlastic
+                v.CastShadow = false
+            elseif v:IsA("Decal") or v:IsA("Texture") then
+                v.Transparency = 1
+            elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
+                v.Enabled = false
+            end
+        end
+    end)
+    Notify("Fix Lag VIP", "Đã bật Max FPS thành công!")
+end)
+
+CreateToggle(FixLagPage, "🥔 Chế Độ Potato Graphics", Config.PotatoMode, function(state)
+    Config.PotatoMode = state
+    pcall(function()
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+        for _, v in ipairs(Workspace:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.Material = state and Enum.Material.SmoothPlastic or Enum.Material.Plastic
+                v.CastShadow = not state
+            end
+        end
     end)
 end)
 
--- Player leave
-Players.PlayerRemoving:Connect(function(player)
-    PlayerState.remove(player)
-    RemoteSecurity.reset(player)
+CreateToggle(FixLagPage, "🧹 Auto Dọn Dẹp RAM Ngầm", Config.AutoMemoryClean, function(state) Config.AutoMemoryClean = state end)
+CreateToggle(FixLagPage, "👤 Ẩn Người Chơi Khác (Hide Players)", Config.HidePlayers, function(state)
+    Config.HidePlayers = state
+    pcall(function()
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                for _, part in ipairs(p.Character:GetDescendants()) do
+                    if part:IsA("BasePart") or part:IsA("Decal") then
+                        part.Transparency = state and 1 or 0
+                    end
+                end
+            end
+        end
+    end)
 end)
 
--- Heartbeat checks
-RunService.Heartbeat:Connect(function(dt)
-    for _, player in ipairs(Players:GetPlayers()) do
-        StrikeSystem.decay(player)
-    end
-    MovementProtection.checkAll(dt)
+----------------------------------------------------------
+-- TAB 5: SETTINGS & CHILL BACKGROUND CUSTOM
+----------------------------------------------------------
+local SList = Instance.new("UIListLayout", SettingsPage)
+SList.SortOrder = Enum.SortOrder.LayoutOrder
+SList.Padding = UDim.new(0, 8)
+
+CreateButton(SettingsPage, "🌄 Đổi Ảnh Background Chill Chill (Preset 1 - 6)", Color3.fromRGB(45, 30, 55), function()
+    Config.CurrentChillIndex = (Config.CurrentChillIndex % #ChillPresets) + 1
+    MainBgImage.Image = ChillPresets[Config.CurrentChillIndex]
+    Notify("Chill Bg", "Đã chuyển sang Nền Lo-Fi Chill #" .. Config.CurrentChillIndex .. " ☕")
 end)
 
--- Remote protection init
-RemoteSecurity.checkAll()
-local ServerStorage = game:GetService("ServerStorage")
+-- Ô NHẬP CUSTOM IMAGE ID
+local CustomIdContainer = Instance.new("Frame")
+CustomIdContainer.Size = UDim2.new(1, -6, 0, 36)
+CustomIdContainer.BackgroundColor3 = CurrentTheme.Button
+CustomIdContainer.BackgroundTransparency = 0.25
+CustomIdContainer.BorderSizePixel = 0
+CustomIdContainer.ZIndex = 4
+CustomIdContainer.Parent = SettingsPage
+Instance.new("UICorner", CustomIdContainer).CornerRadius = UDim.new(0, 6)
 
-local LoggingSystem = {}
-local LogFolder = ServerStorage:FindFirstChild("AntiCheatLogs")
+local CustomIdBox = Instance.new("TextBox")
+CustomIdBox.Size = UDim2.new(1, -80, 1, 0)
+CustomIdBox.Position = UDim2.new(0, 10, 0, 0)
+CustomIdBox.PlaceholderText = "Nhập ID Ảnh Roblox Tự Chọn (Ví dụ: 6071575925)..."
+CustomIdBox.Text = ""
+CustomIdBox.TextColor3 = CurrentTheme.Text
+CustomIdBox.PlaceholderColor3 = Color3.fromRGB(160, 150, 175)
+CustomIdBox.Font = Enum.Font.SourceSans
+CustomIdBox.TextSize = 12
+CustomIdBox.TextXAlignment = Enum.TextXAlignment.Left
+CustomIdBox.BackgroundTransparency = 1
+CustomIdBox.ZIndex = 5
+CustomIdBox.Parent = CustomIdContainer
 
-if not LogFolder then
-    LogFolder = Instance.new("Folder")
-    LogFolder.Name = "AntiCheatLogs"
-    LogFolder.Parent = ServerStorage
-end
+local ApplyIdBtn = Instance.new("TextButton")
+ApplyIdBtn.Size = UDim2.new(0, 60, 0, 26)
+ApplyIdBtn.Position = UDim2.new(1, -66, 0.5, -13)
+ApplyIdBtn.Text = "Đổi Ảnh"
+ApplyIdBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ApplyIdBtn.Font = Enum.Font.SourceSansBold
+ApplyIdBtn.TextSize = 12
+ApplyIdBtn.BackgroundColor3 = CurrentTheme.Accent
+ApplyIdBtn.BorderSizePixel = 0
+ApplyIdBtn.ZIndex = 5
+ApplyIdBtn.Parent = CustomIdContainer
+Instance.new("UICorner", ApplyIdBtn).CornerRadius = UDim.new(0, 4)
 
--- Tạo log entry
-function LoggingSystem.log(player, action, detail)
-    local entry = Instance.new("StringValue")
-    entry.Name = player.Name .. "_" .. os.time()
-    entry.Value = "[AntiCheat] Player: " .. player.Name .. " | Action: " .. action .. " | Detail: " .. detail
-    entry.Parent = LogFolder
-    print(entry.Value)
-end
-
--- Lấy toàn bộ log
-function LoggingSystem.getAll()
-    local logs = {}
-    for _, v in ipairs(LogFolder:GetChildren()) do
-        table.insert(logs, v.Value)
+ApplyIdBtn.MouseButton1Click:Connect(function()
+    local input = CustomIdBox.Text:gsub("%D", "")
+    if #input > 3 then
+        MainBgImage.Image = "rbxassetid://" .. input
+        Notify("Background", "Đã áp dụng Custom Image ID: " .. input)
+    else
+        Notify("Background Lỗi", "Vui lòng nhập số ID hợp lệ!")
     end
-    return logs
+end)
+
+CreateButton(SettingsPage, "🎨 Đổi Tone Màu Theme (Purple/Pink/Ocean/Mint)", Color3.fromRGB(35, 30, 48), function()
+    if CurrentTheme == Themes.ChillPurple then CurrentTheme = Themes.SoftPink
+    elseif CurrentTheme == Themes.SoftPink then CurrentTheme = Themes.OceanBlue
+    elseif CurrentTheme == Themes.OceanBlue then CurrentTheme = Themes.MintGreen
+    else CurrentTheme = Themes.ChillPurple end
+
+    MainFrame.BackgroundColor3 = CurrentTheme.Bg
+    Header.BackgroundColor3 = CurrentTheme.Sidebar
+    Sidebar.BackgroundColor3 = CurrentTheme.Sidebar
+    Title.TextColor3 = CurrentTheme.Accent
+    MainStroke.Color = CurrentTheme.Accent
+    ToggleBtn.BackgroundColor3 = CurrentTheme.Sidebar
+    ButtonStroke.Color = CurrentTheme.Accent
+    TargetLabel.TextColor3 = CurrentTheme.Accent
+    ApplyIdBtn.BackgroundColor3 = CurrentTheme.Accent
+
+    for _, btn in ipairs(TabButtons) do btn.BackgroundColor3 = CurrentTheme.Button end
+    Notify("Settings", "Đã đổi Theme: " .. CurrentTheme.Name)
+end)
+
+CreateToggle(SettingsPage, "Chống Treo Máy (Anti-AFK 24/7)", Config.AntiAFK, function(state) Config.AntiAFK = state end)
+CreateButton(SettingsPage, "🔄 Vào Lại Server (Rejoin)", Color3.fromRGB(45, 25, 35), function()
+    TeleportService:Teleport(game.PlaceId, LocalPlayer)
+end)
+
+----------------------------------------------------------
+-- SYSTEM LOOPS & CORE ENGINE
+----------------------------------------------------------
+local lastM1Tick = 0
+local function ExecuteM1KillProtocol()
+    if tick() - lastM1Tick < 0.04 then return end
+    lastM1Tick = tick()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local cam = workspace.CurrentCamera
+    local tool = char:FindFirstChildOfClass("Tool")
+    local hits = Config.SuperM1Damage and Config.DamageMultiplier or 1
+
+    task.spawn(function()
+        for i = 1, hits do
+            if VirtualUser then
+                pcall(function()
+                    VirtualUser:Button1Down(Vector2.new(0,0), cam.CFrame)
+                    VirtualUser:Button1Up(Vector2.new(0,0), cam.CFrame)
+                end)
+            end
+            if tool then
+                pcall(function() tool:Activate() end)
+            end
+        end
+    end)
 end
 
--- Xóa log cũ
-function LoggingSystem.clearOld(maxEntries)
-    local children = LogFolder:GetChildren()
-    if #children > maxEntries then
-        table.sort(children, function(a, b) return a.Name < b.Name end)
-        for i = 1, #children - maxEntries do
-            children[i]:Destroy()
+-- RENDER & UPDATE LOOP
+local lastTime = tick()
+local frameCount = 0
+local memoryTimer = 0
+
+RunService.Stepped:Connect(function()
+    if Config.NoclipEnabled and LocalPlayer.Character then
+        for _, part in ipairs(LocalPlayer.Character:GetChildren()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
         end
     end
-end
+end)
 
-return LoggingSystem
-local Config = require(script.Parent.Config)
-local PlayerState = require(script.Parent.PlayerState)
-local BanSystem = require(script.Parent.BanSystem)
-local LoggingSystem = require(script.Parent.LoggingSystem)
+RunService.RenderStepped:Connect(function(dt)
+    frameCount = frameCount + 1
+    if tick() - lastTime >= 1 then
+        local currentFPS = math.floor(frameCount / (tick() - lastTime))
+        local pingVal = 0
+        pcall(function() pingVal = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
+        StatsLabel.Text = "FPS: " .. currentFPS .. " | Ping: " .. pingVal .. "ms"
+        frameCount = 0
+        lastTime = tick()
+    end
 
-local AdminTools = {}
+    -- Clean Memory
+    if Config.AutoMemoryClean then
+        memoryTimer = memoryTimer + dt
+        if memoryTimer >= 20 then
+            memoryTimer = 0
+            pcall(function() collectgarbage("collect") end)
+        end
+    end
 
--- Kiểm tra quyền admin
-function AdminTools.isAdmin(player)
-    return Config.Admins[player.UserId] == true
-end
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
 
--- Ban thủ công
-function AdminTools.manualBan(admin, target, reason)
-    if not AdminTools.isAdmin(admin) then return false, "Not authorized" end
-    BanSystem.apply(target, reason or "Manual ban by admin")
-    LoggingSystem.log(target, "ManualBan", reason or "No reason")
-    return true, "Player banned"
-end
+    -- Hitbox Expander
+    if Config.HitboxExpander then
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                local eHRP = p.Character:FindFirstChild("HumanoidRootPart")
+                if eHRP then
+                    eHRP.Size = Vector3.new(Config.HitboxSize, Config.HitboxSize, Config.HitboxSize)
+                    eHRP.Transparency = 0.7
+                    eHRP.Color = CurrentTheme.Accent
+                    eHRP.CanCollide = false
+                end
+            end
+        end
+    end
 
--- Unban thủ công
-function AdminTools.unban(admin, userId)
-    if not AdminTools.isAdmin(admin) then return false, "Not authorized" end
-    local key = BanSystem.getKey(userId)
-    local DataStoreService = game:GetService("DataStoreService")
-    local BanStore = DataStoreService:GetDataStore("Kianbest_AntiCheat_Bans_V3")
-    pcall(function()
-        BanStore:RemoveAsync(key)
-    end)
-    LoggingSystem.log(admin, "Unban", "UserId: " .. userId)
-    return true, "Player unbanned"
-end
+    -- Combat Target Auto TP & Auto Attack
+    if Config.SelectedTarget and Config.SelectedTarget.Character then
+        local tHRP = Config.SelectedTarget.Character:FindFirstChild("HumanoidRootPart")
+        local tHum = Config.SelectedTarget.Character:FindFirstChildOfClass("Humanoid")
+        if tHRP and tHum and tHum.Health > 0 and hrp then
+            if Config.AutoTPTarget then hrp.CFrame = tHRP.CFrame * CFrame.new(0, 0, 2.2) end
+            if Config.AutoAttack or Config.SuperM1Damage then ExecuteM1KillProtocol() end
+        end
+    end
 
--- Xem trạng thái player
-function AdminTools.inspect(admin, player)
-    if not AdminTools.isAdmin(admin) then return nil, "Not authorized" end
-    local state = PlayerState.get(player)
-    if not state then return nil, "No state" end
-    return {
-        Strikes = state.Strikes,
-        LastStrikeReason = state.LastStrikeReason,
-        LastStrikeTime = state.LastStrikeTime,
-        IsBanned = state.IsBanned,
-    }
-end
+    if Config.SpeedEnabled and hum then hum.WalkSpeed = Config.SpeedValue end
+end)
 
--- Xem log
-function AdminTools.viewLogs(admin)
-    if not AdminTools.isAdmin(admin) then return nil, "Not authorized" end
-    return LoggingSystem.getAll()
-end
+-- ANTI-AFK 24/7
+LocalPlayer.Idled:Connect(function()
+    if Config.AntiAFK and VirtualUser then
+        pcall(function()
+            VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+            task.wait(1)
+            VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        end)
+    end
+end)
 
-return AdminTools
+Notify("Kianbest Hub", "Đã tải v12.5 CHILL EDITION! Nền mờ mờ Lo-Fi đã hiển thị hoàn hảo! ☕✨")
