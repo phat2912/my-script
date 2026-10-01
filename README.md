@@ -1,6 +1,7 @@
 -- ==========================================================
--- SCRIPT MENU SYSTEM V10.5 ULTRA VIP (Kianbest Hub)
--- Updated: Advanced Multi-Mode Fix Lag & Performance Booster
+-- SCRIPT MENU SYSTEM V10.0 ULTRA VIP (Kianbest Hub)
+-- Fix: Smooth Noclip + Instant M1 Multi-Hit Execution
+-- Preset 10 Anime Girls + 5-Layer Anti-Ban Protection
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -13,33 +14,34 @@ local TweenService = game:GetService("TweenService")
 local Stats = game:GetService("Stats")
 local TeleportService = game:GetService("TeleportService")
 local VirtualUser = game:GetService("VirtualUser")
-local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 
--- 1. CẤU HÌNH HỆ THỐNG & FIX LAG MODES
+-- 1. CẤU HÌNH HỆ THỐNG & ANTI-BAN
 local Config = {
+    -- Anti-Ban & Protection Settings
     AntiBanEnabled = true,
     AntiKick = true,
     AntiLog = true,
     DisableClientAC = true,
 
-    -- Fix Lag Extended Modes
-    PotatoMode = false,
-    RemoveShadows = false,
-    RemoveTextures = false,
-    FullBright = false,
-    LowPoly = false,
-    RemoveParticles = false,
-    AutoMemoryClean = false,
-    HidePlayers = false,
-    RemoveVFX = false,
-
-    -- Movement & Combat
+    -- ESP & Visuals
+    ESPEnabled = false,
+    ESPNamesEnabled = false,
+    ESPHealthEnabled = false,
+    
+    -- Movement
     NoclipEnabled = false,
     SpeedEnabled = false,
     SpeedValue = 35,
     FlyEnabled = false,
     FlySpeed = 75,
+    
+    -- Fix Lag
+    RemoveVFX = false,
+    RemoveTextures = false,
+    HidePlayers = false,
+    
+    -- Combat VIP
     SelectedTarget = nil,
     AutoTPTarget = false,
     AutoAttack = false,
@@ -48,7 +50,8 @@ local Config = {
     HitboxExpander = false,
     HitboxSize = 18,
     AutoSkills = false,
-
+    
+    -- Interface & Anti-AFK
     AntiAFK = true,
     CurrentAnimeIndex = math.random(1, 10),
     BgTransparency = 0.35,
@@ -156,27 +159,70 @@ local function Notify(title, text, duration)
 end
 
 ----------------------------------------------------------
--- 🛡️ ANTI-BAN MODULE
+-- 🛡️ HỆ THỐNG ANTI-BAN MODULE
 ----------------------------------------------------------
 local function InitAntiBanModule()
     if not Config.AntiBanEnabled then return end
+    
     if hookmetamethod then
         local oldNamecall
         oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
             local method = getnamecallmethod()
+            
             if Config.AntiKick and (method:lower() == "kick") and self == LocalPlayer then
+                Notify("Anti-Ban 🛡️", "Đã chặn lệnh Kick từ Server/Client AC!", 3)
                 return nil
             end
+            
             if Config.AntiLog and (method == "FireServer" or method == "InvokeServer") then
                 local remoteName = tostring(self.Name):lower()
-                if remoteName:find("ban") or remoteName:find("flag") or remoteName:find("cheat") or remoteName:find("detect") or remoteName:find("log") then
+                if remoteName:find("ban") or remoteName:find("flag") or remoteName:find("cheat") or remoteName:find("detect") or remoteName:find("log") or remoteName:find("report") then
+                    Notify("Anti-Ban 🛡️", "Đã chặn Remote Log: " .. self.Name, 2)
                     return nil
                 end
             end
+            
             return oldNamecall(self, ...)
         end)
     end
+
+    local function DisableClientAntiCheats()
+        if not Config.DisableClientAC then return end
+        local keywords = {"adoni", "anticheat", "ac", "checker", "detector", "protect", "exploit"}
+        
+        local function ScanContainer(container)
+            for _, v in ipairs(container:GetChildren()) do
+                if v:IsA("LocalScript") or v:IsA("ModuleScript") then
+                    local name = v.Name:lower()
+                    for _, kw in ipairs(keywords) do
+                        if name:find(kw) then
+                            pcall(function()
+                                v.Disabled = true
+                                v:Destroy()
+                            end)
+                            Notify("Anti-Ban 🛡️", "Đã xóa Script AC: " .. v.Name, 2)
+                            break
+                        end
+                    end
+                end
+            end
+        end
+        
+        pcall(function() ScanContainer(LocalPlayer:WaitForChild("PlayerScripts")) end)
+        if LocalPlayer.Character then
+            pcall(function() ScanContainer(LocalPlayer.Character) end)
+        end
+    end
+
+    DisableClientAntiCheats()
+    LocalPlayer.CharacterAdded:Connect(function()
+        task.wait(1.2)
+        DisableClientAntiCheats()
+    end)
+    
+    Notify("Anti-Ban 🛡️️", "Bảo vệ Anti-Ban v10.0 ULTRA VIP đã sẵn sàng!")
 end
+
 InitAntiBanModule()
 
 ----------------------------------------------------------
@@ -195,10 +241,12 @@ MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+
 local MainStroke = Instance.new("UIStroke", MainFrame)
 MainStroke.Color = CurrentTheme.Accent
 MainStroke.Thickness = 2
 
+-- HÌNH NỀN ANIME NỮ CUTE HD PRESET
 local MainBgImage = Instance.new("ImageLabel")
 MainBgImage.Name = "MainBgAnimeGirl"
 MainBgImage.Size = UDim2.new(1, 0, 1, 0)
@@ -217,14 +265,15 @@ Header.BackgroundTransparency = 0.2
 Header.BorderSizePixel = 0
 Header.ZIndex = 3
 Header.Parent = MainFrame
+
 Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 10)
 
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(0, 300, 1, 0)
+Title.Size = UDim2.new(0, 280, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
-Title.Text = "🚀 Kianbest Hub v10.5 ULTRA VIP"
+Title.Text = "🛡️ Kianbest Hub v10.0 ULTRA VIP"
 Title.TextColor3 = CurrentTheme.Accent
-Title.TextSize = 14
+Title.TextSize = 15
 Title.Font = Enum.Font.FredokaOne
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
@@ -256,7 +305,7 @@ CloseBtn.ZIndex = 4
 CloseBtn.Parent = Header
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 
--- TOGGLE BUTTON
+-- NÚT TRÒN TOGGLE "KIAN"
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Name = "KianToggleButton"
 ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
@@ -270,10 +319,13 @@ ToggleBtn.Active = true
 ToggleBtn.Draggable = true
 ToggleBtn.ZIndex = 100
 ToggleBtn.Parent = ScreenGui
+
 Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
 
 local ButtonAspect = Instance.new("UIAspectRatioConstraint", ToggleBtn)
 ButtonAspect.AspectRatio = 1
+ButtonAspect.AspectType = Enum.AspectType.FitWithinMaxSize
+
 local ButtonStroke = Instance.new("UIStroke", ToggleBtn)
 ButtonStroke.Color = CurrentTheme.Accent
 ButtonStroke.Thickness = 2.5
@@ -295,12 +347,13 @@ end
 
 ToggleBtn.MouseButton1Click:Connect(ToggleMenu)
 CloseBtn.MouseButton1Click:Connect(ToggleMenu)
-UserInputService.InputBegan:Connect(function(input, gp)
-    if not gp and input.KeyCode == Config.ToggleKey then ToggleMenu() end
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Config.ToggleKey then ToggleMenu() end
 end)
 
 ----------------------------------------------------------
--- SIDEBAR & TABS
+-- SIDEBAR & TAB SYSTEM
 ----------------------------------------------------------
 local Sidebar = Instance.new("Frame")
 Sidebar.Size = UDim2.new(0, 130, 1, -38)
@@ -334,6 +387,7 @@ local function CreateTab(name, icon, posIndex)
     TabBtn.BorderSizePixel = 0
     TabBtn.ZIndex = 4
     TabBtn.Parent = Sidebar
+
     Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 6)
 
     local Page = Instance.new("ScrollingFrame")
@@ -361,13 +415,13 @@ local function CreateTab(name, icon, posIndex)
 end
 
 local CombatPage = CreateTab("Combat VIP", "⚔️", 1)
-local MovementPage = CreateTab("Movement", "⚡", 2)
-local FixLagPage = CreateTab("Fix Lag VIP", "🚀", 3)
-local VisualsPage = CreateTab("Visuals", "👁", 4)
+local VisualsPage = CreateTab("Visuals", "👁", 2)
+local MovementPage = CreateTab("Movement", "⚡", 3)
+local FixLagPage = CreateTab("Fix Lag", "🚀", 4)
 local SettingsPage = CreateTab("Settings", "⚙️", 5)
 
 ----------------------------------------------------------
--- UI BUILDERS
+-- UI BUILDER HELPERS
 ----------------------------------------------------------
 local function CreateToggle(parent, text, defaultState, callback)
     local Btn = Instance.new("TextButton")
@@ -381,6 +435,7 @@ local function CreateToggle(parent, text, defaultState, callback)
     Btn.BorderSizePixel = 0
     Btn.ZIndex = 4
     Btn.Parent = parent
+
     Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
 
     local StatusInd = Instance.new("Frame")
@@ -390,6 +445,7 @@ local function CreateToggle(parent, text, defaultState, callback)
     StatusInd.BorderSizePixel = 0
     StatusInd.ZIndex = 5
     StatusInd.Parent = Btn
+
     Instance.new("UICorner", StatusInd).CornerRadius = UDim.new(1, 0)
 
     local state = defaultState
@@ -408,6 +464,7 @@ local function CreateValueAdjuster(parent, title, minVal, maxVal, defaultVal, st
     Container.BorderSizePixel = 0
     Container.ZIndex = 4
     Container.Parent = parent
+
     Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 6)
 
     local Label = Instance.new("TextLabel")
@@ -423,6 +480,7 @@ local function CreateValueAdjuster(parent, title, minVal, maxVal, defaultVal, st
     Label.Parent = Container
 
     local current = defaultVal
+
     local MinusBtn = Instance.new("TextButton")
     MinusBtn.Size = UDim2.new(0, 26, 0, 22)
     MinusBtn.Position = UDim2.new(1, -62, 0.5, -11)
@@ -454,6 +512,7 @@ local function CreateValueAdjuster(parent, title, minVal, maxVal, defaultVal, st
         Label.Text = title .. ": " .. tostring(current)
         callback(current)
     end)
+
     PlusBtn.MouseButton1Click:Connect(function()
         current = math.min(maxVal, current + step)
         Label.Text = title .. ": " .. tostring(current)
@@ -473,12 +532,13 @@ local function CreateButton(parent, text, bgColor, callback)
     Btn.ZIndex = 4
     Btn.Parent = parent
     Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+
     Btn.MouseButton1Click:Connect(callback)
     return Btn
 end
 
 ----------------------------------------------------------
--- TAB 1: COMBAT VIP
+-- TAB 1: COMBAT VIP (CƠ CHẾ ĐẤM TỬ THẦN INSTANT M1)
 ----------------------------------------------------------
 local CList = Instance.new("UIListLayout", CombatPage)
 CList.SortOrder = Enum.SortOrder.LayoutOrder
@@ -500,16 +560,24 @@ CreateButton(CombatPage, "🎯 Chọn Mục Tiêu (Đổi Player)", Color3.fromR
     for i, p in ipairs(plrs) do
         if p == Config.SelectedTarget then currentIndex = i break end
     end
+    
     local nextPlr = plrs[(currentIndex % #plrs) + 1]
     if nextPlr == LocalPlayer then nextPlr = plrs[((currentIndex + 1) % #plrs) + 1] end
+    
     Config.SelectedTarget = nextPlr
     if Config.SelectedTarget then
-        TargetLabel.Text = "Mục tiêu: " .. Config.SelectedTarget.DisplayName
+        TargetLabel.Text = "Mục tiêu: " .. Config.SelectedTarget.DisplayName .. " (@" .. Config.SelectedTarget.Name .. ")"
         Notify("Combat VIP", "Đã chọn: " .. Config.SelectedTarget.DisplayName)
+    else
+        TargetLabel.Text = "Mục tiêu: Không có người chơi khác"
     end
 end)
 
-CreateToggle(CombatPage, "⚡ M1 Tử Thần Multi-Hit (Auto Kill Instant)", Config.SuperM1Damage, function(state) Config.SuperM1Damage = state end)
+CreateToggle(CombatPage, "⚡ M1 Tử Thần Multi-Hit (Auto Kill Instant)", Config.SuperM1Damage, function(state)
+    Config.SuperM1Damage = state
+    Notify("Combat VIP", state and "Đã BẬT M1 Tử Thần!" or "Đã TẮT M1")
+end)
+
 CreateValueAdjuster(CombatPage, "Sức Mạnh Multi-Hit M1", 10, 100, Config.DamageMultiplier, 10, function(val) Config.DamageMultiplier = val end)
 CreateToggle(CombatPage, "📦 Phóng To Hitbox Kẻ Địch", Config.HitboxExpander, function(state) Config.HitboxExpander = state end)
 CreateValueAdjuster(CombatPage, "Kích Thước Hitbox", 5, 35, Config.HitboxSize, 5, function(val) Config.HitboxSize = val end)
@@ -518,16 +586,30 @@ CreateToggle(CombatPage, "🥊 Auto Đấm Liên Hoàn M1", Config.AutoAttack, f
 CreateToggle(CombatPage, "🔥 Auto Combo Skill (Z, X, C, V)", Config.AutoSkills, function(state) Config.AutoSkills = state end)
 
 ----------------------------------------------------------
--- TAB 2: MOVEMENT
+-- TAB 2: VISUALS
+----------------------------------------------------------
+local VList = Instance.new("UIListLayout", VisualsPage)
+VList.SortOrder = Enum.SortOrder.LayoutOrder
+VList.Padding = UDim.new(0, 8)
+
+CreateToggle(VisualsPage, "ESP Highlight (Xuyên Tường)", Config.ESPEnabled, function(state) Config.ESPEnabled = state end)
+CreateToggle(VisualsPage, "ESP Name (Hiện Tên)", Config.ESPNamesEnabled, function(state) Config.ESPNamesEnabled = state end)
+CreateToggle(VisualsPage, "ESP Health Bar (Thanh Máu)", Config.ESPHealthEnabled, function(state) Config.ESPHealthEnabled = state end)
+
+----------------------------------------------------------
+-- TAB 3: MOVEMENT (FIX NOCLIP KHÔNG BỊ ĐƠ)
 ----------------------------------------------------------
 local MList = Instance.new("UIListLayout", MovementPage)
 MList.SortOrder = Enum.SortOrder.LayoutOrder
 MList.Padding = UDim.new(0, 8)
 
 local bodyVel, bodyGyro
-CreateToggle(MovementPage, "Bay 3D Chuẩn (Fly WASD)", Config.FlyEnabled, function(state)
+
+CreateToggle(MovementPage, "Bay 3D Chuẩn (Fly WASD/Joystick)", Config.FlyEnabled, function(state)
     Config.FlyEnabled = state
-    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
     if not state then
         if bodyVel then bodyVel:Destroy() bodyVel = nil end
         if bodyGyro then bodyGyro:Destroy() bodyGyro = nil end
@@ -535,89 +617,61 @@ CreateToggle(MovementPage, "Bay 3D Chuẩn (Fly WASD)", Config.FlyEnabled, funct
         bodyVel = Instance.new("BodyVelocity", hrp)
         bodyVel.MaxForce = Vector3.new(1e9, 1e9, 1e9)
         bodyVel.Velocity = Vector3.zero
+
         bodyGyro = Instance.new("BodyGyro", hrp)
         bodyGyro.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+        bodyGyro.P = 10000
         bodyGyro.CFrame = hrp.CFrame
     end
 end)
+
 CreateValueAdjuster(MovementPage, "Tốc Độ Bay", 20, 250, Config.FlySpeed, 10, function(val) Config.FlySpeed = val end)
-CreateToggle(MovementPage, "Đi Xuyên Tường Smooth (Fix Đứng Yên)", Config.NoclipEnabled, function(state) Config.NoclipEnabled = state end)
-CreateToggle(MovementPage, "Chạy Nhanh (Speed Hack)", Config.SpeedEnabled, function(state) Config.SpeedEnabled = state end)
+
+-- FIX HOÀN TOÀN NOCLIP KHÔNG CẦN PART ẢNH HƯỞNG DI CHUYỂN
+CreateToggle(MovementPage, "Đi Xuyên Tường Smooth (Fix Đứng Yên)", Config.NoclipEnabled, function(state)
+    Config.NoclipEnabled = state
+    if state then
+        Notify("Movement", "Đã bật Noclip Siêu Mượt!")
+    end
+end)
+
+CreateToggle(MovementPage, "Chạy Nhanh (Speed Hack)", Config.SpeedEnabled, function(state)
+    Config.SpeedEnabled = state
+    if not Config.SpeedEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 16
+    end
+end)
+
 CreateValueAdjuster(MovementPage, "Tốc Độ Chạy", 16, 200, Config.SpeedValue, 10, function(val) Config.SpeedValue = val end)
 
 ----------------------------------------------------------
--- TAB 3: FIX LAG VIP (BỔ SUNG NHIỀU CHẾ ĐỘ CHUYÊN SÂU)
+-- TAB 4: FIX LAG
 ----------------------------------------------------------
 local FList = Instance.new("UIListLayout", FixLagPage)
 FList.SortOrder = Enum.SortOrder.LayoutOrder
 FList.Padding = UDim.new(0, 8)
 
-CreateButton(FixLagPage, "🚀 Kích Hoạt Siêu Tối Ưu Toàn Bộ Map", Color3.fromRGB(35, 55, 35), function()
+CreateButton(FixLagPage, "🚀 Super FPS Boost (Tối Ưu Map)", Color3.fromRGB(35, 45, 35), function()
     for _, v in ipairs(Lighting:GetChildren()) do
-        if v:IsA("Sky") or v:IsA("Atmosphere") or v:IsA("PostEffect") or v:IsA("BlurEffect") or v:IsA("SunRaysEffect") then v:Destroy() end
+        if v:IsA("Sky") or v:IsA("Atmosphere") or v:IsA("PostEffect") then v:Destroy() end
     end
     Lighting.GlobalShadows = false
     Lighting.FogEnd = 9e9
-    Lighting.Brightness = 2
     
-    for _, v in ipairs(Workspace:GetDescendants()) do
+    for _, v in ipairs(game:GetDescendants()) do
         if v:IsA("BasePart") then
             v.Material = Enum.Material.SmoothPlastic
             v.CastShadow = false
-            v.Reflectance = 0
         elseif v:IsA("Decal") or v:IsA("Texture") then
             v.Transparency = 1
-        elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
+        elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
             v.Enabled = false
         end
     end
-    Notify("Fix Lag VIP", "Đã dọn sạch hiệu ứng, bật max FPS thành công! ⚡")
+    Notify("Fix Lag", "Đã tối ưu mượt map thành công!")
 end)
 
-CreateToggle(FixLagPage, "🥔 Chế Độ Potato Graphics (Đồ Họa Thấp)", Config.PotatoMode, function(state)
-    Config.PotatoMode = state
-    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
-    for _, v in ipairs(Workspace:GetDescendants()) do
-        if v:IsA("BasePart") then
-            v.Material = state and Enum.Material.SmoothPlastic or Enum.Material.Plastic
-            v.CastShadow = not state
-        end
-    end
-    Notify("Fix Lag VIP", state and "Đã Bật chế độ Potato!" | "Đã tắt Potato")
-end)
-
-CreateToggle(FixLagPage, "☀️ Full Bright (Sáng Trưng, Xóa Bóng)", Config.FullBright, function(state)
-    Config.FullBright = state
-    Lighting.GlobalShadows = not state
-    Lighting.Brightness = state and 3 or 1
-    Notify("Fix Lag", state and "Đã bật Full Bright!" or "Đã tắt Full Bright")
-end)
-
-CreateToggle(FixLagPage, "🧱 Chuyển Map Sang Nhựa Trơn (Low-Poly)", Config.LowPoly, function(state)
-    Config.LowPoly = state
-    for _, v in ipairs(Workspace:GetDescendants()) do
-        if v:IsA("BasePart") then
-            v.Material = state and Enum.Material.SmoothPlastic or Enum.Material.Plastic
-        end
-    end
-    Notify("Fix Lag", state and "Đã Low-Poly map!" or "Khôi phục vật liệu")
-end)
-
-CreateToggle(FixLagPage, "🚫 Tự Động Xóa Hạt Hiệu Ứng (Particles)", Config.RemoveParticles, function(state)
-    Config.RemoveParticles = state
-    for _, v in ipairs(Workspace:GetDescendants()) do
-        if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") then
-            v.Enabled = not state
-        end
-    end
-    Notify("Fix Lag", state and "Đã tắt tất cả Particles!" or "Đã bật lại Particles")
-end)
-
-CreateToggle(FixLagPage, "🧹 Tự Động Dọn Dẹp RAM (Memory Cleaner)", Config.AutoMemoryClean, function(state)
-    Config.AutoMemoryClean = state
-    Notify("Fix Lag", state and "Đã bật Auto Dọn RAM ngầm!" or "Đã tắt Auto Dọn RAM")
-end)
-
+CreateToggle(FixLagPage, "🚫 Xóa Effect Chiêu Thức (Anti-VFX)", Config.RemoveVFX, function(state) Config.RemoveVFX = state end)
 CreateToggle(FixLagPage, "👤 Ẩn Người Chơi Khác (Hide Players)", Config.HidePlayers, function(state)
     Config.HidePlayers = state
     for _, p in ipairs(Players:GetPlayers()) do
@@ -632,25 +686,14 @@ CreateToggle(FixLagPage, "👤 Ẩn Người Chơi Khác (Hide Players)", Config
 end)
 
 ----------------------------------------------------------
--- TAB 4: VISUALS
-----------------------------------------------------------
-local VList = Instance.new("UIListLayout", VisualsPage)
-VList.SortOrder = Enum.SortOrder.LayoutOrder
-VList.Padding = UDim.new(0, 8)
-
-CreateToggle(VisualsPage, "ESP Highlight (Xuyên Tường)", false, function(state) end)
-CreateToggle(VisualsPage, "ESP Name (Hiện Tên)", false, function(state) end)
-CreateToggle(VisualsPage, "ESP Health Bar (Thanh Máu)", false, function(state) end)
-
-----------------------------------------------------------
--- TAB 5: SETTINGS
+-- TAB 5: SETTINGS & CUTE ANIME BACKGROUNDS
 ----------------------------------------------------------
 local SList = Instance.new("UIListLayout", SettingsPage)
 SList.SortOrder = Enum.SortOrder.LayoutOrder
 SList.Padding = UDim.new(0, 8)
 
-CreateToggle(SettingsPage, "🛡️️ Chống Kick (Anti-Kick)", Config.AntiKick, function(state) Config.AntiKick = state end)
-CreateToggle(SettingsPage, "🛡️ Chống Gửi Log Hack (Anti-Report)", Config.AntiLog, function(state) Config.AntiLog = state end)
+CreateToggle(SettingsPage, "🛡️ Bật Chống Kick (Anti-Kick)", Config.AntiKick, function(state) Config.AntiKick = state end)
+CreateToggle(SettingsPage, "🛡️ Chặn Gửi Log Hack (Anti-Report)", Config.AntiLog, function(state) Config.AntiLog = state end)
 
 CreateButton(SettingsPage, "🌸 Đổi Nền Anime Female Cute (1 - 10)", Color3.fromRGB(55, 30, 50), function()
     Config.CurrentAnimeIndex = (Config.CurrentAnimeIndex % #CuteAnimePresets) + 1
@@ -675,31 +718,36 @@ CreateButton(SettingsPage, "🎨 Đổi Theme Màu (Pink/Blue/Red/Purple)", Colo
     TargetLabel.TextColor3 = CurrentTheme.Accent
 
     for _, btn in ipairs(TabButtons) do btn.BackgroundColor3 = CurrentTheme.Button end
-    Notify("Settings", "Đã đổi theme màu thành công!")
+    Notify("Settings", "Đã chuyển theme: " .. CurrentTheme.Name)
 end)
 
 CreateToggle(SettingsPage, "Chống Treo Máy (Anti-AFK 24/7)", Config.AntiAFK, function(state) Config.AntiAFK = state end)
+
 CreateButton(SettingsPage, "🔄 Vào Lại Server (Rejoin)", Color3.fromRGB(50, 30, 45), function()
     TeleportService:Teleport(game.PlaceId, LocalPlayer)
 end)
 
 ----------------------------------------------------------
--- M1 MULTI-HIT PUNCH PROTOCOL
+-- VIP INSTANT M1 MULTI-HIT PUNCH PROTOCOL (CƠ CHẾ ĐẤM CHẾT)
 ----------------------------------------------------------
 local lastM1Tick = 0
 local function ExecuteM1KillProtocol()
     if tick() - lastM1Tick < 0.03 then return end
     lastM1Tick = tick()
+
     local char = LocalPlayer.Character
     if not char then return end
+
     local cam = workspace.CurrentCamera
     local tool = char:FindFirstChildOfClass("Tool")
     local hits = Config.SuperM1Damage and Config.DamageMultiplier or 1
 
+    -- Multi-threaded Attack Simulation
     task.spawn(function()
         for i = 1, hits do
             VirtualUser:Button1Down(Vector2.new(0,0), cam.CFrame)
             VirtualUser:Button1Up(Vector2.new(0,0), cam.CFrame)
+            
             if tool then
                 tool:Activate()
                 for _, child in ipairs(tool:GetDescendants()) do
@@ -716,18 +764,19 @@ local function ExecuteM1KillProtocol()
 end
 
 ----------------------------------------------------------
--- RENDER LOOP & MEMORY CLEANER
+-- RENDER LOOP (NOCLIP & COMBAT ENGINE)
 ----------------------------------------------------------
 local lastTime = tick()
 local frameCount = 0
 local skillTimer = 0
-local memoryTimer = 0
 
--- NOCLIP LOOP
+-- NOCLIP LOOP CHUẨN (KHÔNG BỊ ĐƠ HOẶC KHỰNG)
 RunService.Stepped:Connect(function()
     if Config.NoclipEnabled and LocalPlayer.Character then
         for _, part in ipairs(LocalPlayer.Character:GetChildren()) do
-            if part:IsA("BasePart") then part.CanCollide = false end
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
         end
     end
 end)
@@ -743,25 +792,11 @@ RunService.RenderStepped:Connect(function(dt)
         lastTime = tick()
     end
 
-    -- Auto Memory Cleaner Ngầm chống tràn RAM
-    if Config.AutoMemoryClean then
-        memoryTimer = memoryTimer + dt
-        if memoryTimer >= 15 then
-            memoryTimer = 0
-            pcall(function()
-                collectgarbage("collect")
-                for _, v in ipairs(Workspace:GetDescendants()) do
-                    if v:IsA("ParticleEmitter") or v:IsA("Trail") then v.Enabled = false end
-                end
-            end)
-        end
-    end
-
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChildOfClass("Humanoid")
 
-    -- HITBOX EXPANDER
+    -- 1. HITBOX EXPANDER
     if Config.HitboxExpander then
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character then
@@ -770,24 +805,33 @@ RunService.RenderStepped:Connect(function(dt)
                     eHRP.Size = Vector3.new(Config.HitboxSize, Config.HitboxSize, Config.HitboxSize)
                     eHRP.Transparency = 0.7
                     eHRP.Color = CurrentTheme.Accent
+                    eHRP.Material = Enum.Material.Neon
                     eHRP.CanCollide = false
                 end
             end
         end
     end
 
-    -- COMBAT TARGET
+    -- 2. COMBAT TARGET & M1 KILL PROTOCOL
     if Config.SelectedTarget and Config.SelectedTarget.Character then
         local tHRP = Config.SelectedTarget.Character:FindFirstChild("HumanoidRootPart")
         local tHum = Config.SelectedTarget.Character:FindFirstChildOfClass("Humanoid")
+
         if tHRP and tHum and tHum.Health > 0 and hrp then
-            if Config.AutoTPTarget then hrp.CFrame = tHRP.CFrame * CFrame.new(0, 0, 2.2) end
-            if Config.AutoAttack or Config.SuperM1Damage then ExecuteM1KillProtocol() end
+            if Config.AutoTPTarget then
+                hrp.CFrame = tHRP.CFrame * CFrame.new(0, 0, 2.2)
+            end
+
+            if Config.AutoAttack or Config.SuperM1Damage then
+                ExecuteM1KillProtocol()
+            end
+
             if Config.AutoSkills then
                 skillTimer = skillTimer + dt
                 if skillTimer >= 0.2 then
                     skillTimer = 0
-                    for _, key in ipairs({Enum.KeyCode.Z, Enum.KeyCode.X, Enum.KeyCode.C, Enum.KeyCode.V}) do
+                    local keys = {Enum.KeyCode.Z, Enum.KeyCode.X, Enum.KeyCode.C, Enum.KeyCode.V}
+                    for _, key in ipairs(keys) do
                         VirtualInputManager:SendKeyEvent(true, key, false, game)
                         task.wait(0.01)
                         VirtualInputManager:SendKeyEvent(false, key, false, game)
@@ -797,9 +841,13 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    if Config.SpeedEnabled and hum then hum.WalkSpeed = Config.SpeedValue end
+    -- 3. SPEED HACK
+    if Config.SpeedEnabled and hum then
+        hum.WalkSpeed = Config.SpeedValue
+    end
 end)
 
+-- ANTI-AFK 24/7
 LocalPlayer.Idled:Connect(function()
     if Config.AntiAFK then
         VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
@@ -808,4 +856,4 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
-Notify("Kianbest Hub", "Đã cập nhật v10.5 ULTRA VIP với Tab Fix Lag Đa Chế Độ!")
+Notify("Kianbest Hub", "Đã kích hoạt v10.0 ULTRA VIP (Fix Noclip & M1 Killer)!")
