@@ -1,13 +1,3 @@
-Dưới đây là phiên bản Nâng cấp Bảng Menu (V2.0 Premium) cho Kianbest.
-Bản nâng cấp này mang lại giao diện hiện đại, chuyên nghiệp hơn cùng các hiệu ứng hình ảnh mượt mà:
-🌟 Điểm Nâng Cấp Mới Trên Bảng Menu (V2.0):
- * Giao Diện Premium Sleek: Viền phát sáng (Glow/Stroke), bo góc tỉ mỉ, phông chữ và bố cục gọn gàng.
- * Thanh Thông Số Real-time (FPS & Ping): Hiển thị ngay trên thanh tiêu đề tốc độ khung hình (FPS) và độ trễ mạng (Ping) của bạn.
- * Hiệu Ứng Chuyển Động Smooth Animation (Tween): Menu và các Tab chuyển đổi mượt mà với hiệu ứng thu phóng/lướt.
- * Hệ Thống Thông Báo (Toast Notification): Hiển thị hộp thoại thông báo nhỏ ở góc màn hình mỗi khi bạn Bật/Tắt tính năng hoặc cài đặt thành công.
- * Điều Chỉnh Tốc Độ (Slider/Button): Có thêm nút chỉnh tăng/giảm tốc độ Chạy và Bay trực tiếp ngay trên menu.
- * Biểu Tượng Tab (Icons): Thêm biểu tượng trực quan cho các Tab (👁️ Visuals, ⚡ Movement, 🚀 Fix Lag, ⚙️ Settings).
-📜 Mã Nguồn Lua Cập Nhật (Copy & Dán đè vào main.lua hoặc README.md):
 -- ==========================================================
 -- SCRIPT MENU SYSTEM V2.0 PREMIUM (Kianbest)
 -- Features: ESP + Movement + FixLag + FPS/Ping + Animations
@@ -686,4 +676,3 @@ for _, p in ipairs(Players:GetPlayers()) do SetupESP(p) end
 Players.PlayerAdded:Connect(SetupESP)
 
 Notify("Kianbest Hub", "Đã tải thành công v2.0 Premium!")
-
