@@ -1,7 +1,7 @@
 -- ==========================================================
--- SCRIPT MENU SYSTEM V12.9 ULTRA COMBO & CUSTOM BG FIX
--- Updates: Auto Target Nearest, Safe Broad Hitbox, Smooth Super Damage M1, Universal Image ID Fix
--- Compatibility: Delta, Hydrogen, Fluxus, Solara, Wave, CodeX, Arceus X
+-- SCRIPT MENU SYSTEM V13.0 ULTRA FIX - KIANBEST HUB
+-- Fixes: Removed Ugly Textures/Red Overlay, Fixed Anti-Ban Shield, Fixed 3D Fly Map Unload
+-- Compatibility: Delta, Solara, Wave, CodeX, Hydrogen, Fluxus, Arceus X
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -12,7 +12,6 @@ local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 local Stats = game:GetService("Stats")
 local TeleportService = game:GetService("TeleportService")
-local MarketplaceService = game:GetService("MarketplaceService")
 local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 
@@ -49,45 +48,41 @@ local Config = {
     
     AntiAFK = true,
     CurrentChillIndex = 1,
-    BgTransparency = 0.45,
-    FrameTransparency = 0.25,
+    BgTransparency = 0.15,
+    FrameTransparency = 0.15,
     ToggleKey = Enum.KeyCode.RightControl
 }
 
--- DANH SÁCH PRESET BACKGROUND CHILL (AESTHETIC HD)
+-- PRESET BACKGROUND TỐI CHILL MINIMALIST (KHÔNG CÒN HỌA TIẾT REN HAY ẢNH LỖI)
 local ChillPresets = {
-    "rbxassetid://6071575925",  -- 1. Lo-Fi Rainy City Night
-    "rbxassetid://7043825807",  -- 2. Soft Pink Sunset Sky
+    "rbxassetid://6071575925",  -- 1. Lo-Fi Rainy City
+    "rbxassetid://7043825807",  -- 2. Soft Pink Sunset
     "rbxassetid://6985068228",  -- 3. Chill Anime Room
     "rbxassetid://11414436906", -- 4. Pastel Purple Clouds
     "rbxassetid://10023403248", -- 5. Anime Cozy Street
-    "rbxassetid://11702739401", -- 6. Chill Galaxy Night
-    "rbxassetid://6032220401",  -- 7. Cyberpunk Neon City
-    "rbxassetid://9132200898",  -- 8. Aesthetic Dusk Cloud
-    "rbxassetid://7041740322",  -- 9. Retro Purple Horizon
-    "rbxassetid://6158221876"   -- 10. Lofi Starry Night
+    "rbxassetid://11702739401"  -- 6. Chill Galaxy Night
 }
 
 local Themes = {
-    ChillPurple = { Name = "Chill Lavender 🔮", Bg = Color3.fromRGB(20, 16, 28), Sidebar = Color3.fromRGB(14, 10, 20), Accent = Color3.fromRGB(185, 140, 255), Button = Color3.fromRGB(32, 24, 44), Text = Color3.fromRGB(240, 235, 255) },
-    SoftPink = { Name = "Soft Sakura 🌸", Bg = Color3.fromRGB(28, 18, 24), Sidebar = Color3.fromRGB(20, 12, 17), Accent = Color3.fromRGB(255, 150, 190), Button = Color3.fromRGB(42, 26, 36), Text = Color3.fromRGB(255, 240, 248) },
-    OceanBlue = { Name = "Midnight Ocean 🌊", Bg = Color3.fromRGB(14, 22, 32), Sidebar = Color3.fromRGB(9, 15, 24), Accent = Color3.fromRGB(100, 200, 255), Button = Color3.fromRGB(22, 34, 48), Text = Color3.fromRGB(235, 248, 255) },
-    MintGreen = { Name = "Chill Matcha 🍃", Bg = Color3.fromRGB(16, 26, 22), Sidebar = Color3.fromRGB(10, 18, 15), Accent = Color3.fromRGB(130, 230, 175), Button = Color3.fromRGB(24, 40, 33), Text = Color3.fromRGB(235, 255, 242) }
+    ChillPurple = { Name = "Chill Lavender 🔮", Bg = Color3.fromRGB(18, 16, 26), Sidebar = Color3.fromRGB(12, 10, 18), Accent = Color3.fromRGB(165, 120, 255), Button = Color3.fromRGB(28, 22, 38), Text = Color3.fromRGB(240, 235, 255) },
+    SoftPink = { Name = "Soft Sakura 🌸", Bg = Color3.fromRGB(24, 16, 22), Sidebar = Color3.fromRGB(16, 10, 15), Accent = Color3.fromRGB(255, 140, 180), Button = Color3.fromRGB(36, 22, 32), Text = Color3.fromRGB(255, 240, 248) },
+    OceanBlue = { Name = "Midnight Ocean 🌊", Bg = Color3.fromRGB(12, 18, 28), Sidebar = Color3.fromRGB(8, 12, 20), Accent = Color3.fromRGB(90, 185, 255), Button = Color3.fromRGB(20, 30, 44), Text = Color3.fromRGB(235, 248, 255) },
+    MintGreen = { Name = "Chill Matcha 🍃", Bg = Color3.fromRGB(14, 22, 18), Sidebar = Color3.fromRGB(8, 15, 12), Accent = Color3.fromRGB(110, 220, 160), Button = Color3.fromRGB(20, 34, 28), Text = Color3.fromRGB(235, 255, 242) }
 }
 
 local CurrentTheme = Themes.ChillPurple
 
 local ParentGui = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
-if ParentGui:FindFirstChild("KianbestMenuV12_9") then
-    ParentGui.KianbestMenuV12_9:Destroy()
+if ParentGui:FindFirstChild("KianbestMenuV13_0") then
+    ParentGui.KianbestMenuV13_0:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "KianbestMenuV12_9"
+ScreenGui.Name = "KianbestMenuV13_0"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = ParentGui
 
--- SYSTEM NOTIFICATION TOAST
+-- NOTIFICATION TOAST
 local NotificationFrame = Instance.new("Frame")
 NotificationFrame.Name = "NotificationFrame"
 NotificationFrame.Size = UDim2.new(0, 250, 0, 240)
@@ -154,53 +149,53 @@ local function Notify(title, text, duration)
 end
 
 ----------------------------------------------------------
--- 🛡️ ANTI-BAN SHIELD ENGINE
+-- 🛡️ ANTI-BAN SHIELD ENGINE (FIXED & UPGRADED)
 ----------------------------------------------------------
 pcall(function()
     if not Config.AntiBanEnabled then return end
 
-    if hookfunction then
-        local oldKick
-        oldKick = hookfunction(LocalPlayer.Kick, function(self, ...)
-            if Config.AntiKick and self == LocalPlayer then
-                Notify("🛡️ Anti-Ban Shield", "Đã chặn 1 yêu cầu Kick!")
-                return nil
-            end
-            return oldKick(self, ...)
-        end)
-    end
+    -- Hook Metatable Chặn Remote Kick/Log & Anti-Cheat
+    local rawMT = getrawmetatable and getrawmetatable(game)
+    if rawMT then
+        local oldNamecall = rawMT.__namecall
+        local oldIndex = rawMT.__index
+        
+        setreadonly(rawMT, false)
 
-    if hookmetamethod then
-        local oldNamecall
-        oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        rawMT.__namecall = newcclosure(function(self, ...)
             local method = getnamecallmethod()
+            
             if Config.AntiKick and (method:lower() == "kick") and self == LocalPlayer then
+                Notify("🛡️ Anti-Ban Shield", "Đã chặn 1 yêu cầu Kick từ Server!")
                 return nil
             end
 
             if Config.AntiLog and (method == "FireServer" or method == "InvokeServer") then
-                local remoteName = tostring(self.Name):lower()
-                local blockKeywords = {"ban", "kick", "flag", "cheat", "detect", "log", "ac", "check", "security"}
+                local remoteName = tostring(self):lower()
+                local blockKeywords = {"ban", "kick", "flag", "cheat", "detect", "log", "ac", "security", "adonis", "anticheat"}
                 for _, word in ipairs(blockKeywords) do
                     if remoteName:find(word) then return nil end
                 end
             end
+
             return oldNamecall(self, ...)
         end)
 
-        local oldIndex
-        oldIndex = hookmetamethod(game, "__index", function(self, key)
+        rawMT.__index = newcclosure(function(self, key)
             if Config.SpoofStats and not checkcaller() and self:IsA("Humanoid") then
                 if key == "WalkSpeed" then return 16 end
                 if key == "JumpPower" then return 50 end
+                if key == "HipHeight" then return 2 end
             end
             return oldIndex(self, key)
         end)
+
+        setreadonly(rawMT, true)
     end
 end)
 
 ----------------------------------------------------------
--- MAIN FRAME & GLASSMORPHISM UI
+-- MAIN FRAME & CLEAN GLASSMORPHISM UI
 ----------------------------------------------------------
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
@@ -220,20 +215,10 @@ MainStroke.Color = CurrentTheme.Accent
 MainStroke.Thickness = 1.5
 MainStroke.Transparency = 0.3
 
-local MainBgImage = Instance.new("ImageLabel")
-MainBgImage.Name = "MainBgChill"
-MainBgImage.Size = UDim2.new(1, 0, 1, 0)
-MainBgImage.BackgroundTransparency = 1
-MainBgImage.ImageTransparency = Config.BgTransparency
-MainBgImage.ScaleType = Enum.ScaleType.Crop
-MainBgImage.Image = ChillPresets[Config.CurrentChillIndex]
-MainBgImage.ZIndex = 1
-MainBgImage.Parent = MainFrame
-
 local Header = Instance.new("Frame")
 Header.Size = UDim2.new(1, 0, 0, 38)
 Header.BackgroundColor3 = CurrentTheme.Sidebar
-Header.BackgroundTransparency = 0.35
+Header.BackgroundTransparency = 0.2
 Header.BorderSizePixel = 0
 Header.ZIndex = 3
 Header.Parent = MainFrame
@@ -241,8 +226,8 @@ Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 12)
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(0, 320, 1, 0)
-Title.Position = UDim2.new(0, 12, 0, 0)
-Title.Text = "☕ Kianbest Hub v12.9 FIX IMAGE & AUTO TARGET"
+Title.Position = UDim2.new(0, 14, 0, 0)
+Title.Text = "☕ Kianbest Hub v13.0 Ultra Clean & Smooth Fly"
 Title.TextColor3 = CurrentTheme.Accent
 Title.TextSize = 13
 Title.Font = Enum.Font.FredokaOne
@@ -323,7 +308,7 @@ local Sidebar = Instance.new("Frame")
 Sidebar.Size = UDim2.new(0, 130, 1, -38)
 Sidebar.Position = UDim2.new(0, 0, 0, 38)
 Sidebar.BackgroundColor3 = CurrentTheme.Sidebar
-Sidebar.BackgroundTransparency = 0.45
+Sidebar.BackgroundTransparency = 0.3
 Sidebar.BorderSizePixel = 0
 Sidebar.ZIndex = 3
 Sidebar.Parent = MainFrame
@@ -516,10 +501,9 @@ AList.Padding = UDim.new(0, 8)
 CreateToggle(AntiBanPage, "🛡️ Chống Kick Tối Đa (Anti-Kick)", Config.AntiKick, function(state) Config.AntiKick = state end)
 CreateToggle(AntiBanPage, "🚫 Chặn Gửi Log/Report Cho Game", Config.AntiLog, function(state) Config.AntiLog = state end)
 CreateToggle(AntiBanPage, "🎭 Ngụy Trang Chỉ Số (Spoof Humanoid)", Config.SpoofStats, function(state) Config.SpoofStats = state end)
-CreateToggle(AntiBanPage, "🧹 Khóa Script Anti-Cheat Của Game", Config.DisableClientAC, function(state) Config.DisableClientAC = state end)
 
 ----------------------------------------------------------
--- TAB 2: COMBAT VIP (SMOOTH M1 & AUTO TARGET FIX)
+-- TAB 2: COMBAT VIP
 ----------------------------------------------------------
 local CList = Instance.new("UIListLayout", CombatPage)
 CList.SortOrder = Enum.SortOrder.LayoutOrder
@@ -567,21 +551,6 @@ CreateButton(CombatPage, "🎯 Tự Chọn Người Gần Nhất (Auto Nearest)"
     end
 end)
 
-CreateButton(CombatPage, "🔄 Đổi Target (Xoay Vòng Player)", Color3.fromRGB(35, 25, 45), function()
-    local plrs = Players:GetPlayers()
-    if #plrs <= 1 then Notify("Combat", "Không có đối thủ khác!") return end
-    local currIdx = 1
-    for i, p in ipairs(plrs) do
-        if p == Config.SelectedTarget then currIdx = i break end
-    end
-    local nextPlr = plrs[(currIdx % #plrs) + 1]
-    if nextPlr == LocalPlayer then nextPlr = plrs[((currIdx + 1) % #plrs) + 1] end
-    Config.SelectedTarget = nextPlr
-    if Config.SelectedTarget then
-        Notify("Combat VIP", "Đã đổi Target: " .. Config.SelectedTarget.DisplayName)
-    end
-end)
-
 CreateToggle(CombatPage, "🔄 Tự Khóa Target Gần Nhất (Auto Lock)", Config.AutoLockNearest, function(state) Config.AutoLockNearest = state end)
 CreateToggle(CombatPage, "⚡ Hit Dame To Mượt (Super Damage M1)", Config.SuperM1Damage, function(state) Config.SuperM1Damage = state end)
 CreateValueAdjuster(CombatPage, "Số Hit Nhân Sát Thương", 5, 50, Config.DamageMultiplier, 5, function(val) Config.DamageMultiplier = val end)
@@ -604,7 +573,7 @@ CreateToggle(CombatPage, "⚡ Auto TP Áp Sát Lưng Đối Thủ", Config.AutoT
 CreateToggle(CombatPage, "🥊 Auto Đấm M1 Tự Động", Config.AutoAttack, function(state) Config.AutoAttack = state end)
 
 ----------------------------------------------------------
--- TAB 3: MOVEMENT & ULTRA 3D FLY ENGINE
+-- TAB 3: MOVEMENT & ULTRA 3D FLY ENGINE (FIXED MAP UNLOAD)
 ----------------------------------------------------------
 local MList = Instance.new("UIListLayout", MovementPage)
 MList.SortOrder = Enum.SortOrder.LayoutOrder
@@ -612,19 +581,21 @@ MList.Padding = UDim.new(0, 8)
 
 local flyVelocity, flyGyro
 
-local function CleanFly()
+local function StopFlyEngine()
     if flyVelocity then flyVelocity:Destroy() flyVelocity = nil end
     if flyGyro then flyGyro:Destroy() flyGyro = nil end
     pcall(function()
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").PlatformStand = false
+        if LocalPlayer.Character then
+            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum then hum.PlatformStand = false end
         end
+        LocalPlayer.ReplicationFocus = nil
     end)
 end
 
 CreateToggle(MovementPage, "Bay 3D Chuẩn Smooth (Mobile/PC)", Config.FlyEnabled, function(state)
     Config.FlyEnabled = state
-    if not state then CleanFly() end
+    if not state then StopFlyEngine() end
 end)
 
 CreateValueAdjuster(MovementPage, "Tốc Độ Bay 3D", 20, 250, Config.FlySpeed, 10, function(val) Config.FlySpeed = val end)
@@ -692,86 +663,11 @@ CreateToggle(FixLagPage, "👤 Ẩn Người Chơi Khác (Hide Players)", Config
 end)
 
 ----------------------------------------------------------
--- TAB 5: SETTINGS & CHILL BACKGROUND CUSTOM (FIXED IMAGE LOADING)
+-- TAB 5: SETTINGS & THEME CUSTOM
 ----------------------------------------------------------
 local SList = Instance.new("UIListLayout", SettingsPage)
 SList.SortOrder = Enum.SortOrder.LayoutOrder
 SList.Padding = UDim.new(0, 8)
-
-CreateButton(SettingsPage, "🌄 Đổi Ảnh Background Chill (Preset 1 - 10)", Color3.fromRGB(45, 30, 55), function()
-    Config.CurrentChillIndex = (Config.CurrentChillIndex % #ChillPresets) + 1
-    MainBgImage.Image = ChillPresets[Config.CurrentChillIndex]
-    Notify("Chill Bg", "Đã đổi sang Ảnh Nền #" .. Config.CurrentChillIndex .. "/" .. #ChillPresets .. " ☕")
-end)
-
--- Ô NHẬP CUSTOM IMAGE ID CHUẨN 100%
-local CustomIdContainer = Instance.new("Frame")
-CustomIdContainer.Size = UDim2.new(1, -6, 0, 36)
-CustomIdContainer.BackgroundColor3 = CurrentTheme.Button
-CustomIdContainer.BackgroundTransparency = 0.25
-CustomIdContainer.BorderSizePixel = 0
-CustomIdContainer.ZIndex = 4
-CustomIdContainer.Parent = SettingsPage
-Instance.new("UICorner", CustomIdContainer).CornerRadius = UDim.new(0, 6)
-
-local CustomIdBox = Instance.new("TextBox")
-CustomIdBox.Size = UDim2.new(1, -80, 1, 0)
-CustomIdBox.Position = UDim2.new(0, 10, 0, 0)
-CustomIdBox.PlaceholderText = "Nhập ID/Link Ảnh Roblox (VD: 6071575925)..."
-CustomIdBox.Text = ""
-CustomIdBox.TextColor3 = CurrentTheme.Text
-CustomIdBox.PlaceholderColor3 = Color3.fromRGB(160, 150, 175)
-CustomIdBox.Font = Enum.Font.SourceSans
-CustomIdBox.TextSize = 12
-CustomIdBox.TextXAlignment = Enum.TextXAlignment.Left
-CustomIdBox.BackgroundTransparency = 1
-CustomIdBox.ZIndex = 5
-CustomIdBox.Parent = CustomIdContainer
-
-local ApplyIdBtn = Instance.new("TextButton")
-ApplyIdBtn.Size = UDim2.new(0, 60, 0, 26)
-ApplyIdBtn.Position = UDim2.new(1, -66, 0.5, -13)
-ApplyIdBtn.Text = "Đổi Ảnh"
-ApplyIdBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ApplyIdBtn.Font = Enum.Font.SourceSansBold
-ApplyIdBtn.TextSize = 12
-ApplyIdBtn.BackgroundColor3 = CurrentTheme.Accent
-ApplyIdBtn.BorderSizePixel = 0
-ApplyIdBtn.ZIndex = 5
-ApplyIdBtn.Parent = CustomIdContainer
-Instance.new("UICorner", ApplyIdBtn).CornerRadius = UDim.new(0, 4)
-
--- HÀM LOAD ẢNH BẢO ĐẢM TẢI 100%
-local function ApplyCustomImageID(rawInput)
-    local cleanId = tostring(rawInput):match("%d+")
-    if not cleanId or #cleanId < 4 then
-        Notify("Lỗi Background", "Vui lòng nhập ID hoặc Link hợp lệ!")
-        return
-    end
-
-    Notify("Background", "Đang xử lý ID ảnh: " .. cleanId .. "...")
-    task.spawn(function()
-        local formattedUrl = "rbxassetid://" .. cleanId
-        MainBgImage.Image = formattedUrl
-        MainBgImage.ImageTransparency = Config.BgTransparency
-        Notify("Background", "Đã cập nhật ảnh background! ID: " .. cleanId .. " ✨")
-    end)
-end
-
-ApplyIdBtn.MouseButton1Click:Connect(function()
-    ApplyCustomImageID(CustomIdBox.Text)
-end)
-
-CustomIdBox.FocusLost:Connect(function(enterPressed)
-    if enterPressed then ApplyCustomImageID(CustomIdBox.Text) end
-end)
-
-CreateButton(SettingsPage, "🔄 Reset Ảnh Background Về Mặc Định", Color3.fromRGB(55, 30, 35), function()
-    Config.CurrentChillIndex = 1
-    MainBgImage.Image = ChillPresets[1]
-    CustomIdBox.Text = ""
-    Notify("Background Reset", "Đã khôi phục ảnh Lo-Fi mặc định! ☕✨")
-end)
 
 CreateButton(SettingsPage, "🎨 Đổi Tone Màu Theme (Purple/Pink/Ocean/Mint)", Color3.fromRGB(35, 30, 48), function()
     if CurrentTheme == Themes.ChillPurple then CurrentTheme = Themes.SoftPink
@@ -787,7 +683,6 @@ CreateButton(SettingsPage, "🎨 Đổi Tone Màu Theme (Purple/Pink/Ocean/Mint)
     ToggleBtn.BackgroundColor3 = CurrentTheme.Sidebar
     ButtonStroke.Color = CurrentTheme.Accent
     TargetLabel.TextColor3 = CurrentTheme.Accent
-    ApplyIdBtn.BackgroundColor3 = CurrentTheme.Accent
 
     for _, btn in ipairs(TabButtons) do btn.BackgroundColor3 = CurrentTheme.Button end
     Notify("Settings", "Đã đổi Theme: " .. CurrentTheme.Name)
@@ -808,12 +703,12 @@ local function ExecuteM1KillProtocol()
 
     local char = LocalPlayer.Character
     if not char then return end
-    local cam = workspace.CurrentCamera
+    local cam = Workspace.CurrentCamera
     local tool = char:FindFirstChildOfClass("Tool")
     local hits = Config.SuperM1Damage and Config.DamageMultiplier or 1
 
     task.spawn(function()
-        for i = 1, math.min(hits, 40) do
+        for i = 1, math.min(hits, 35) do
             if tool then pcall(function() tool:Activate() end) end
             if VirtualUser then
                 pcall(function()
@@ -859,7 +754,7 @@ RunService.RenderStepped:Connect(function(dt)
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChildOfClass("Humanoid")
-    local cam = workspace.CurrentCamera
+    local cam = Workspace.CurrentCamera
 
     -- AUTO LOCK NEAREST
     if Config.AutoLockNearest then
@@ -867,7 +762,7 @@ RunService.RenderStepped:Connect(function(dt)
         if nearPlr then Config.SelectedTarget = nearPlr end
     end
 
-    -- DISPLAY TARGET INFO
+    -- TARGET INFO
     if Config.SelectedTarget and Config.SelectedTarget.Character then
         local tHum = Config.SelectedTarget.Character:FindFirstChildOfClass("Humanoid")
         local tHRP = Config.SelectedTarget.Character:FindFirstChild("HumanoidRootPart")
@@ -882,20 +777,23 @@ RunService.RenderStepped:Connect(function(dt)
         TargetLabel.Text = "🎯 Target: Chưa chọn"
     end
 
-    -- ⚡ HỆ THỐNG BAY 3D CHUẨN SMOOTH
+    -- ⚡ HỆ THỐNG BAY 3D CHUẨN SMOOTH (FIX KHÔNG MẤT MAP)
     if Config.FlyEnabled and hrp and hum and cam then
         hum.PlatformStand = true
         
+        -- Khóa điểm nạp Map vào nhân vật để StreamingEnabled không xóa Map xung quanh
+        LocalPlayer.ReplicationFocus = hrp
+        
         if not flyVelocity or flyVelocity.Parent ~= hrp then
             flyVelocity = Instance.new("BodyVelocity")
-            flyVelocity.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+            flyVelocity.MaxForce = Vector3.new(1e8, 1e8, 1e8)
             flyVelocity.Parent = hrp
         end
         
         if not flyGyro or flyGyro.Parent ~= hrp then
             flyGyro = Instance.new("BodyGyro")
-            flyGyro.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
-            flyGyro.P = 9e4
+            flyGyro.MaxTorque = Vector3.new(1e8, 1e8, 1e8)
+            flyGyro.P = 12000
             flyGyro.Parent = hrp
         end
 
@@ -903,13 +801,8 @@ RunService.RenderStepped:Connect(function(dt)
 
         local moveDir = hum.MoveDirection
         if moveDir.Magnitude > 0 then
-            local flatLook = Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z).Unit
-            local flatRight = Vector3.new(cam.CFrame.RightVector.X, 0, cam.CFrame.RightVector.Z).Unit
-            
-            local forwardScalar = moveDir:Dot(flatLook)
-            local rightScalar = moveDir:Dot(flatRight)
-            
-            local flyVector = (cam.CFrame.LookVector * forwardScalar) + (cam.CFrame.RightVector * rightScalar)
+            local camCF = cam.CFrame
+            local flyVector = (camCF.LookVector * -moveDir.Z) + (camCF.RightVector * moveDir.X)
             if flyVector.Magnitude > 0 then
                 flyVelocity.Velocity = flyVector.Unit * Config.FlySpeed
             else
@@ -919,10 +812,10 @@ RunService.RenderStepped:Connect(function(dt)
             flyVelocity.Velocity = Vector3.zero
         end
     elseif not Config.FlyEnabled and flyVelocity then
-        CleanFly()
+        StopFlyEngine()
     end
 
-    -- HITBOX EXPANDER AN TOÀN KHÔNG LỖI VẬT LÝ
+    -- HITBOX EXPANDER
     if Config.HitboxExpander then
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character then
@@ -955,11 +848,11 @@ end)
 LocalPlayer.Idled:Connect(function()
     if Config.AntiAFK and VirtualUser then
         pcall(function()
-            VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+            VirtualUser:Button2Down(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
             task.wait(1)
-            VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+            VirtualUser:Button2Up(Vector2.new(0,0), Workspace.CurrentCamera.CFrame)
         end)
     end
 end)
 
-Notify("Kianbest Hub", "Đã kích hoạt v12.9! Auto Target, Hitbox Rộng & Fix Background ID thành công ☕✨")
+Notify("Kianbest Hub", "Đã kích hoạt v13.0 Clean UI & Smooth 3D Fly (Fix Map)! ☕✨")
