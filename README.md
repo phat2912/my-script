@@ -1,6 +1,6 @@
 -- ==========================================================
--- SCRIPT MENU SYSTEM V4.0 SUPREME (Kianbest)
--- Features: Kian Toggle Button + B&W Anime Background + Real Noclip + Multi Fix Lag Modes
+-- SCRIPT MENU SYSTEM V6.0 MOVEMENT ULTIMATE (Kianbest Hub)
+-- Features: 3D Vector Flying (WASD/Joystick) + AirWalk Pro + Mobile Fly Controls
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -10,6 +10,8 @@ local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 local Stats = game:GetService("Stats")
+local TeleportService = game:GetService("TeleportService")
+local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 
 -- 1. Cấu hình & Trạng thái (Config)
@@ -17,7 +19,7 @@ local Config = {
     ESPEnabled = false,
     ESPNamesEnabled = false,
     ESPHealthEnabled = false,
-    ESPColor = Color3.fromRGB(0, 255, 150),
+    ESPColor = Color3.fromRGB(0, 200, 140),
     
     NoclipEnabled = false,
     SpeedEnabled = false,
@@ -25,43 +27,50 @@ local Config = {
     
     FlyEnabled = false,
     FlySpeed = 50,
+    FlyUp = false,
+    FlyDown = false,
     
     AirWalkEnabled = false,
+    
+    AntiAFK = false,
+    CrosshairEnabled = false,
+    FOVValue = 70,
+    BgTransparency = 0.5,
     ToggleKey = Enum.KeyCode.RightControl
 }
 
--- 2. Bộ chủ đề giao diện (8 Themes)
+-- 2. Bộ chủ đề màu sắc dịu mắt (8 Muted Dark Themes)
 local Themes = {
-    Dark = { Bg = Color3.fromRGB(20, 22, 28), Sidebar = Color3.fromRGB(15, 16, 20), Accent = Color3.fromRGB(255, 105, 180), Button = Color3.fromRGB(30, 34, 42), Text = Color3.fromRGB(240, 240, 240) },
-    Cyan = { Bg = Color3.fromRGB(15, 25, 35), Sidebar = Color3.fromRGB(10, 18, 26), Accent = Color3.fromRGB(0, 210, 255), Button = Color3.fromRGB(22, 38, 52), Text = Color3.fromRGB(240, 240, 240) },
-    Purple = { Bg = Color3.fromRGB(25, 18, 35), Sidebar = Color3.fromRGB(18, 12, 26), Accent = Color3.fromRGB(180, 70, 255), Button = Color3.fromRGB(38, 26, 52), Text = Color3.fromRGB(240, 240, 240) },
-    Red = { Bg = Color3.fromRGB(30, 18, 18), Sidebar = Color3.fromRGB(22, 12, 12), Accent = Color3.fromRGB(255, 70, 70), Button = Color3.fromRGB(48, 26, 26), Text = Color3.fromRGB(240, 240, 240) },
-    Emerald = { Bg = Color3.fromRGB(18, 30, 22), Sidebar = Color3.fromRGB(12, 22, 15), Accent = Color3.fromRGB(50, 220, 120), Button = Color3.fromRGB(26, 48, 32), Text = Color3.fromRGB(240, 240, 240) },
-    Gold = { Bg = Color3.fromRGB(30, 28, 18), Sidebar = Color3.fromRGB(22, 20, 12), Accent = Color3.fromRGB(255, 200, 50), Button = Color3.fromRGB(48, 44, 26), Text = Color3.fromRGB(240, 240, 240) },
-    Pink = { Bg = Color3.fromRGB(30, 18, 26), Sidebar = Color3.fromRGB(22, 12, 18), Accent = Color3.fromRGB(255, 100, 200), Button = Color3.fromRGB(48, 26, 40), Text = Color3.fromRGB(240, 240, 240) },
-    Ocean = { Bg = Color3.fromRGB(15, 20, 32), Sidebar = Color3.fromRGB(10, 14, 24), Accent = Color3.fromRGB(30, 140, 255), Button = Color3.fromRGB(20, 32, 50), Text = Color3.fromRGB(240, 240, 240) }
+    Obsidian = { Bg = Color3.fromRGB(16, 17, 22), Sidebar = Color3.fromRGB(11, 12, 16), Accent = Color3.fromRGB(90, 155, 255), Button = Color3.fromRGB(24, 26, 34), Text = Color3.fromRGB(230, 230, 235) },
+    Midnight = { Bg = Color3.fromRGB(14, 20, 28), Sidebar = Color3.fromRGB(9, 14, 20), Accent = Color3.fromRGB(75, 160, 225), Button = Color3.fromRGB(20, 30, 42), Text = Color3.fromRGB(230, 235, 240) },
+    Violet = { Bg = Color3.fromRGB(20, 16, 26), Sidebar = Color3.fromRGB(14, 10, 18), Accent = Color3.fromRGB(150, 100, 220), Button = Color3.fromRGB(30, 24, 38), Text = Color3.fromRGB(235, 230, 240) },
+    WineRed = { Bg = Color3.fromRGB(24, 16, 18), Sidebar = Color3.fromRGB(16, 10, 12), Accent = Color3.fromRGB(200, 80, 95), Button = Color3.fromRGB(36, 24, 26), Text = Color3.fromRGB(240, 230, 230) },
+    SageEmerald = { Bg = Color3.fromRGB(16, 22, 19), Sidebar = Color3.fromRGB(10, 15, 12), Accent = Color3.fromRGB(75, 175, 125), Button = Color3.fromRGB(24, 34, 28), Text = Color3.fromRGB(230, 240, 235) },
+    Amber = { Bg = Color3.fromRGB(24, 21, 16), Sidebar = Color3.fromRGB(16, 14, 10), Accent = Color3.fromRGB(210, 155, 70), Button = Color3.fromRGB(36, 31, 24), Text = Color3.fromRGB(240, 235, 225) },
+    CharcoalPink = { Bg = Color3.fromRGB(24, 17, 22), Sidebar = Color3.fromRGB(16, 11, 15), Accent = Color3.fromRGB(200, 110, 160), Button = Color3.fromRGB(36, 25, 32), Text = Color3.fromRGB(240, 230, 235) },
+    Slate = { Bg = Color3.fromRGB(18, 20, 24), Sidebar = Color3.fromRGB(12, 14, 17), Accent = Color3.fromRGB(120, 140, 165), Button = Color3.fromRGB(26, 30, 36), Text = Color3.fromRGB(235, 235, 240) }
 }
 
-local CurrentTheme = Themes.Dark
+local CurrentTheme = Themes.Obsidian
 
--- 3. Khởi tạo Gui
+-- 3. Khởi tạo ScreenGui
 local ParentGui = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
-if ParentGui:FindFirstChild("KianbestMenuV4") then
-    ParentGui.KianbestMenuV4:Destroy()
+if ParentGui:FindFirstChild("KianbestMenuV6") then
+    ParentGui.KianbestMenuV6:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "KianbestMenuV4"
+ScreenGui.Name = "KianbestMenuV6"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = ParentGui
 
--- 4. HỆ THỐNG THÔNG BÁO (FADE-IN / FADE-OUT)
+-- 4. HỆ THỐNG THÔNG BÁO (TOAST NOTIFICATION)
 local NotificationFrame = Instance.new("Frame")
 NotificationFrame.Name = "NotificationFrame"
 NotificationFrame.Size = UDim2.new(0, 220, 0, 200)
 NotificationFrame.Position = UDim2.new(1, -230, 1, -210)
 NotificationFrame.BackgroundTransparency = 1
-NotificationFrame.ZIndex = 10
+NotificationFrame.ZIndex = 20
 NotificationFrame.Parent = ScreenGui
 
 local NotificationList = Instance.new("UIListLayout", NotificationFrame)
@@ -71,19 +80,18 @@ NotificationList.VerticalAlignment = Enum.VerticalAlignment.Bottom
 
 local function Notify(title, text, duration)
     duration = duration or 2.5
-    
     local Toast = Instance.new("Frame")
     Toast.Size = UDim2.new(1, 0, 0, 46)
     Toast.BackgroundColor3 = CurrentTheme.Sidebar
     Toast.BackgroundTransparency = 1
     Toast.BorderSizePixel = 0
-    Toast.ZIndex = 10
+    Toast.ZIndex = 20
     Toast.Parent = NotificationFrame
 
     Instance.new("UICorner", Toast).CornerRadius = UDim.new(0, 6)
     local Stroke = Instance.new("UIStroke", Toast)
     Stroke.Color = CurrentTheme.Accent
-    Stroke.Thickness = 1.5
+    Stroke.Thickness = 1.2
     Stroke.Transparency = 1
 
     local TTitle = Instance.new("TextLabel")
@@ -96,7 +104,7 @@ local function Notify(title, text, duration)
     TTitle.TextSize = 13
     TTitle.TextXAlignment = Enum.TextXAlignment.Left
     TTitle.BackgroundTransparency = 1
-    TTitle.ZIndex = 11
+    TTitle.ZIndex = 21
     TTitle.Parent = Toast
 
     local TText = Instance.new("TextLabel")
@@ -109,17 +117,17 @@ local function Notify(title, text, duration)
     TText.TextSize = 12
     TText.TextXAlignment = Enum.TextXAlignment.Left
     TText.BackgroundTransparency = 1
-    TText.ZIndex = 11
+    TText.ZIndex = 21
     TText.Parent = Toast
 
-    local fadeInInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    TweenService:Create(Toast, fadeInInfo, {BackgroundTransparency = 0.15}):Play()
+    local fadeInInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    TweenService:Create(Toast, fadeInInfo, {BackgroundTransparency = 0.1}):Play()
     TweenService:Create(Stroke, fadeInInfo, {Transparency = 0}):Play()
     TweenService:Create(TTitle, fadeInInfo, {TextTransparency = 0}):Play()
     TweenService:Create(TText, fadeInInfo, {TextTransparency = 0}):Play()
 
     task.delay(duration, function()
-        local fadeOutInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        local fadeOutInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
         TweenService:Create(Toast, fadeOutInfo, {BackgroundTransparency = 1}):Play()
         TweenService:Create(Stroke, fadeOutInfo, {Transparency = 1}):Play()
         TweenService:Create(TTitle, fadeOutInfo, {TextTransparency = 1}):Play()
@@ -129,7 +137,7 @@ local function Notify(title, text, duration)
     end)
 end
 
--- 5. MAIN FRAME MENU (CÓ BACKGROUND ANIME TRẮNG ĐEN MỜ)
+-- 5. MAIN FRAME MENU
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 520, 0, 330)
@@ -145,18 +153,16 @@ Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
 local MainStroke = Instance.new("UIStroke", MainFrame)
 MainStroke.Color = CurrentTheme.Accent
-MainStroke.Thickness = 2
-MainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+MainStroke.Thickness = 1.5
 
--- 🖼️ HÌNH NỀN ANIME TRẮNG ĐEN MỜ MỜ CHUYÊN NGHIỆP
+-- HÌNH NỀN ANIME TRẮNG ĐEN
 local MainBgImage = Instance.new("ImageLabel")
 MainBgImage.Name = "MainBgAnime"
 MainBgImage.Size = UDim2.new(1, 0, 1, 0)
 MainBgImage.BackgroundTransparency = 1
-MainBgImage.ImageTransparency = 0.82 -- Độ mờ nghệ thuật
+MainBgImage.ImageTransparency = Config.BgTransparency
 MainBgImage.ScaleType = Enum.ScaleType.Crop
-MainBgImage.Image = "rbxassetid://10023471025" -- Asset Anime Manga B&W
-MainBgImage.ImageColor3 = Color3.fromRGB(220, 220, 220)
+MainBgImage.Image = "rbxassetid://6071575925"
 MainBgImage.ZIndex = 1
 MainBgImage.Parent = MainFrame
 
@@ -164,7 +170,7 @@ MainBgImage.Parent = MainFrame
 local Header = Instance.new("Frame")
 Header.Size = UDim2.new(1, 0, 0, 38)
 Header.BackgroundColor3 = CurrentTheme.Sidebar
-Header.BackgroundTransparency = 0.1
+Header.BackgroundTransparency = 0.15
 Header.BorderSizePixel = 0
 Header.ZIndex = 3
 Header.Parent = MainFrame
@@ -172,11 +178,11 @@ Header.Parent = MainFrame
 Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 10)
 
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(0, 180, 1, 0)
+Title.Size = UDim2.new(0, 220, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
-Title.Text = "Kianbest Hub v4.0"
+Title.Text = "Kianbest Hub v6.0 Movement"
 Title.TextColor3 = CurrentTheme.Accent
-Title.TextSize = 16
+Title.TextSize = 15
 Title.Font = Enum.Font.FredokaOne
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
@@ -187,7 +193,7 @@ local StatsLabel = Instance.new("TextLabel")
 StatsLabel.Size = UDim2.new(0, 200, 1, 0)
 StatsLabel.Position = UDim2.new(1, -240, 0, 0)
 StatsLabel.Text = "FPS: -- | Ping: --ms"
-StatsLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+StatsLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
 StatsLabel.TextSize = 12
 StatsLabel.Font = Enum.Font.SourceSansBold
 StatsLabel.TextXAlignment = Enum.TextXAlignment.Right
@@ -199,25 +205,25 @@ local CloseBtn = Instance.new("TextButton")
 CloseBtn.Size = UDim2.new(0, 26, 0, 26)
 CloseBtn.Position = UDim2.new(1, -32, 0, 6)
 CloseBtn.Text = "✕"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 90, 90)
-CloseBtn.TextSize = 14
+CloseBtn.TextColor3 = Color3.fromRGB(220, 90, 90)
+CloseBtn.TextSize = 13
 CloseBtn.Font = Enum.Font.SourceSansBold
-CloseBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(28, 30, 38)
 CloseBtn.BorderSizePixel = 0
 CloseBtn.ZIndex = 4
 CloseBtn.Parent = Header
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 
--- 🔘 NÚT NỔI TRÒN ĐÓNG/MỞ BẮT MẮT (CHỮ "Kian")
+-- NÚT TRÒN SẮC NÉT CHỮ "KIAN"
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Name = "KianToggleButton"
-ToggleBtn.Size = UDim2.new(0, 52, 0, 52)
+ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
 ToggleBtn.Position = UDim2.new(0, 15, 0.4, 0)
-ToggleBtn.BackgroundColor3 = CurrentTheme.Sidebar
-ToggleBtn.Text = "Kian"
-ToggleBtn.TextColor3 = CurrentTheme.Accent
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(18, 20, 26)
+ToggleBtn.Text = "KIAN"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleBtn.Font = Enum.Font.FredokaOne
-ToggleBtn.TextSize = 16
+ToggleBtn.TextSize = 15
 ToggleBtn.Active = true
 ToggleBtn.Draggable = true
 ToggleBtn.ZIndex = 100
@@ -227,7 +233,8 @@ Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
 
 local ButtonStroke = Instance.new("UIStroke", ToggleBtn)
 ButtonStroke.Color = CurrentTheme.Accent
-ButtonStroke.Thickness = 3
+ButtonStroke.Thickness = 2.5
+ButtonStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 local isMenuOpen = true
 local function ToggleMenu()
@@ -252,13 +259,62 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 ----------------------------------------------------------
+-- NÚT ĐIỀU KHIỂN BAY CHO MOBILE (FLY UP / DOWN BUTTONS)
+----------------------------------------------------------
+local FlyControlsFrame = Instance.new("Frame")
+FlyControlsFrame.Name = "FlyControls"
+FlyControlsFrame.Size = UDim2.new(0, 50, 0, 110)
+FlyControlsFrame.Position = UDim2.new(1, -65, 0.5, -55)
+FlyControlsFrame.BackgroundTransparency = 1
+FlyControlsFrame.Visible = false
+FlyControlsFrame.ZIndex = 90
+FlyControlsFrame.Parent = ScreenGui
+
+local FlyUpBtn = Instance.new("TextButton")
+FlyUpBtn.Size = UDim2.new(0, 48, 0, 48)
+FlyUpBtn.Position = UDim2.new(0, 0, 0, 0)
+FlyUpBtn.Text = "▲"
+FlyUpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FlyUpBtn.Font = Enum.Font.SourceSansBold
+FlyUpBtn.TextSize = 20
+FlyUpBtn.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
+FlyUpBtn.BorderSizePixel = 0
+FlyUpBtn.ZIndex = 91
+FlyUpBtn.Parent = FlyControlsFrame
+Instance.new("UICorner", FlyUpBtn).CornerRadius = UDim.new(0, 10)
+local UpStroke = Instance.new("UIStroke", FlyUpBtn)
+UpStroke.Color = CurrentTheme.Accent
+UpStroke.Thickness = 1.5
+
+local FlyDownBtn = Instance.new("TextButton")
+FlyDownBtn.Size = UDim2.new(0, 48, 0, 48)
+FlyDownBtn.Position = UDim2.new(0, 0, 0, 58)
+FlyDownBtn.Text = "▼"
+FlyDownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+FlyDownBtn.Font = Enum.Font.SourceSansBold
+FlyDownBtn.TextSize = 20
+FlyDownBtn.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
+FlyDownBtn.BorderSizePixel = 0
+FlyDownBtn.ZIndex = 91
+FlyDownBtn.Parent = FlyControlsFrame
+Instance.new("UICorner", FlyDownBtn).CornerRadius = UDim.new(0, 10)
+local DownStroke = Instance.new("UIStroke", FlyDownBtn)
+DownStroke.Color = CurrentTheme.Accent
+DownStroke.Thickness = 1.5
+
+FlyUpBtn.MouseButton1Down:Connect(function() Config.FlyUp = true end)
+FlyUpBtn.MouseButton1Up:Connect(function() Config.FlyUp = false end)
+FlyDownBtn.MouseButton1Down:Connect(function() Config.FlyDown = true end)
+FlyDownBtn.MouseButton1Up:Connect(function() Config.FlyDown = false end)
+
+----------------------------------------------------------
 -- SIDEBAR & TAB SYSTEM
 ----------------------------------------------------------
 local Sidebar = Instance.new("Frame")
 Sidebar.Size = UDim2.new(0, 130, 1, -38)
 Sidebar.Position = UDim2.new(0, 0, 0, 38)
 Sidebar.BackgroundColor3 = CurrentTheme.Sidebar
-Sidebar.BackgroundTransparency = 0.25
+Sidebar.BackgroundTransparency = 0.3
 Sidebar.BorderSizePixel = 0
 Sidebar.ZIndex = 3
 Sidebar.Parent = MainFrame
@@ -335,9 +391,9 @@ local function CreateToggle(parent, text, defaultState, callback)
     Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
 
     local StatusInd = Instance.new("Frame")
-    StatusInd.Size = UDim2.new(0, 30, 0, 16)
-    StatusInd.Position = UDim2.new(1, -38, 0.5, -8)
-    StatusInd.BackgroundColor3 = defaultState and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(80, 80, 90)
+    StatusInd.Size = UDim2.new(0, 28, 0, 15)
+    StatusInd.Position = UDim2.new(1, -36, 0.5, -7.5)
+    StatusInd.BackgroundColor3 = defaultState and Color3.fromRGB(0, 180, 100) or Color3.fromRGB(60, 65, 75)
     StatusInd.BorderSizePixel = 0
     StatusInd.ZIndex = 5
     StatusInd.Parent = Btn
@@ -347,7 +403,7 @@ local function CreateToggle(parent, text, defaultState, callback)
     local state = defaultState
     Btn.MouseButton1Click:Connect(function()
         state = not state
-        StatusInd.BackgroundColor3 = state and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(80, 80, 90)
+        StatusInd.BackgroundColor3 = state and Color3.fromRGB(0, 180, 100) or Color3.fromRGB(60, 65, 75)
         callback(state)
     end)
     return Btn
@@ -378,25 +434,25 @@ local function CreateValueAdjuster(parent, title, minVal, maxVal, defaultVal, st
     local current = defaultVal
 
     local MinusBtn = Instance.new("TextButton")
-    MinusBtn.Size = UDim2.new(0, 28, 0, 24)
-    MinusBtn.Position = UDim2.new(1, -66, 0.5, -12)
+    MinusBtn.Size = UDim2.new(0, 26, 0, 22)
+    MinusBtn.Position = UDim2.new(1, -62, 0.5, -11)
     MinusBtn.Text = "-"
-    MinusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    MinusBtn.TextColor3 = Color3.fromRGB(240, 240, 240)
     MinusBtn.Font = Enum.Font.SourceSansBold
-    MinusBtn.TextSize = 16
-    MinusBtn.BackgroundColor3 = Color3.fromRGB(50, 55, 65)
+    MinusBtn.TextSize = 15
+    MinusBtn.BackgroundColor3 = Color3.fromRGB(45, 50, 60)
     MinusBtn.BorderSizePixel = 0
     MinusBtn.ZIndex = 5
     MinusBtn.Parent = Container
     Instance.new("UICorner", MinusBtn).CornerRadius = UDim.new(0, 4)
 
     local PlusBtn = Instance.new("TextButton")
-    PlusBtn.Size = UDim2.new(0, 28, 0, 24)
-    PlusBtn.Position = UDim2.new(1, -34, 0.5, -12)
+    PlusBtn.Size = UDim2.new(0, 26, 0, 22)
+    PlusBtn.Position = UDim2.new(1, -32, 0.5, -11)
     PlusBtn.Text = "+"
-    PlusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    PlusBtn.TextColor3 = Color3.fromRGB(240, 240, 240)
     PlusBtn.Font = Enum.Font.SourceSansBold
-    PlusBtn.TextSize = 16
+    PlusBtn.TextSize = 15
     PlusBtn.BackgroundColor3 = CurrentTheme.Accent
     PlusBtn.BorderSizePixel = 0
     PlusBtn.ZIndex = 5
@@ -414,6 +470,23 @@ local function CreateValueAdjuster(parent, title, minVal, maxVal, defaultVal, st
         Label.Text = title .. ": " .. tostring(current)
         callback(current)
     end)
+end
+
+local function CreateButton(parent, text, bgColor, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, -6, 0, 34)
+    Btn.Text = text
+    Btn.TextColor3 = Color3.fromRGB(245, 245, 245)
+    Btn.Font = Enum.Font.SourceSansBold
+    Btn.TextSize = 13
+    Btn.BackgroundColor3 = bgColor or CurrentTheme.Button
+    Btn.BorderSizePixel = 0
+    Btn.ZIndex = 4
+    Btn.Parent = parent
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+
+    Btn.MouseButton1Click:Connect(callback)
+    return Btn
 end
 
 ----------------------------------------------------------
@@ -439,16 +512,49 @@ CreateToggle(VisualsPage, "ESP Health Bar (Thanh Máu Địch)", Config.ESPHealt
 end)
 
 ----------------------------------------------------------
--- TAB 2: MOVEMENT (CÓ THÊM NOCLIP ĐI XUYÊN TƯỜNG THẬT)
+-- TAB 2: MOVEMENT (NÂNG CẤP V6.0 MOVEMENT ULTIMATE)
 ----------------------------------------------------------
 local MList = Instance.new("UIListLayout", MovementPage)
 MList.SortOrder = Enum.SortOrder.LayoutOrder
 MList.Padding = UDim.new(0, 8)
 
--- CHỨC NĂNG NOCLIP THẬT
+local bodyVel, bodyGyro
+
+CreateToggle(MovementPage, "Bay 3D Chuẩn (Fly 3D WASD/Joystick)", Config.FlyEnabled, function(state)
+    Config.FlyEnabled = state
+    FlyControlsFrame.Visible = state
+    Notify("Movement", state and "Đã BẬT Bay 3D! Dùng WASD/Cần Gạt để di chuyển 360°" or "Đã TẮT Bay 3D!")
+
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+    if not state then
+        if bodyVel then bodyVel:Destroy() bodyVel = nil end
+        if bodyGyro then bodyGyro:Destroy() bodyGyro = nil end
+    elseif hrp then
+        bodyVel = Instance.new("BodyVelocity", hrp)
+        bodyVel.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+        bodyVel.Velocity = Vector3.zero
+
+        bodyGyro = Instance.new("BodyGyro", hrp)
+        bodyGyro.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+        bodyGyro.P = 10000
+        bodyGyro.CFrame = hrp.CFrame
+    end
+end)
+
+CreateValueAdjuster(MovementPage, "Tốc Độ Bay", 20, 300, Config.FlySpeed, 10, function(val)
+    Config.FlySpeed = val
+end)
+
+CreateToggle(MovementPage, "Đi Trên Không 2.0 (Air Walk Pro)", Config.AirWalkEnabled, function(state)
+    Config.AirWalkEnabled = state
+    Notify("Movement", state and "Đã BẬT Air Walk (Đi trên không mượt mà)" or "Đã TẮT Air Walk")
+end)
+
 CreateToggle(MovementPage, "Đi Xuyên Tường (Noclip)", Config.NoclipEnabled, function(state)
     Config.NoclipEnabled = state
-    Notify("Movement", state and "Đã BẬT Đi Xuyên Tường!" or "Đã TẮT Đi Xuyên Tường!")
+    Notify("Movement", state and "Đã BẬT Noclip!" or "Đã TẮT Noclip!")
 end)
 
 CreateToggle(MovementPage, "Chạy Nhanh (Speed Hack)", Config.SpeedEnabled, function(state)
@@ -463,56 +569,14 @@ CreateValueAdjuster(MovementPage, "Tốc Độ Chạy", 16, 250, Config.SpeedVal
     Config.SpeedValue = val
 end)
 
-CreateToggle(MovementPage, "Chế độ Bay (Fly Mode)", Config.FlyEnabled, function(state)
-    Config.FlyEnabled = state
-    Notify("Movement", state and "Đã BẬT Fly Mode" or "Đã TẮT Fly Mode")
-    
-    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not Config.FlyEnabled then
-        if bodyVel then bodyVel:Destroy() end
-        if bodyGyro then bodyGyro:Destroy() end
-    elseif hrp then
-        bodyVel = Instance.new("BodyVelocity", hrp)
-        bodyVel.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-        bodyVel.Velocity = Vector3.zero
-
-        bodyGyro = Instance.new("BodyGyro", hrp)
-        bodyGyro.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
-        bodyGyro.P = 10000
-        bodyGyro.CFrame = hrp.CFrame
-    end
-end)
-
-CreateValueAdjuster(MovementPage, "Tốc Độ Bay", 20, 300, Config.FlySpeed, 15, function(val)
-    Config.FlySpeed = val
-end)
-
-CreateToggle(MovementPage, "Đi Trên Không (Air Walk)", Config.AirWalkEnabled, function(state)
-    Config.AirWalkEnabled = state
-    Notify("Movement", state and "Đã BẬT Air Walk" or "Đã TẮT Air Walk")
-end)
-
 ----------------------------------------------------------
--- TAB 3: FIX LAG (NÂNG CẤP ĐA DẠNG CHẾ ĐỘ TỐI ƯU)
+-- TAB 3: FIX LAG
 ----------------------------------------------------------
 local FList = Instance.new("UIListLayout", FixLagPage)
 FList.SortOrder = Enum.SortOrder.LayoutOrder
 FList.Padding = UDim.new(0, 8)
 
--- 1. Full Auto Boost
-local BoostBtn = Instance.new("TextButton")
-BoostBtn.Size = UDim2.new(1, -6, 0, 36)
-BoostBtn.Text = "🚀 Super FPS Boost (1-Click Tối Ưu Nhanh)"
-BoostBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-BoostBtn.Font = Enum.Font.SourceSansBold
-BoostBtn.TextSize = 13
-BoostBtn.BackgroundColor3 = Color3.fromRGB(0, 160, 220)
-BoostBtn.BorderSizePixel = 0
-BoostBtn.ZIndex = 4
-BoostBtn.Parent = FixLagPage
-Instance.new("UICorner", BoostBtn).CornerRadius = UDim.new(0, 6)
-
-BoostBtn.MouseButton1Click:Connect(function()
+CreateButton(FixLagPage, "🚀 Super FPS Boost (1-Click Tối Ưu Nhanh)", Color3.fromRGB(35, 110, 160), function()
     for _, v in ipairs(Lighting:GetChildren()) do
         if v:IsA("Sky") or v:IsA("Atmosphere") or v:IsA("PostEffect") then v:Destroy() end
     end
@@ -529,10 +593,9 @@ BoostBtn.MouseButton1Click:Connect(function()
             v.Enabled = false
         end
     end
-    Notify("Fix Lag", "Đã bật Super FPS Boost thành công!")
+    Notify("Fix Lag", "Đã tối ưu mượt map thành công!")
 end)
 
--- 2. Toggle Xóa Texture (Plastic Mode)
 CreateToggle(FixLagPage, "Xóa Textures Map (Plastic Smooth)", false, function(state)
     for _, v in ipairs(workspace:GetDescendants()) do
         if v:IsA("BasePart") then
@@ -542,22 +605,20 @@ CreateToggle(FixLagPage, "Xóa Textures Map (Plastic Smooth)", false, function(s
     Notify("Fix Lag", state and "Đã bật Smooth Plastic" or "Đã khôi phục Texture")
 end)
 
--- 3. Toggle Đổi Bầu Trời Đen / Xám (Black Skybox)
-CreateToggle(FixLagPage, "Đổi Bầu Trời Tối Đơn Sắc (Black Sky)", false, function(state)
+CreateToggle(FixLagPage, "Đổi Bầu Trời Tối Dịu Mắt (Dark Sky)", false, function(state)
     if state then
         for _, v in ipairs(Lighting:GetChildren()) do
             if v:IsA("Sky") or v:IsA("Atmosphere") then v:Destroy() end
         end
-        Lighting.OutdoorAmbient = Color3.fromRGB(30, 30, 30)
-        Lighting.Ambient = Color3.fromRGB(30, 30, 30)
+        Lighting.OutdoorAmbient = Color3.fromRGB(25, 25, 28)
+        Lighting.Ambient = Color3.fromRGB(25, 25, 28)
     else
         Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
     end
     Notify("Fix Lag", state and "Đã bật Bầu Trời Tối" or "Đã tắt Bầu Trời Tối")
 end)
 
--- 4. Toggle Tắt Bóng Đổ & Sương Mù (No Fog & Shadows)
-CreateToggle(FixLagPage, "Tắt Bóng Đổ & Sương Mù (No Shadow/Fog)", true, function(state)
+CreateToggle(FixLagPage, "Tắt Bóng Đổ & Sương Mù (No Fog/Shadows)", true, function(state)
     Lighting.GlobalShadows = not state
     Lighting.FogEnd = state and 9e9 or 1000
     Notify("Fix Lag", state and "Đã tắt Bóng & Sương Mù" or "Đã bật Bóng Đổ")
@@ -568,14 +629,66 @@ end)
 ----------------------------------------------------------
 local SList = Instance.new("UIListLayout", SettingsPage)
 SList.SortOrder = Enum.SortOrder.LayoutOrder
-SList.Padding = UDim.new(0, 6)
+SList.Padding = UDim.new(0, 8)
+
+CreateToggle(SettingsPage, "Chống Treo Máy (Anti-AFK 24/7)", Config.AntiAFK, function(state)
+    Config.AntiAFK = state
+    Notify("Settings", state and "Đã BẬT Anti-AFK" or "Đã TẮT Anti-AFK")
+end)
+
+local CrosshairFrame = Instance.new("Frame")
+CrosshairFrame.Name = "CustomCrosshair"
+CrosshairFrame.Size = UDim2.new(0, 8, 0, 8)
+CrosshairFrame.Position = UDim2.new(0.5, -4, 0.5, -4)
+CrosshairFrame.BackgroundColor3 = Color3.fromRGB(0, 255, 170)
+CrosshairFrame.BorderSizePixel = 0
+CrosshairFrame.Visible = false
+CrosshairFrame.ZIndex = 100
+CrosshairFrame.Parent = ScreenGui
+Instance.new("UICorner", CrosshairFrame).CornerRadius = UDim.new(1, 0)
+
+CreateToggle(SettingsPage, "Bật Tâm Bắn Màn Hình (Crosshair)", Config.CrosshairEnabled, function(state)
+    Config.CrosshairEnabled = state
+    CrosshairFrame.Visible = state
+    Notify("Settings", state and "Đã hiện Tâm Bắn" or "Đã ẩn Tâm Bắn")
+end)
+
+CreateValueAdjuster(SettingsPage, "Tầm Nhìn Camera (FOV)", 70, 120, Config.FOVValue, 5, function(val)
+    Config.FOVValue = val
+    workspace.CurrentCamera.FieldOfView = val
+end)
+
+CreateValueAdjuster(SettingsPage, "Độ Mờ Ảnh Nền Anime", 0, 10, 5, 1, function(val)
+    MainBgImage.ImageTransparency = val / 10
+end)
+
+CreateButton(SettingsPage, "🔄 Vào Lại Server (Rejoin)", Color3.fromRGB(45, 55, 70), function()
+    Notify("Server", "Đang kết nối lại Server...")
+    TeleportService:Teleport(game.PlaceId, LocalPlayer)
+end)
+
+CreateButton(SettingsPage, "🔀 Đổi Server Khác (Server Hop)", Color3.fromRGB(45, 55, 70), function()
+    Notify("Server", "Đang tìm Server mới...")
+    pcall(function()
+        local req = game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/0?sortOrder=Asc&limit=100")
+        local body = game:GetService("HttpService"):JSONDecode(req)
+        if body and body.data then
+            for _, v in ipairs(body.data) do
+                if v.playing < v.maxPlayers and v.id ~= game.JobId then
+                    TeleportService:TeleportToPlaceInstance(game.PlaceId, v.id, LocalPlayer)
+                    break
+                end
+            end
+        end
+    end)
+end)
 
 local ThemeLabel = Instance.new("TextLabel")
 ThemeLabel.Size = UDim2.new(1, 0, 0, 18)
-ThemeLabel.Text = "Chọn Chủ Đề Màu Sắc (8 Themes):"
+ThemeLabel.Text = "Chọn Chủ Đề Màu Tối Dịu Mắt (8 Themes):"
 ThemeLabel.TextColor3 = CurrentTheme.Text
 ThemeLabel.Font = Enum.Font.SourceSansBold
-ThemeLabel.TextSize = 13
+ThemeLabel.TextSize = 12
 ThemeLabel.TextXAlignment = Enum.TextXAlignment.Left
 ThemeLabel.BackgroundTransparency = 1
 ThemeLabel.ZIndex = 4
@@ -587,7 +700,7 @@ ThemeGrid.BackgroundTransparency = 1
 ThemeGrid.ZIndex = 4
 ThemeGrid.Parent = SettingsPage
 
-local themeList = {"Dark", "Cyan", "Purple", "Red", "Emerald", "Gold", "Pink", "Ocean"}
+local themeList = {"Obsidian", "Midnight", "Violet", "WineRed", "SageEmerald", "Amber", "CharcoalPink", "Slate"}
 for i, name in ipairs(themeList) do
     local row = math.floor((i - 1) / 4)
     local col = (i - 1) % 4
@@ -596,9 +709,9 @@ for i, name in ipairs(themeList) do
     TBtn.Size = UDim2.new(0, 80, 0, 26)
     TBtn.Position = UDim2.new(0, col * 86, 0, row * 32)
     TBtn.Text = name
-    TBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TBtn.TextColor3 = Color3.fromRGB(240, 240, 240)
     TBtn.Font = Enum.Font.SourceSansBold
-    TBtn.TextSize = 11
+    TBtn.TextSize = 10
     TBtn.BackgroundColor3 = Themes[name].Accent
     TBtn.BorderSizePixel = 0
     TBtn.ZIndex = 5
@@ -613,10 +726,23 @@ for i, name in ipairs(themeList) do
         Title.TextColor3 = CurrentTheme.Accent
         MainStroke.Color = CurrentTheme.Accent
         ButtonStroke.Color = CurrentTheme.Accent
-        ToggleBtn.TextColor3 = CurrentTheme.Accent
-        Notify("Theme", "Đã đổi sang Theme: " .. name)
+        UpStroke.Color = CurrentTheme.Accent
+        DownStroke.Color = CurrentTheme.Accent
+        CrosshairFrame.BackgroundColor3 = CurrentTheme.Accent
+        Notify("Theme", "Đã áp dụng tông màu: " .. name)
     end)
 end
+
+----------------------------------------------------------
+-- ANTI AFK SYSTEM
+----------------------------------------------------------
+LocalPlayer.Idled:Connect(function()
+    if Config.AntiAFK then
+        VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+    end
+end)
 
 ----------------------------------------------------------
 -- NAMETAG & VISUAL SYSTEM
@@ -644,10 +770,10 @@ local function CreateNameTag(char, plr)
     nameTxt.Position = UDim2.new(0, 0, 0, 0)
     nameTxt.BackgroundTransparency = 1
     nameTxt.Text = plr.DisplayName .. " (@" .. plr.Name .. ")"
-    nameTxt.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameTxt.TextColor3 = Color3.fromRGB(240, 240, 240)
     nameTxt.TextStrokeTransparency = 0.2
     nameTxt.Font = Enum.Font.SourceSansBold
-    nameTxt.TextSize = 13
+    nameTxt.TextSize = 12
     nameTxt.Parent = bbg
 
     local distTxt = Instance.new("TextLabel")
@@ -656,7 +782,7 @@ local function CreateNameTag(char, plr)
     distTxt.Position = UDim2.new(0, 0, 0, 16)
     distTxt.BackgroundTransparency = 1
     distTxt.Text = "0 Studs"
-    distTxt.TextColor3 = Color3.fromRGB(0, 230, 255)
+    distTxt.TextColor3 = Color3.fromRGB(120, 180, 240)
     distTxt.TextStrokeTransparency = 0.3
     distTxt.Font = Enum.Font.SourceSans
     distTxt.TextSize = 11
@@ -664,9 +790,9 @@ local function CreateNameTag(char, plr)
 
     local hpBg = Instance.new("Frame")
     hpBg.Name = "HPBackground"
-    hpBg.Size = UDim2.new(0, 100, 0, 5)
+    hpBg.Size = UDim2.new(0, 100, 0, 4)
     hpBg.Position = UDim2.new(0.5, -50, 0, 32)
-    hpBg.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    hpBg.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
     hpBg.BorderSizePixel = 0
     hpBg.Visible = false
     hpBg.Parent = bbg
@@ -675,7 +801,7 @@ local function CreateNameTag(char, plr)
     local hpBar = Instance.new("Frame")
     hpBar.Name = "HPBar"
     hpBar.Size = UDim2.new(1, 0, 1, 0)
-    hpBar.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+    hpBar.BackgroundColor3 = Color3.fromRGB(0, 200, 120)
     hpBar.BorderSizePixel = 0
     hpBar.Parent = hpBg
     Instance.new("UICorner", hpBar).CornerRadius = UDim.new(1, 0)
@@ -692,7 +818,7 @@ local function SetupPlayerESP(plr)
         highlight.Adornee = char
         highlight.FillColor = Config.ESPColor
         highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-        highlight.FillTransparency = 0.4
+        highlight.FillTransparency = 0.5
         highlight.Enabled = Config.ESPEnabled
         highlight.Parent = char
 
@@ -707,12 +833,12 @@ for _, p in ipairs(Players:GetPlayers()) do SetupPlayerESP(p) end
 Players.PlayerAdded:Connect(SetupPlayerESP)
 
 ----------------------------------------------------------
--- REALTIME RENDER LOOP & NOCLIP STEPPED
+-- RENDER LOOP & ADVANCED MOVEMENT LOGIC
 ----------------------------------------------------------
 local lastTime = tick()
 local frameCount = 0
+local airPlatform = nil
 
--- VÒNG LẶP NOCLIP CHUẨN XÁC
 RunService.Stepped:Connect(function()
     if Config.NoclipEnabled and LocalPlayer.Character then
         for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
@@ -724,7 +850,7 @@ RunService.Stepped:Connect(function()
 end)
 
 RunService.RenderStepped:Connect(function(dt)
-    -- Calculate FPS/Ping
+    -- FPS & Ping Counter
     frameCount = frameCount + 1
     if tick() - lastTime >= 1 then
         local currentFPS = math.floor(frameCount / (tick() - lastTime))
@@ -735,70 +861,114 @@ RunService.RenderStepped:Connect(function(dt)
         lastTime = tick()
     end
 
-    -- Speed Hack
-    if Config.SpeedEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-        LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = Config.SpeedValue
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    local cam = workspace.CurrentCamera
+
+    -- 1. SPEED HACK SMOOTH
+    if Config.SpeedEnabled and hum then
+        hum.WalkSpeed = Config.SpeedValue
     end
 
-    -- Fly Mode
-    if Config.FlyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local cam = workspace.CurrentCamera
-        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if bodyVel and hum then
-            bodyVel.Velocity = cam.CFrame.LookVector * (hum.MoveDirection.Magnitude > 0 and Config.FlySpeed or 0)
+    -- 2. FLY 3D MULTI-DIRECTIONAL MATH (XỬ LÝ FLY 360 CỰC MƯỢT)
+    if Config.FlyEnabled and hrp and hum and cam then
+        if not bodyVel or not bodyVel.Parent then
+            bodyVel = Instance.new("BodyVelocity", hrp)
+            bodyVel.MaxForce = Vector3.new(1e9, 1e9, 1e9)
         end
-        if bodyGyro then bodyGyro.CFrame = cam.CFrame end
+        if not bodyGyro or not bodyGyro.Parent then
+            bodyGyro = Instance.new("BodyGyro", hrp)
+            bodyGyro.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+            bodyGyro.P = 10000
+        end
+
+        bodyGyro.CFrame = cam.CFrame
+
+        local moveDir = hum.MoveDirection
+        local flyVel = Vector3.zero
+
+        if moveDir.Magnitude > 0 then
+            -- Tính toán hướng Vector 3D thực tế theo WASD / Joystick gạt
+            local camCF = cam.CFrame
+            local flatLook = Vector3.new(camCF.LookVector.X, 0, camCF.LookVector.Z).Unit
+            local flatRight = Vector3.new(camCF.RightVector.X, 0, camCF.RightVector.Z).Unit
+
+            local forwardDot = moveDir:Dot(flatLook)
+            local rightDot = moveDir:Dot(flatRight)
+
+            local flight3D = (camCF.LookVector * forwardDot) + (camCF.RightVector * rightDot)
+            if flight3D.Magnitude > 0 then
+                flight3D = flight3D.Unit
+            end
+
+            flyVel = flight3D * Config.FlySpeed
+        end
+
+        -- Thêm điều khiển Nâng / Hạ độ cao (Phím / Touch Mobile)
+        local ySpeed = 0
+        if Config.FlyUp or UserInputService:IsKeyDown(Enum.KeyCode.E) or UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            ySpeed = ySpeed + Config.FlySpeed
+        end
+        if Config.FlyDown or UserInputService:IsKeyDown(Enum.KeyCode.Q) or UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+            ySpeed = ySpeed - Config.FlySpeed
+        end
+
+        bodyVel.Velocity = flyVel + Vector3.new(0, ySpeed, 0)
     end
 
-    -- AirWalk
-    if Config.AirWalkEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+    -- 3. AIR WALK PRO 2.0 (SÀN TRÊN KHÔNG TỰ ĐỘNG)
+    if Config.AirWalkEnabled and hrp then
         if not airPlatform or not airPlatform.Parent then
             airPlatform = Instance.new("Part")
-            airPlatform.Size = Vector3.new(6, 1, 6)
+            airPlatform.Name = "AirWalkPlatformPro"
+            airPlatform.Size = Vector3.new(7, 0.8, 7)
             airPlatform.Anchored = true
             airPlatform.Transparency = 0.5
             airPlatform.Material = Enum.Material.Neon
             airPlatform.Color = CurrentTheme.Accent
             airPlatform.Parent = workspace
         end
-        local hrp = LocalPlayer.Character.HumanoidRootPart
-        airPlatform.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y - 3.5, hrp.Position.Z)
+        
+        -- Nếu bấm nhảy thì nhích sàn lên cao
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            airPlatform.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y - 2.8, hrp.Position.Z)
+        else
+            airPlatform.CFrame = CFrame.new(hrp.Position.X, airPlatform.Position.Y, hrp.Position.Z)
+        end
     else
         if airPlatform then airPlatform:Destroy() airPlatform = nil end
     end
 
-    -- ESP & Nametags
-    local myChar = LocalPlayer.Character
-    local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
-
+    -- 4. ESP & NAMETAGS
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Character then
-            local char = p.Character
-            local head = char:FindFirstChild("Head")
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            local hl = char:FindFirstChild("ESPHighlight")
+            local pChar = p.Character
+            local pHead = pChar:FindFirstChild("Head")
+            local pHum = pChar:FindFirstChildOfClass("Humanoid")
+            local hl = pChar:FindFirstChild("ESPHighlight")
 
             if hl then hl.Enabled = Config.ESPEnabled end
 
-            if head then
-                local bbg = head:FindFirstChild("ESPNameTag")
+            if pHead then
+                local bbg = pHead:FindFirstChild("ESPNameTag")
                 if bbg then
                     bbg.Enabled = Config.ESPNamesEnabled
 
                     if Config.ESPNamesEnabled then
                         local distLabel = bbg:FindFirstChild("DistLabel")
-                        if distLabel and myHRP then
-                            local dist = math.floor((head.Position - myHRP.Position).Magnitude)
+                        if distLabel and hrp then
+                            local dist = math.floor((pHead.Position - hrp.Position).Magnitude)
                             distLabel.Text = tostring(dist) .. " Studs"
                         end
 
                         local hpBg = bbg:FindFirstChild("HPBackground")
                         if hpBg then
                             hpBg.Visible = Config.ESPHealthEnabled
-                            if Config.ESPHealthEnabled and hum then
+                            if Config.ESPHealthEnabled and pHum then
                                 local hpBar = hpBg:FindFirstChild("HPBar")
                                 if hpBar then
-                                    local ratio = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+                                    local ratio = math.clamp(pHum.Health / pHum.MaxHealth, 0, 1)
                                     hpBar.Size = UDim2.new(ratio, 0, 1, 0)
                                     hpBar.BackgroundColor3 = Color3.fromRGB(255 * (1 - ratio), 255 * ratio, 0)
                                 end
@@ -811,4 +981,4 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
-Notify("Kianbest Hub", "Đã cập nhật phiên bản v4.0 Supreme!")
+Notify("Kianbest Hub", "Đã nâng cấp v6.0 Movement Ultimate!")
