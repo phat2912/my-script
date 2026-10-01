@@ -1,7 +1,7 @@
 -- ==========================================================
--- SCRIPT MENU SYSTEM V8.0 ULTIMATE VIP (Kianbest Hub)
--- Fix: Perfect Circle Button, Real Anime Girl BG, Custom Image ID, Theme Switcher,
--- Hitbox Expander + Super M1 Damage, Full Fix Lag & Settings Suite.
+-- SCRIPT MENU SYSTEM V9.0 PRO ULTIMATE FIX (Kianbest Hub)
+-- Features: Working Anime Girl BG Presets + Super M1 Multi-Hit Damage
+-- Perfectly Round Toggle Button + Full Fix Lag & Settings Suite
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -16,7 +16,7 @@ local TeleportService = game:GetService("TeleportService")
 local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 
--- 1. CẤU HÌNH HỆ THỐNG (CONFIG)
+-- 1. CẤU HÌNH HỆ THỐNG
 local Config = {
     ESPEnabled = false,
     ESPNamesEnabled = false,
@@ -35,7 +35,7 @@ local Config = {
     RemoveTextures = false,
     HidePlayers = false,
     
-    -- Combat & Hitbox Super M1 Config
+    -- Combat / Multi-Hit Super M1 Damage
     SelectedTarget = nil,
     AutoTPTarget = false,
     AutoAttack = false,
@@ -48,13 +48,21 @@ local Config = {
     KillAuraRange = 20,
     
     AntiAFK = false,
-    AnimeImageID = "rbxassetid://7074718961", -- ID Anime Girl HD Cute
+    CurrentAnimeIndex = 1,
     BgTransparency = 0.35,
     FrameTransparency = 0.15,
     ToggleKey = Enum.KeyCode.RightControl
 }
 
--- 2. BỘ CHỦ ĐỀ MÀU SẮC (THEMES)
+-- DANH SÁCH ID ANIME GIRL HD ĐÃ TEST
+local AnimePresets = {
+    "rbxassetid://11702739401", -- Anime Cute Girl 1
+    "rbxassetid://10023403248", -- Anime Girl 2
+    "rbxassetid://6071575925",  -- Anime Aesthetic 3
+    "rbxassetid://11414436906"  -- Anime Kawaii 4
+}
+
+-- BỘ THEMES MÀU SẮC
 local Themes = {
     CutePink = { Name = "Cute Pink 🌸", Bg = Color3.fromRGB(25, 18, 24), Sidebar = Color3.fromRGB(18, 12, 17), Accent = Color3.fromRGB(255, 120, 170), Button = Color3.fromRGB(38, 24, 34), Text = Color3.fromRGB(255, 240, 245) },
     CyberBlue = { Name = "Cyber Blue 💎", Bg = Color3.fromRGB(15, 22, 32), Sidebar = Color3.fromRGB(10, 15, 24), Accent = Color3.fromRGB(0, 195, 255), Button = Color3.fromRGB(20, 32, 48), Text = Color3.fromRGB(235, 245, 255) },
@@ -64,18 +72,18 @@ local Themes = {
 
 local CurrentTheme = Themes.CutePink
 
--- 3. KHỞI TẠO SCREENGUI
+-- KHỞI TẠO SCREENGUI
 local ParentGui = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
-if ParentGui:FindFirstChild("KianbestMenuV8") then
-    ParentGui.KianbestMenuV8:Destroy()
+if ParentGui:FindFirstChild("KianbestMenuV9") then
+    ParentGui.KianbestMenuV9:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "KianbestMenuV8"
+ScreenGui.Name = "KianbestMenuV9"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = ParentGui
 
--- 4. NOTIFICATION TOAST
+-- NOTIFICATION TOAST
 local NotificationFrame = Instance.new("Frame")
 NotificationFrame.Name = "NotificationFrame"
 NotificationFrame.Size = UDim2.new(0, 230, 0, 200)
@@ -139,7 +147,7 @@ local function Notify(title, text, duration)
     end)
 end
 
--- 5. MAIN FRAME
+-- MAIN FRAME
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 540, 0, 350)
@@ -158,14 +166,14 @@ local MainStroke = Instance.new("UIStroke", MainFrame)
 MainStroke.Color = CurrentTheme.Accent
 MainStroke.Thickness = 2
 
--- HÌNH NỀN ANIME NỮ chuẩn HD
+-- HÌNH NỀN ANIME NỮ HD CHUẨN PRESET
 local MainBgImage = Instance.new("ImageLabel")
 MainBgImage.Name = "MainBgAnimeGirl"
 MainBgImage.Size = UDim2.new(1, 0, 1, 0)
 MainBgImage.BackgroundTransparency = 1
 MainBgImage.ImageTransparency = Config.BgTransparency
 MainBgImage.ScaleType = Enum.ScaleType.Crop
-MainBgImage.Image = Config.AnimeImageID
+MainBgImage.Image = AnimePresets[1]
 MainBgImage.ZIndex = 1
 MainBgImage.Parent = MainFrame
 
@@ -183,7 +191,7 @@ Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 10)
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(0, 260, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
-Title.Text = "🌸 Kianbest Hub v8.0 ULTIMATE"
+Title.Text = "🌸 Kianbest Hub v9.0 PRO FIX"
 Title.TextColor3 = CurrentTheme.Accent
 Title.TextSize = 15
 Title.Font = Enum.Font.FredokaOne
@@ -217,10 +225,10 @@ CloseBtn.ZIndex = 4
 CloseBtn.Parent = Header
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 
--- NÚT TRÒN TOGGLE CHỮ "KIAN" (ĐÃ FIX HOÀN HẢO KHÔNG BỊ MÉO)
+-- NÚT TRÒN TOGGLE CHỮ "KIAN" (CỐ ĐỊNH TỶ LỆ TRÒN 100%)
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Name = "KianToggleButton"
-ToggleBtn.Size = UDim2.new(0, 52, 0, 52)
+ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
 ToggleBtn.Position = UDim2.new(0, 15, 0.4, 0)
 ToggleBtn.BackgroundColor3 = CurrentTheme.Sidebar
 ToggleBtn.Text = "KIAN"
@@ -234,7 +242,6 @@ ToggleBtn.Parent = ScreenGui
 
 Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
 
--- Cố định tỉ lệ 1:1 giữ nút luôn tròn xoe
 local ButtonAspect = Instance.new("UIAspectRatioConstraint", ToggleBtn)
 ButtonAspect.AspectRatio = 1
 ButtonAspect.AspectType = Enum.AspectType.FitWithinMaxSize
@@ -334,10 +341,8 @@ local FixLagPage = CreateTab("Fix Lag", "🚀", 4)
 local SettingsPage = CreateTab("Settings", "⚙️", 5)
 
 ----------------------------------------------------------
--- UI CREATORS
+-- UI COMPONENTS
 ----------------------------------------------------------
-local RegisteredToggles = {}
-
 local function CreateToggle(parent, text, defaultState, callback)
     local Btn = Instance.new("TextButton")
     Btn.Size = UDim2.new(1, -6, 0, 34)
@@ -369,8 +374,6 @@ local function CreateToggle(parent, text, defaultState, callback)
         StatusInd.BackgroundColor3 = state and CurrentTheme.Accent or Color3.fromRGB(60, 65, 75)
         callback(state)
     end)
-
-    table.insert(RegisteredToggles, {Btn = Btn, Indicator = StatusInd, GetState = function() return state end})
     return Btn
 end
 
@@ -497,7 +500,7 @@ local function CreateInputBox(parent, title, placeholder, callback)
 end
 
 ----------------------------------------------------------
--- TAB 1: COMBAT VIP & SÁT THƯƠNG M1 SIÊU TO (ONE-SHOT + HITBOX)
+-- TAB 1: COMBAT VIP & SÁT THƯƠNG M1 SIÊU TO (MULTI-HIT)
 ----------------------------------------------------------
 local CList = Instance.new("UIListLayout", CombatPage)
 CList.SortOrder = Enum.SortOrder.LayoutOrder
@@ -543,28 +546,17 @@ end)
 
 CreateToggle(CombatPage, "📦 Mở Rộng Hitbox Kẻ Địch (Phóng To Body)", Config.HitboxExpander, function(state)
     Config.HitboxExpander = state
-    Notify("Combat VIP", state and "Đã BẬT Phóng To Hitbox Kẻ Địch!" or "Đã TẮT Hitbox Expander")
+    Notify("Combat VIP", state and "Đã BẬT Phóng To Hitbox!" or "Đã TẮT Hitbox Expander")
 end)
 
 CreateValueAdjuster(CombatPage, "Kích Thước Hitbox", 5, 30, Config.HitboxSize, 5, function(val)
     Config.HitboxSize = val
 end)
 
-CreateToggle(CombatPage, "⚡ Auto TP Áp Sát Lưng Đối Thủ", Config.AutoTPTarget, function(state)
-    Config.AutoTPTarget = state
-end)
-
-CreateToggle(CombatPage, "🥊 Auto Đấm Thường M1", Config.AutoAttack, function(state)
-    Config.AutoAttack = state
-end)
-
-CreateToggle(CombatPage, "🔥 Auto Skill Combo (Z, X, C, V)", Config.AutoSkills, function(state)
-    Config.AutoSkills = state
-end)
-
-CreateToggle(CombatPage, "💥 Kill Aura (Xả Dame Xung Quanh)", Config.KillAura, function(state)
-    Config.KillAura = state
-end)
+CreateToggle(CombatPage, "⚡ Auto TP Áp Sát Lưng Đối Thủ", Config.AutoTPTarget, function(state) Config.AutoTPTarget = state end)
+CreateToggle(CombatPage, "🥊 Auto Đấm Thường M1", Config.AutoAttack, function(state) Config.AutoAttack = state end)
+CreateToggle(CombatPage, "🔥 Auto Skill Combo (Z, X, C, V)", Config.AutoSkills, function(state) Config.AutoSkills = state end)
+CreateToggle(CombatPage, "💥 Kill Aura (Xả Dame Xung Quanh)", Config.KillAura, function(state) Config.KillAura = state end)
 
 ----------------------------------------------------------
 -- TAB 2: VISUALS
@@ -607,10 +599,7 @@ CreateToggle(MovementPage, "Bay 3D Chuẩn (Fly WASD/Joystick)", Config.FlyEnabl
 end)
 
 CreateValueAdjuster(MovementPage, "Tốc Độ Bay", 20, 300, Config.FlySpeed, 10, function(val) Config.FlySpeed = val end)
-
-CreateToggle(MovementPage, "Đi Xuyên Tường (Noclip Fix Rơi Map)", Config.NoclipEnabled, function(state)
-    Config.NoclipEnabled = state
-end)
+CreateToggle(MovementPage, "Đi Xuyên Tường (Noclip Fix Rơi Map)", Config.NoclipEnabled, function(state) Config.NoclipEnabled = state end)
 
 CreateToggle(MovementPage, "Chạy Nhanh (Speed Hack)", Config.SpeedEnabled, function(state)
     Config.SpeedEnabled = state
@@ -645,7 +634,7 @@ CreateButton(FixLagPage, "🚀 Super FPS Boost (Tối Ưu 1-Click)", Color3.from
             v.Enabled = false
         end
     end
-    Notify("Fix Lag", "Đã siêu tối ưu mượt map!")
+    Notify("Fix Lag", "Đã tối ưu mượt map thành công!")
 end)
 
 CreateToggle(FixLagPage, "🚫 Xóa Effect Chiêu Thức (Anti-VFX)", Config.RemoveVFX, function(state)
@@ -677,14 +666,21 @@ CreateToggle(FixLagPage, "👤 Ẩn Người Chơi Khác (Hide Players)", Config
 end)
 
 ----------------------------------------------------------
--- TAB 5: SETTINGS & ĐỔI MÀU BACKGROUND
+-- TAB 5: SETTINGS & ĐỔI NỀN ANIME CUTE
 ----------------------------------------------------------
 local SList = Instance.new("UIListLayout", SettingsPage)
 SList.SortOrder = Enum.SortOrder.LayoutOrder
 SList.Padding = UDim.new(0, 8)
 
--- ĐỔI MÀU CHỦ ĐỀ MENU
-CreateButton(SettingsPage, "🎨 Đổi Màu Chủ Đề (Pink/Blue/Red/Purple)", Color3.fromRGB(45, 30, 45), function()
+-- CHUYỂN ẢNH ANIME PRESET TRONG MENU
+CreateButton(SettingsPage, "🖼️ Chuyển Ảnh Anime Nữ HD (1 - 4)", Color3.fromRGB(45, 30, 45), function()
+    Config.CurrentAnimeIndex = (Config.CurrentAnimeIndex % #AnimePresets) + 1
+    MainBgImage.Image = AnimePresets[Config.CurrentAnimeIndex]
+    Notify("Settings", "Đã đổi nền Anime " .. Config.CurrentAnimeIndex)
+end)
+
+-- ĐỔI THEMES MÀU MENU
+CreateButton(SettingsPage, "🎨 Đổi Màu Chủ Đề (Pink/Blue/Red/Purple)", Color3.fromRGB(40, 25, 45), function()
     if CurrentTheme == Themes.CutePink then CurrentTheme = Themes.CyberBlue
     elseif CurrentTheme == Themes.CyberBlue then CurrentTheme = Themes.BloodRed
     elseif CurrentTheme == Themes.BloodRed then CurrentTheme = Themes.DarkPurple
@@ -704,12 +700,11 @@ CreateButton(SettingsPage, "🎨 Đổi Màu Chủ Đề (Pink/Blue/Red/Purple)"
     Notify("Settings", "Đã chuyển theme: " .. CurrentTheme.Name)
 end)
 
--- NHẬP ID CẢNH ANIME TUỲ CHỈNH
-CreateInputBox(SettingsPage, "🖼️ Dán ID Ảnh Anime Custom:", "Ví dụ: 7074718961", function(text)
+-- DÁN ID ANIME TỰ CHỌN
+CreateInputBox(SettingsPage, "📥 Dán ID Ảnh Custom:", "Ví dụ: 11702739401", function(text)
     local formatted = text:find("rbxassetid://") and text or "rbxassetid://" .. text
-    Config.AnimeImageID = formatted
     MainBgImage.Image = formatted
-    Notify("Settings", "Đã đổi ảnh nền Anime mới!")
+    Notify("Settings", "Đã cài đặt ảnh custom mới!")
 end)
 
 CreateValueAdjuster(SettingsPage, "Độ Mờ Ảnh Nền Anime", 0, 10, 3, 1, function(val)
@@ -720,35 +715,42 @@ CreateValueAdjuster(SettingsPage, "Độ Mờ Khung Menu Main", 0, 10, 2, 1, fun
     MainFrame.BackgroundTransparency = val / 10
 end)
 
-CreateToggle(SettingsPage, "Chống Treo Máy (Anti-AFK 24/7)", Config.AntiAFK, function(state)
-    Config.AntiAFK = state
-end)
+CreateToggle(SettingsPage, "Chống Treo Máy (Anti-AFK 24/7)", Config.AntiAFK, function(state) Config.AntiAFK = state end)
 
 CreateButton(SettingsPage, "🔄 Vào Lại Server (Rejoin)", Color3.fromRGB(50, 30, 45), function()
     TeleportService:Teleport(game.PlaceId, LocalPlayer)
 end)
 
 ----------------------------------------------------------
--- CHỨC NĂNG SÁT THƯƠNG M1 SIÊU TO + FAST ATTACK
+-- HỆ THỐNG SÁT THƯƠNG M1 SIÊU TO (BYPASS REMOTE & MULTI-HIT)
 ----------------------------------------------------------
 local function TriggerSuperDamageM1()
     local char = LocalPlayer.Character
     local cam = workspace.CurrentCamera
     local tool = char and char:FindFirstChildOfClass("Tool")
-
     local count = Config.SuperM1Damage and Config.DamageMultiplier or 1
 
     for i = 1, count do
+        -- 1. Virtual Mouse Click
         VirtualUser:Button1Down(Vector2.new(0,0), cam.CFrame)
         VirtualUser:Button1Up(Vector2.new(0,0), cam.CFrame)
+        
+        -- 2. Tool Activate
         if tool then
             tool:Activate()
+            
+            -- 3. Trigger Weapon Attack Remotes inside tool
+            for _, v in ipairs(tool:GetDescendants()) do
+                if v:IsA("RemoteEvent") and (v.Name:lower():find("attack") or v.Name:lower():find("hit") or v.Name:lower():find("m1") or v.Name:lower():find("swing")) then
+                    pcall(function() v:FireServer() end)
+                end
+            end
         end
     end
 end
 
 ----------------------------------------------------------
--- RENDER LOOP (HITBOX, COMBAT, NOCLIP, FLY)
+-- RENDER LOOP (COMBAT, HITBOX, NOCLIP, FLY)
 ----------------------------------------------------------
 local lastTime = tick()
 local frameCount = 0
@@ -795,7 +797,7 @@ RunService.RenderStepped:Connect(function(dt)
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChildOfClass("Humanoid")
 
-    -- 1. HITBOX EXPANDER (PHÓNG TO BODY KẺ ĐỊCH)
+    -- 1. HITBOX EXPANDER (PHÓNG TO THÂN THỂ KẺ ĐỊCH)
     if Config.HitboxExpander then
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character then
@@ -811,7 +813,7 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    -- 2. COMBAT TARGET & SUPER DAMAGE M1
+    -- 2. COMBAT TARGET & MULTI-HIT SUPER DAMAGE M1
     if Config.SelectedTarget and Config.SelectedTarget.Character then
         local tHRP = Config.SelectedTarget.Character:FindFirstChild("HumanoidRootPart")
         local tHum = Config.SelectedTarget.Character:FindFirstChildOfClass("Humanoid")
@@ -855,4 +857,4 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
-Notify("Kianbest Hub", "Đã khởi chạy v8.0 ULTIMATE VIP Anime Girl!")
+Notify("Kianbest Hub", "Đã khởi chạy v9.0 PRO FIX thành công!")
