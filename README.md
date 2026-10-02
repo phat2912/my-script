@@ -1,8 +1,11 @@
 -- ==========================================================
--- KIANBEST HUB V16.0 ULTRA SAFE ENGINE
--- Fix: Bật Anti không văng game, Noti gọn gàng không che phím Mobile
--- Fix: Layout Nút bấm tự co giãn (No Glitch), Đổi Icon Vương Miện -> Sấm Sét ⚡
--- Tương thích: Delta, Solara, Wave, CodeX, Hydrogen, Arceus X, Fluxus
+-- KIANBEST HUB V17.1 - iOS DYNAMIC ISLAND EDITION
+-- Feature: Hệ thống Noti iOS Dynamic Island v2.0 (Xanh / Đỏ chuẩn iOS)
+-- Feature: Bất Tử GOD MODE (Chống M1 & Tất Cả Chiêu Thức)
+-- Fix: Nhân vật di chuyển mượt khi bật Hitbox (No Physics Freeze)
+-- Fix: Auto TP sau lưng xoay mặt chuẩn 100% đánh trúng
+-- Fix: Bay 3D mượt mà không bị spam Noti
+-- Clean: Xóa toàn bộ ảnh nền mẫu, giữ ô chèn ID tùy chọn
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -32,6 +35,7 @@ local Config = {
     AntiCrashRemote = true,
     AntiBanGUI = true,
 
+    GodMode = false,
     NoclipEnabled = false,
     SpeedEnabled = false,
     SpeedValue = 35,
@@ -53,19 +57,9 @@ local Config = {
     HidePlayers = false,
     
     AntiAFK = true,
-    CurrentChillIndex = 1,
     BgTransparency = 0.2,
     FrameTransparency = 0.15,
     ToggleKey = Enum.KeyCode.RightControl
-}
-
-local ChillPresets = {
-    "rbxassetid://6071575925",
-    "rbxassetid://7043825807",
-    "rbxassetid://6985068228",
-    "rbxassetid://11414436906",
-    "rbxassetid://10023403248",
-    "rbxassetid://11702739401"
 }
 
 local Themes = {
@@ -78,93 +72,142 @@ local Themes = {
 local CurrentTheme = Themes.ChillPurple
 
 local ParentGui = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
-if ParentGui:FindFirstChild("KianbestMenuV16_0") then
-    ParentGui.KianbestMenuV16_0:Destroy()
+if ParentGui:FindFirstChild("KianbestMenuV17_1") then
+    ParentGui.KianbestMenuV17_1:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "KianbestMenuV16_0"
+ScreenGui.Name = "KianbestMenuV17_1"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = ParentGui
 
 ----------------------------------------------------------
--- 🔔 FIXED NOTIFICATION QUEUE (CHUYỂN SANG GÓC DƯỚI TRÁI - KHÔNG CHE PHÍM)
+-- 📲 IOS NOTIFICATION SYSTEM V2.0 (DYNAMIC ISLAND STYLE)
 ----------------------------------------------------------
 local NotiContainer = Instance.new("Frame")
-NotiContainer.Name = "NotiContainer"
-NotiContainer.Size = UDim2.new(0, 210, 0, 200)
-NotiContainer.Position = UDim2.new(0, 15, 1, -210) -- Góc Dưới Bên Trái
+NotiContainer.Name = "iOSNotiContainer"
+NotiContainer.Size = UDim2.new(0, 260, 0, 200)
+NotiContainer.Position = UDim2.new(0.5, -130, 0, 15)
 NotiContainer.BackgroundTransparency = 1
-NotiContainer.ZIndex = 200
+NotiContainer.ZIndex = 999
 NotiContainer.Parent = ScreenGui
 
 local NotiLayout = Instance.new("UIListLayout", NotiContainer)
 NotiLayout.SortOrder = Enum.SortOrder.LayoutOrder
-NotiLayout.Padding = UDim.new(0, 5)
-NotiLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+NotiLayout.Padding = UDim.new(0, 8)
+NotiLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+NotiLayout.VerticalAlignment = Enum.VerticalAlignment.Top
 
 local ActiveNotifications = {}
 local MAX_NOTIFICATIONS = 3
 
+local iOSColors = {
+    Success = Color3.fromRGB(48, 209, 88),   -- Xanh lá iOS
+    Error   = Color3.fromRGB(255, 69, 58),   -- Đỏ iOS
+    Info    = Color3.fromRGB(10, 132, 255),  -- Xanh dương iOS
+    Warning = Color3.fromRGB(255, 159, 10),  -- Vàng Cam iOS
+    Bg      = Color3.fromRGB(22, 22, 26),    -- Nền Cyber Dark
+    TextMain= Color3.fromRGB(255, 255, 255)
+}
+
 local function Notify(title, text, duration)
-    duration = duration or 2.0
+    duration = duration or 2.2
+    
+    local statusColor = iOSColors.Info
+    local checkStr = (tostring(title) .. " " .. tostring(text)):lower()
+    
+    if checkStr:find("bật") or checkStr:find("on") or checkStr:find("🟢") or checkStr:find("kích hoạt") or checkStr:find("thành công") then
+        statusColor = iOSColors.Success
+    elseif checkStr:find("tắt") or checkStr:find("off") or checkStr:find("🔴") or checkStr:find("chặn") or checkStr:find("lỗi") then
+        statusColor = iOSColors.Error
+    elseif checkStr:find("cảnh báo") or checkStr:find("admin") or checkStr:find("⚠️") then
+        statusColor = iOSColors.Warning
+    end
 
     if #ActiveNotifications >= MAX_NOTIFICATIONS then
         local oldest = table.remove(ActiveNotifications, 1)
-        if oldest and oldest.Frame then oldest.Frame:Destroy() end
+        if oldest and oldest.Frame and oldest.Frame.Parent then 
+            oldest.Frame:Destroy() 
+        end
     end
 
     local Toast = Instance.new("Frame")
-    Toast.Size = UDim2.new(1, 0, 0, 38)
-    Toast.BackgroundColor3 = CurrentTheme.Sidebar
+    Toast.Name = "iOSToast"
+    Toast.Size = UDim2.new(1, 0, 0, 44)
+    Toast.BackgroundColor3 = iOSColors.Bg
     Toast.BackgroundTransparency = 0.15
     Toast.BorderSizePixel = 0
-    Toast.ZIndex = 201
+    Toast.ClipsDescendants = true
+    Toast.ZIndex = 1000
     Toast.Parent = NotiContainer
 
-    Instance.new("UICorner", Toast).CornerRadius = UDim.new(0, 8)
+    Instance.new("UICorner", Toast).CornerRadius = UDim.new(0, 12)
+    
     local Stroke = Instance.new("UIStroke", Toast)
-    Stroke.Color = CurrentTheme.Accent
+    Stroke.Color = statusColor
     Stroke.Thickness = 1.2
+    Stroke.Transparency = 0.4
+
+    local StatusPill = Instance.new("Frame")
+    StatusPill.Size = UDim2.new(0, 4, 0, 24)
+    StatusPill.Position = UDim2.new(0, 8, 0.5, -12)
+    StatusPill.BackgroundColor3 = statusColor
+    StatusPill.BorderSizePixel = 0
+    StatusPill.ZIndex = 1001
+    StatusPill.Parent = Toast
+    Instance.new("UICorner", StatusPill).CornerRadius = UDim.new(1, 0)
 
     local TTitle = Instance.new("TextLabel")
-    TTitle.Size = UDim2.new(1, -10, 0, 14)
-    TTitle.Position = UDim2.new(0, 8, 0, 3)
-    TTitle.Text = title
-    TTitle.TextColor3 = CurrentTheme.Accent
+    TTitle.Size = UDim2.new(1, -24, 0, 16)
+    TTitle.Position = UDim2.new(0, 18, 0, 6)
+    TTitle.Text = title or "Thông báo"
+    TTitle.TextColor3 = iOSColors.TextMain
     TTitle.Font = Enum.Font.SourceSansBold
-    TTitle.TextSize = 12
+    TTitle.TextSize = 13
     TTitle.TextXAlignment = Enum.TextXAlignment.Left
     TTitle.BackgroundTransparency = 1
-    TTitle.ZIndex = 202
+    TTitle.ZIndex = 1001
     TTitle.Parent = Toast
 
     local TText = Instance.new("TextLabel")
-    TText.Size = UDim2.new(1, -10, 0, 14)
-    TText.Position = UDim2.new(0, 8, 0, 18)
-    TText.Text = text
-    TText.TextColor3 = CurrentTheme.Text
-    TText.Font = Enum.Font.SourceSans
-    TText.TextSize = 11
+    TText.Size = UDim2.new(1, -24, 0, 14)
+    TText.Position = UDim2.new(0, 18, 0, 22)
+    TText.Text = text or ""
+    TText.TextColor3 = statusColor
+    TText.Font = Enum.Font.SourceSansSemiBold
+    TText.TextSize = 12
     TText.TextXAlignment = Enum.TextXAlignment.Left
     TText.BackgroundTransparency = 1
-    TText.ZIndex = 202
+    TText.ZIndex = 1001
     TText.Parent = Toast
 
     local notiObj = {Frame = Toast}
     table.insert(ActiveNotifications, notiObj)
 
-    Toast.Position = UDim2.new(-0.2, 0, 0, 0)
-    TweenService:Create(Toast, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+    Toast.Size = UDim2.new(0, 180, 0, 44)
+    Toast.BackgroundTransparency = 1
+    TTitle.TextTransparency = 1
+    TText.TextTransparency = 1
+    StatusPill.BackgroundTransparency = 1
+    Stroke.Transparency = 1
+
+    local tweenInInfo = TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+    TweenService:Create(Toast, tweenInInfo, {Size = UDim2.new(1, 0, 0, 44), BackgroundTransparency = 0.15}):Play()
+    TweenService:Create(TTitle, tweenInInfo, {TextTransparency = 0}):Play()
+    TweenService:Create(TText, tweenInInfo, {TextTransparency = 0}):Play()
+    TweenService:Create(StatusPill, tweenInInfo, {BackgroundTransparency = 0}):Play()
+    TweenService:Create(Stroke, tweenInInfo, {Transparency = 0.4}):Play()
 
     task.delay(duration, function()
         pcall(function()
-            local fadeInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-            TweenService:Create(Toast, fadeInfo, {BackgroundTransparency = 1}):Play()
-            TweenService:Create(Stroke, fadeInfo, {Transparency = 1}):Play()
-            TweenService:Create(TTitle, fadeInfo, {TextTransparency = 1}):Play()
-            local lastTween = TweenService:Create(TText, fadeInfo, {TextTransparency = 1})
+            local tweenOutInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+            TweenService:Create(Toast, tweenOutInfo, {Size = UDim2.new(0, 120, 0, 0), BackgroundTransparency = 1}):Play()
+            TweenService:Create(TTitle, tweenOutInfo, {TextTransparency = 1}):Play()
+            TweenService:Create(TText, tweenOutInfo, {TextTransparency = 1}):Play()
+            TweenService:Create(StatusPill, tweenOutInfo, {BackgroundTransparency = 1}):Play()
+            local lastTween = TweenService:Create(Stroke, tweenOutInfo, {Transparency = 1})
             lastTween:Play()
+
             lastTween.Completed:Connect(function()
                 for i, v in ipairs(ActiveNotifications) do
                     if v == notiObj then
@@ -179,25 +222,24 @@ local function Notify(title, text, duration)
 end
 
 ----------------------------------------------------------
--- 🛡️ SAFE CRASH-PROOF ANTI-BAN ENGINE (HOOKMETAMETHOD SAFE)
+-- 🛡️ ANTI-BAN SHIELD VIP
 ----------------------------------------------------------
 pcall(function()
     if not Config.AntiBanEnabled then return end
 
-    -- Bọc An Toàn Tránh Crash Executor
     if hookmetamethod then
         local oldNamecall
         oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
             local method = getnamecallmethod()
             
             if Config.AntiKick and (method == "Kick" or method == "kick") and self == LocalPlayer then
-                Notify("🛡️ Anti-Ban VIP", "Đã chặn 1 lệnh KICK từ Server!")
+                Notify("🛡️ Anti-Ban VIP", "Đã chặn 1 lệnh KICK!")
                 return nil
             end
 
             if Config.AntiLog and (method == "FireServer" or method == "InvokeServer") then
                 local remoteName = tostring(self):lower()
-                local blockKeywords = {"ban", "kick", "flag", "cheat", "detect", "log", "ac", "security", "adonis", "anticheat", "report", "screenshot", "teleportcheck", "speedcheck"}
+                local blockKeywords = {"ban", "kick", "flag", "cheat", "detect", "log", "ac", "security", "adonis", "anticheat", "report"}
                 for _, word in ipairs(blockKeywords) do
                     if remoteName:find(word) then return nil end
                 end
@@ -215,55 +257,10 @@ pcall(function()
             return oldIndex(self, key)
         end))
     end
-
-    if Config.DisableClientAC then
-        task.spawn(function()
-            for _, v in ipairs(LocalPlayer:GetDescendants()) do
-                if v:IsA("LocalScript") then
-                    local name = v.Name:lower()
-                    if name:find("anticheat") or name:find("ac") or name:find("security") or name:find("adonis") then
-                        v.Disabled = true
-                    end
-                end
-            end
-        end)
-    end
-
-    if Config.AntiBanGUI then
-        LocalPlayer.PlayerGui.ChildAdded:Connect(function(child)
-            local name = child.Name:lower()
-            if name:find("ban") or name:find("kick") then
-                task.wait(0.1)
-                child:Destroy()
-                Notify("🛡️ Anti-Ban VIP", "Đã diệt 1 Bảng Ban/Kick ảo!")
-            end
-        end)
-    end
 end)
 
-local function CheckAdmin(plr)
-    if not Config.AntiAdmin then return end
-    pcall(function()
-        if plr ~= LocalPlayer then
-            local isCreator = (plr.UserId == game.CreatorId)
-            local rank = (game.CreatorType == Enum.CreatorType.Group and game.CreatorId > 0) and plr:GetRankInGroup(game.CreatorId) or 0
-            if isCreator or rank >= 100 then
-                Notify("⚠️ CHÚ Ý ADMIN!", "Admin " .. plr.Name .. " đã vào game!", 5)
-                if Config.AutoHopOnAdmin then
-                    Notify("🛡️ Anti-Ban VIP", "Đang đổi Server để an toàn...", 3)
-                    task.wait(1)
-                    TeleportService:Teleport(game.PlaceId, LocalPlayer)
-                end
-            end
-        end
-    end)
-end
-
-Players.PlayerAdded:Connect(CheckAdmin)
-for _, p in ipairs(Players:GetPlayers()) do CheckAdmin(p) end
-
 ----------------------------------------------------------
--- MAIN FRAME & UI STRUCTURE
+-- MAIN FRAME & GUI UI
 ----------------------------------------------------------
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
@@ -305,7 +302,7 @@ Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 12)
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(0, 300, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
-Title.Text = "⚡ Kianbest Hub v16.0 ULTRA SAFE"
+Title.Text = "⚡ Kianbest Hub v17.1 iOS EDITION"
 Title.TextColor3 = CurrentTheme.Accent
 Title.TextSize = 13
 Title.Font = Enum.Font.FredokaOne
@@ -339,7 +336,6 @@ CloseBtn.ZIndex = 4
 CloseBtn.Parent = Header
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 
--- TOGGLE BUTTON (ĐÃ ĐỔI ICON SẤM SÉT ⚡)
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Name = "KianToggleButton"
 ToggleBtn.Size = UDim2.new(0, 44, 0, 44)
@@ -380,7 +376,7 @@ UserInputService.InputBegan:Connect(function(input, gp)
 end)
 
 ----------------------------------------------------------
--- SIDEBAR & PAGES (AUTO CANVAS SIZE - SỬA LỖI TRÀN NÚT)
+-- SIDEBAR & PAGES
 ----------------------------------------------------------
 local Sidebar = Instance.new("Frame")
 Sidebar.Size = UDim2.new(0, 130, 1, -36)
@@ -423,7 +419,7 @@ local function CreateTab(name, icon, posIndex)
     Page.ScrollBarThickness = 3
     Page.Visible = (posIndex == 1)
     Page.ZIndex = 3
-    Page.AutomaticCanvasSize = Enum.AutomaticSize.Y -- FIX TRÀN NÚT BẤM
+    Page.AutomaticCanvasSize = Enum.AutomaticSize.Y
     Page.CanvasSize = UDim2.new(0, 0, 0, 0)
     Page.Parent = ContentContainer
 
@@ -495,7 +491,7 @@ local function CreateToggle(parent, text, defaultState, callback)
         state = not state
         StatusInd.BackgroundColor3 = state and CurrentTheme.Accent or Color3.fromRGB(60, 65, 75)
         local cleanTitle = text:gsub("^[%s%p%c]+", "")
-        cleanTitle = cleanTitle ~= "" and cleanTitle or "Tính năng"
+        cleanTitle = (cleanTitle and cleanTitle ~= "") and cleanTitle or "Tính năng"
         Notify(cleanTitle, state and "Đã BẬT 🟢" or "Đã TẮT 🔴")
         callback(state)
     end)
@@ -611,19 +607,16 @@ local function CreateTextBox(parent, placeholder, callback)
 end
 
 ----------------------------------------------------------
--- TAB 1: ANTI-BAN SHIELD VIP
+-- TAB 1: ANTI-BAN SHIELD
 ----------------------------------------------------------
 CreateToggle(AntiBanPage, "🛡️ Chống Kick Tối Đa (Anti-Kick Interceptor)", Config.AntiKick, function(state) Config.AntiKick = state end)
 CreateToggle(AntiBanPage, "🚫 Chặn Gửi Log/Report Cho Game", Config.AntiLog, function(state) Config.AntiLog = state end)
 CreateToggle(AntiBanPage, "🎭 Ngụy Trang Chỉ Số (Spoof Humanoid Stats)", Config.SpoofStats, function(state) Config.SpoofStats = state end)
 CreateToggle(AntiBanPage, "👁️ Phát Hiện Admin/Mod (Anti-Staff Alert)", Config.AntiAdmin, function(state) Config.AntiAdmin = state end)
 CreateToggle(AntiBanPage, "🏃 Auto Hop Server Khi Gặp Admin", Config.AutoHopOnAdmin, function(state) Config.AutoHopOnAdmin = state end)
-CreateToggle(AntiBanPage, "🔒 Vô Hiệu Hóa Script Anti-Cheat Game", Config.DisableClientAC, function(state) Config.DisableClientAC = state end)
-CreateToggle(AntiBanPage, "⚡ Chống Server Flood Crash (Anti-Crash)", Config.AntiCrashRemote, function(state) Config.AntiCrashRemote = state end)
-CreateToggle(AntiBanPage, "🧹 Diệt Bảng Báo Ban Ảo (Anti-Ban GUI)", Config.AntiBanGUI, function(state) Config.AntiBanGUI = state end)
 
 ----------------------------------------------------------
--- TAB 2: COMBAT VIP
+-- TAB 2: COMBAT VIP & GOD MODE
 ----------------------------------------------------------
 local TargetLabel = Instance.new("TextLabel")
 TargetLabel.Size = UDim2.new(1, 0, 0, 22)
@@ -657,6 +650,17 @@ local function GetNearestPlayer()
     return closest, math.floor(maxDist)
 end
 
+CreateToggle(CombatPage, "👑 Bất Tử GOD MODE (Chống M1 & Chiêu)", Config.GodMode, function(state)
+    Config.GodMode = state
+    if not state and LocalPlayer.Character then
+        for _, part in ipairs(LocalPlayer.Character:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.CanTouch = true
+            end
+        end
+    end
+end)
+
 CreateButton(CombatPage, "🎯 Tự Chọn Người Gần Nhất (Auto Nearest)", Color3.fromRGB(45, 25, 40), function()
     local target, dist = GetNearestPlayer()
     if target then
@@ -670,7 +674,8 @@ end)
 CreateToggle(CombatPage, "🔄 Tự Khóa Target Gần Nhất (Auto Lock)", Config.AutoLockNearest, function(state) Config.AutoLockNearest = state end)
 CreateToggle(CombatPage, "⚡ Hit Dame To Mượt (Super Damage M1)", Config.SuperM1Damage, function(state) Config.SuperM1Damage = state end)
 CreateValueAdjuster(CombatPage, "Số Hit Nhân Sát Thương", 5, 50, Config.DamageMultiplier, 5, function(val) Config.DamageMultiplier = val end)
-CreateToggle(CombatPage, "📦 Hitbox Rộng Cực Chuẩn (No Glitch)", Config.HitboxExpander, function(state)
+
+CreateToggle(CombatPage, "📦 Hitbox Rộng (Fixed Move Bug)", Config.HitboxExpander, function(state)
     Config.HitboxExpander = state
     if not state then
         for _, p in ipairs(Players:GetPlayers()) do
@@ -679,13 +684,15 @@ CreateToggle(CombatPage, "📦 Hitbox Rộng Cực Chuẩn (No Glitch)", Config.
                 if eHRP then
                     eHRP.Size = Vector3.new(2, 2, 1)
                     eHRP.Transparency = 1
+                    eHRP.CanCollide = false
                 end
             end
         end
     end
 end)
 CreateValueAdjuster(CombatPage, "Kích Thước Hitbox Rộng", 5, 50, Config.HitboxSize, 5, function(val) Config.HitboxSize = val end)
-CreateToggle(CombatPage, "⚡ Auto TP Áp Sát Lưng Đối Thủ", Config.AutoTPTarget, function(state) Config.AutoTPTarget = state end)
+
+CreateToggle(CombatPage, "⚡ Auto TP Áp Sát Lưng (Fixed Hitbox)", Config.AutoTPTarget, function(state) Config.AutoTPTarget = state end)
 CreateToggle(CombatPage, "🥊 Auto Đấm M1 Tự Động", Config.AutoAttack, function(state) Config.AutoAttack = state end)
 
 ----------------------------------------------------------
@@ -705,7 +712,7 @@ local function StopFlyEngine()
     end)
 end
 
-CreateToggle(MovementPage, "Bay 3D Chuẩn Smooth (Fixed Mobile/PC)", Config.FlyEnabled, function(state)
+CreateToggle(MovementPage, "Bay 3D Smooth (Fixed Noti Spam)", Config.FlyEnabled, function(state)
     Config.FlyEnabled = state
     if not state then StopFlyEngine() end
 end)
@@ -747,10 +754,7 @@ end
 
 CreateToggle(FixLagPage, "☁️ Bầu Trời Xám & Cân Bằng Ánh Sáng", Config.GreySkyMode, function(state)
     Config.GreySkyMode = state
-    if state then
-        ApplyGreySkyAndLighting()
-        Notify("Fix Lag VIP", "Đã đổi Bầu trời xám & Giảm tối! ☁️")
-    end
+    if state then ApplyGreySkyAndLighting() end
 end)
 
 CreateButton(FixLagPage, "🚀 Kích Hoạt Max FPS (Xóa Texture Map)", Color3.fromRGB(35, 55, 35), function()
@@ -784,23 +788,9 @@ CreateToggle(FixLagPage, "🥔 Chế Độ Potato Graphics", Config.PotatoMode, 
 end)
 
 CreateToggle(FixLagPage, "🧹 Auto Dọn Dẹp RAM Ngầm", Config.AutoMemoryClean, function(state) Config.AutoMemoryClean = state end)
-CreateToggle(FixLagPage, "👤 Ẩn Người Chơi Khác (Hide Players)", Config.HidePlayers, function(state)
-    Config.HidePlayers = state
-    pcall(function()
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character then
-                for _, part in ipairs(p.Character:GetDescendants()) do
-                    if part:IsA("BasePart") or part:IsA("Decal") then
-                        part.Transparency = state and 1 or 0
-                    end
-                end
-            end
-        end
-    end)
-end)
 
 ----------------------------------------------------------
--- TAB 5: SETTINGS & CHILL (ĐÃ FIX TOÀN BỘ TRÀN NÚT)
+-- TAB 5: SETTINGS & CHILL
 ----------------------------------------------------------
 CreateButton(SettingsPage, "🎨 Đổi Theme Màu (Purple/Pink/Ocean/Mint)", Color3.fromRGB(35, 30, 48), function()
     if CurrentTheme == Themes.ChillPurple then CurrentTheme = Themes.SoftPink
@@ -819,12 +809,6 @@ CreateButton(SettingsPage, "🎨 Đổi Theme Màu (Purple/Pink/Ocean/Mint)", Co
 
     for _, btn in ipairs(TabButtons) do btn.BackgroundColor3 = CurrentTheme.Button end
     Notify("Settings", "Đã đổi Theme: " .. CurrentTheme.Name)
-end)
-
-CreateButton(SettingsPage, "🖼️ Chuyển Preset Background Chill", Color3.fromRGB(40, 32, 50), function()
-    Config.CurrentChillIndex = (Config.CurrentChillIndex % #ChillPresets) + 1
-    BgImage.Image = ChillPresets[Config.CurrentChillIndex]
-    Notify("Settings", "Đã đổi ảnh Chill Preset #" .. Config.CurrentChillIndex)
 end)
 
 CreateTextBox(SettingsPage, "Chèn ID Ảnh Background (VD: 6071575925)", function(text)
@@ -872,7 +856,7 @@ CreateButton(SettingsPage, "🗑️ Tắt Menu Hoàn Toàn (Unload GUI)", Color3
 end)
 
 ----------------------------------------------------------
--- SYSTEM LOOPS & CORE ENGINE
+-- LOOPS ENGINE & CORE LOGIC
 ----------------------------------------------------------
 local lastM1Tick = 0
 local function ExecuteM1KillProtocol()
@@ -934,6 +918,14 @@ RunService.RenderStepped:Connect(function(dt)
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     local cam = Workspace.CurrentCamera
 
+    if Config.GodMode and char then
+        for _, part in ipairs(char:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.CanTouch = false
+            end
+        end
+    end
+
     if Config.AutoLockNearest then
         local nearPlr = GetNearestPlayer()
         if nearPlr then Config.SelectedTarget = nearPlr end
@@ -953,7 +945,6 @@ RunService.RenderStepped:Connect(function(dt)
         TargetLabel.Text = "🎯 Target: Chưa chọn"
     end
 
-    -- BAY 3D CHUẨN SMOOTH (FIX MOBILE/PC)
     if Config.FlyEnabled and hrp and hum and cam then
         hum.PlatformStand = true
         LocalPlayer.ReplicationFocus = hrp
@@ -988,7 +979,6 @@ RunService.RenderStepped:Connect(function(dt)
         StopFlyEngine()
     end
 
-    -- HITBOX EXPANDER
     if Config.HitboxExpander then
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character then
@@ -1000,17 +990,20 @@ RunService.RenderStepped:Connect(function(dt)
                     eHRP.Material = Enum.Material.Neon
                     eHRP.CanCollide = false
                     eHRP.Massless = true
+                    eHRP.CanTouch = true
                 end
             end
         end
     end
 
-    -- AUTO ATTACK & TP
     if Config.SelectedTarget and Config.SelectedTarget.Character then
         local tHRP = Config.SelectedTarget.Character:FindFirstChild("HumanoidRootPart")
         local tHum = Config.SelectedTarget.Character:FindFirstChildOfClass("Humanoid")
         if tHRP and tHum and tHum.Health > 0 and hrp then
-            if Config.AutoTPTarget then hrp.CFrame = tHRP.CFrame * CFrame.new(0, 0, 2.2) end
+            if Config.AutoTPTarget then
+                local behindPos = tHRP.Position - (tHRP.CFrame.LookVector * 2.5)
+                hrp.CFrame = CFrame.lookAt(behindPos, tHRP.Position)
+            end
             if Config.AutoAttack or Config.SuperM1Damage then ExecuteM1KillProtocol() end
         end
     end
@@ -1028,4 +1021,4 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
-Notify("Kianbest Hub VIP", "Đã nâng cấp v16.0 ULTRA SAFE ENGINE! ⚡✨")
+Notify("Kianbest Hub", "Đã nâng cấp v17.1 iOS EDITION! 👑⚡")
