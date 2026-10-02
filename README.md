@@ -1,11 +1,8 @@
 -- ==========================================================
--- KIANBEST HUB V17.1 - iOS DYNAMIC ISLAND EDITION
--- Feature: Hệ thống Noti iOS Dynamic Island v2.0 (Xanh / Đỏ chuẩn iOS)
--- Feature: Bất Tử GOD MODE (Chống M1 & Tất Cả Chiêu Thức)
--- Fix: Nhân vật di chuyển mượt khi bật Hitbox (No Physics Freeze)
--- Fix: Auto TP sau lưng xoay mặt chuẩn 100% đánh trúng
--- Fix: Bay 3D mượt mà không bị spam Noti
--- Clean: Xóa toàn bộ ảnh nền mẫu, giữ ô chèn ID tùy chọn
+-- KIANBEST HUB V17.1 - FIXED iOS DYNAMIC ISLAND EDITION
+-- Fix: Đẩy Notification lên sát đỉnh màn hình (DisplayOrder 999999)
+-- Fix: Hiệu ứng Fade Out mờ dần & thu nhỏ trơn tru không bị đè khung
+-- Feature: Bất Tử GOD MODE, Hitbox VIP, Fly 3D, Super M1, Fix Lag
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -31,9 +28,6 @@ local Config = {
     SpoofStats = true,
     AntiAdmin = true,
     AutoHopOnAdmin = true,
-    DisableClientAC = true,
-    AntiCrashRemote = true,
-    AntiBanGUI = true,
 
     GodMode = false,
     NoclipEnabled = false,
@@ -54,7 +48,6 @@ local Config = {
     GreySkyMode = false,
     PotatoMode = false,
     AutoMemoryClean = true,
-    HidePlayers = false,
     
     AntiAFK = true,
     BgTransparency = 0.2,
@@ -70,8 +63,8 @@ local Themes = {
 }
 
 local CurrentTheme = Themes.ChillPurple
-
 local ParentGui = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
+
 if ParentGui:FindFirstChild("KianbestMenuV17_1") then
     ParentGui.KianbestMenuV17_1:Destroy()
 end
@@ -82,19 +75,29 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = ParentGui
 
 ----------------------------------------------------------
--- 📲 IOS NOTIFICATION SYSTEM V2.0 (DYNAMIC ISLAND STYLE)
+-- 📲 IOS DYNAMIC ISLAND NOTIFICATION SYSTEM (FIXED V2.2)
 ----------------------------------------------------------
+local NotiGui = ParentGui:FindFirstChild("iOSNotiGui")
+if NotiGui then NotiGui:Destroy() end
+
+NotiGui = Instance.new("ScreenGui")
+NotiGui.Name = "iOSNotiGui"
+NotiGui.DisplayOrder = 999999 -- Đặt đè lên mọi GUI khác
+NotiGui.IgnoreGuiInset = true -- Sát mép màn hình chuẩn Dynamic Island
+NotiGui.ResetOnSpawn = false
+NotiGui.Parent = ParentGui
+
 local NotiContainer = Instance.new("Frame")
 NotiContainer.Name = "iOSNotiContainer"
-NotiContainer.Size = UDim2.new(0, 260, 0, 200)
-NotiContainer.Position = UDim2.new(0.5, -130, 0, 15)
+NotiContainer.Size = UDim2.new(0, 280, 0, 300)
+NotiContainer.Position = UDim2.new(0.5, -140, 0, 10)
 NotiContainer.BackgroundTransparency = 1
-NotiContainer.ZIndex = 999
-NotiContainer.Parent = ScreenGui
+NotiContainer.ZIndex = 999999
+NotiContainer.Parent = NotiGui
 
 local NotiLayout = Instance.new("UIListLayout", NotiContainer)
 NotiLayout.SortOrder = Enum.SortOrder.LayoutOrder
-NotiLayout.Padding = UDim.new(0, 8)
+NotiLayout.Padding = UDim.new(0, 6)
 NotiLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 NotiLayout.VerticalAlignment = Enum.VerticalAlignment.Top
 
@@ -102,116 +105,115 @@ local ActiveNotifications = {}
 local MAX_NOTIFICATIONS = 3
 
 local iOSColors = {
-    Success = Color3.fromRGB(48, 209, 88),   -- Xanh lá iOS
+    Success = Color3.fromRGB(48, 209, 88),   -- Xanh Lục iOS
     Error   = Color3.fromRGB(255, 69, 58),   -- Đỏ iOS
-    Info    = Color3.fromRGB(10, 132, 255),  -- Xanh dương iOS
-    Warning = Color3.fromRGB(255, 159, 10),  -- Vàng Cam iOS
-    Bg      = Color3.fromRGB(22, 22, 26),    -- Nền Cyber Dark
-    TextMain= Color3.fromRGB(255, 255, 255)
+    Info    = Color3.fromRGB(10, 132, 255),  -- Xanh Dương iOS
+    Warning = Color3.fromRGB(255, 159, 10),  -- Cam iOS
+    Bg      = Color3.fromRGB(18, 18, 22),    -- Nền Cyber Dark
+    Text    = Color3.fromRGB(255, 255, 255)
 }
 
 local function Notify(title, text, duration)
-    duration = duration or 2.2
+    duration = duration or 2.0
     
     local statusColor = iOSColors.Info
     local checkStr = (tostring(title) .. " " .. tostring(text)):lower()
     
-    if checkStr:find("bật") or checkStr:find("on") or checkStr:find("🟢") or checkStr:find("kích hoạt") or checkStr:find("thành công") then
+    if checkStr:find("bật") or checkStr:find("on") or checkStr:find("🟢") or checkStr:find("thành công") or checkStr:find("kích hoạt") then
         statusColor = iOSColors.Success
     elseif checkStr:find("tắt") or checkStr:find("off") or checkStr:find("🔴") or checkStr:find("chặn") or checkStr:find("lỗi") then
         statusColor = iOSColors.Error
-    elseif checkStr:find("cảnh báo") or checkStr:find("admin") or checkStr:find("⚠️") then
+    elseif checkStr:find("cảnh báo") or checkStr:find("⚠️") then
         statusColor = iOSColors.Warning
     end
 
-    if #ActiveNotifications >= MAX_NOTIFICATIONS then
+    while #ActiveNotifications >= MAX_NOTIFICATIONS do
         local oldest = table.remove(ActiveNotifications, 1)
-        if oldest and oldest.Frame and oldest.Frame.Parent then 
-            oldest.Frame:Destroy() 
+        if oldest and oldest.Frame and oldest.Frame.Parent then
+            oldest.Frame:Destroy()
         end
     end
 
     local Toast = Instance.new("Frame")
     Toast.Name = "iOSToast"
-    Toast.Size = UDim2.new(1, 0, 0, 44)
+    Toast.Size = UDim2.new(1, 0, 0, 42)
     Toast.BackgroundColor3 = iOSColors.Bg
-    Toast.BackgroundTransparency = 0.15
+    Toast.BackgroundTransparency = 1
     Toast.BorderSizePixel = 0
     Toast.ClipsDescendants = true
-    Toast.ZIndex = 1000
+    Toast.ZIndex = 999999
     Toast.Parent = NotiContainer
 
     Instance.new("UICorner", Toast).CornerRadius = UDim.new(0, 12)
-    
+
     local Stroke = Instance.new("UIStroke", Toast)
     Stroke.Color = statusColor
     Stroke.Thickness = 1.2
-    Stroke.Transparency = 0.4
+    Stroke.Transparency = 1
 
-    local StatusPill = Instance.new("Frame")
-    StatusPill.Size = UDim2.new(0, 4, 0, 24)
-    StatusPill.Position = UDim2.new(0, 8, 0.5, -12)
-    StatusPill.BackgroundColor3 = statusColor
-    StatusPill.BorderSizePixel = 0
-    StatusPill.ZIndex = 1001
-    StatusPill.Parent = Toast
-    Instance.new("UICorner", StatusPill).CornerRadius = UDim.new(1, 0)
+    local Dot = Instance.new("Frame")
+    Dot.Size = UDim2.new(0, 8, 0, 8)
+    Dot.Position = UDim2.new(0, 12, 0.5, -4)
+    Dot.BackgroundColor3 = statusColor
+    Dot.BorderSizePixel = 0
+    Dot.BackgroundTransparency = 1
+    Dot.ZIndex = 1000000
+    Dot.Parent = Toast
+    Instance.new("UICorner", Dot).CornerRadius = UDim.new(1, 0)
 
     local TTitle = Instance.new("TextLabel")
-    TTitle.Size = UDim2.new(1, -24, 0, 16)
-    TTitle.Position = UDim2.new(0, 18, 0, 6)
+    TTitle.Size = UDim2.new(1, -30, 0, 16)
+    TTitle.Position = UDim2.new(0, 26, 0, 5)
     TTitle.Text = title or "Thông báo"
-    TTitle.TextColor3 = iOSColors.TextMain
+    TTitle.TextColor3 = iOSColors.Text
     TTitle.Font = Enum.Font.SourceSansBold
     TTitle.TextSize = 13
     TTitle.TextXAlignment = Enum.TextXAlignment.Left
     TTitle.BackgroundTransparency = 1
-    TTitle.ZIndex = 1001
+    TTitle.TextTransparency = 1
+    TTitle.ZIndex = 1000000
     TTitle.Parent = Toast
 
     local TText = Instance.new("TextLabel")
-    TText.Size = UDim2.new(1, -24, 0, 14)
-    TText.Position = UDim2.new(0, 18, 0, 22)
+    TText.Size = UDim2.new(1, -30, 0, 14)
+    TText.Position = UDim2.new(0, 26, 0, 21)
     TText.Text = text or ""
     TText.TextColor3 = statusColor
     TText.Font = Enum.Font.SourceSansSemiBold
     TText.TextSize = 12
     TText.TextXAlignment = Enum.TextXAlignment.Left
     TText.BackgroundTransparency = 1
-    TText.ZIndex = 1001
+    TText.TextTransparency = 1
+    TText.ZIndex = 1000000
     TText.Parent = Toast
 
-    local notiObj = {Frame = Toast}
-    table.insert(ActiveNotifications, notiObj)
+    local notiData = {Frame = Toast}
+    table.insert(ActiveNotifications, notiData)
 
-    Toast.Size = UDim2.new(0, 180, 0, 44)
-    Toast.BackgroundTransparency = 1
-    TTitle.TextTransparency = 1
-    TText.TextTransparency = 1
-    StatusPill.BackgroundTransparency = 1
-    Stroke.Transparency = 1
-
-    local tweenInInfo = TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-    TweenService:Create(Toast, tweenInInfo, {Size = UDim2.new(1, 0, 0, 44), BackgroundTransparency = 0.15}):Play()
+    Toast.Size = UDim2.new(0.5, 0, 0, 0)
+    local tweenInInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+    TweenService:Create(Toast, tweenInInfo, {Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 0.1}):Play()
+    TweenService:Create(Stroke, tweenInInfo, {Transparency = 0.3}):Play()
+    TweenService:Create(Dot, tweenInInfo, {BackgroundTransparency = 0}):Play()
     TweenService:Create(TTitle, tweenInInfo, {TextTransparency = 0}):Play()
     TweenService:Create(TText, tweenInInfo, {TextTransparency = 0}):Play()
-    TweenService:Create(StatusPill, tweenInInfo, {BackgroundTransparency = 0}):Play()
-    TweenService:Create(Stroke, tweenInInfo, {Transparency = 0.4}):Play()
 
     task.delay(duration, function()
         pcall(function()
+            if not Toast or not Toast.Parent then return end
             local tweenOutInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
-            TweenService:Create(Toast, tweenOutInfo, {Size = UDim2.new(0, 120, 0, 0), BackgroundTransparency = 1}):Play()
+            
+            TweenService:Create(Toast, tweenOutInfo, {Size = UDim2.new(0.5, 0, 0, 0), BackgroundTransparency = 1}):Play()
+            TweenService:Create(Stroke, tweenOutInfo, {Transparency = 1}):Play()
+            TweenService:Create(Dot, tweenOutInfo, {BackgroundTransparency = 1}):Play()
             TweenService:Create(TTitle, tweenOutInfo, {TextTransparency = 1}):Play()
-            TweenService:Create(TText, tweenOutInfo, {TextTransparency = 1}):Play()
-            TweenService:Create(StatusPill, tweenOutInfo, {BackgroundTransparency = 1}):Play()
-            local lastTween = TweenService:Create(Stroke, tweenOutInfo, {Transparency = 1})
+            local lastTween = TweenService:Create(TText, tweenOutInfo, {TextTransparency = 1})
             lastTween:Play()
 
             lastTween.Completed:Connect(function()
-                for i, v in ipairs(ActiveNotifications) do
-                    if v == notiObj then
-                        table.remove(ActiveNotifications, i)
+                for idx, item in ipairs(ActiveNotifications) do
+                    if item == notiData then
+                        table.remove(ActiveNotifications, idx)
                         break
                     end
                 end
@@ -231,20 +233,17 @@ pcall(function()
         local oldNamecall
         oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
             local method = getnamecallmethod()
-            
             if Config.AntiKick and (method == "Kick" or method == "kick") and self == LocalPlayer then
                 Notify("🛡️ Anti-Ban VIP", "Đã chặn 1 lệnh KICK!")
                 return nil
             end
-
             if Config.AntiLog and (method == "FireServer" or method == "InvokeServer") then
                 local remoteName = tostring(self):lower()
-                local blockKeywords = {"ban", "kick", "flag", "cheat", "detect", "log", "ac", "security", "adonis", "anticheat", "report"}
+                local blockKeywords = {"ban", "kick", "flag", "cheat", "detect", "log", "ac", "security", "adonis", "anticheat"}
                 for _, word in ipairs(blockKeywords) do
                     if remoteName:find(word) then return nil end
                 end
             end
-
             return oldNamecall(self, ...)
         end))
 
@@ -712,7 +711,7 @@ local function StopFlyEngine()
     end)
 end
 
-CreateToggle(MovementPage, "Bay 3D Smooth (Fixed Noti Spam)", Config.FlyEnabled, function(state)
+CreateToggle(MovementPage, "Bay 3D Smooth (Fixed Noti)", Config.FlyEnabled, function(state)
     Config.FlyEnabled = state
     if not state then StopFlyEngine() end
 end)
@@ -852,6 +851,7 @@ end)
 
 CreateButton(SettingsPage, "🗑️ Tắt Menu Hoàn Toàn (Unload GUI)", Color3.fromRGB(60, 20, 25), function()
     StopFlyEngine()
+    if NotiGui then NotiGui:Destroy() end
     ScreenGui:Destroy()
 end)
 
@@ -1021,4 +1021,4 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
-Notify("Kianbest Hub", "Đã nâng cấp v17.1 iOS EDITION! 👑⚡")
+Notify("Kianbest Hub", "Đã fix thông báo iOS mượt mà! 🟢🔴")
