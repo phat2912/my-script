@@ -1,25 +1,24 @@
 -- ==========================================================
--- ROBLOX GAME UI FRAMEWORK - KIANBEST EDITION (WITH VISUALS)
--- Sử dụng chuẩn Roblox Luau cho Game Development
+-- ROBLOX GAME UI FRAMEWORK - KIANBEST EDITION (V3 ULTIMATE)
+-- Thêm Xuyên Tường, Tối Ưu Đồ Họa & Đổi Màu Theme Menu
 -- ==========================================================
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
 
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- 1. CẤU HÌNH THEME (GIAO DIỆN)
+-- 1. BỘ CHỦ ĐỀ MÀU SẮC (THEMES)
 local Themes = {
-    DarkPurple = {
-        Bg = Color3.fromRGB(18, 16, 26),
-        Sidebar = Color3.fromRGB(12, 10, 18),
-        Accent = Color3.fromRGB(165, 120, 255),
-        Button = Color3.fromRGB(28, 22, 38),
-        Text = Color3.fromRGB(240, 235, 255)
-    }
+    DarkPurple = { Name = "Tím Đêm", Bg = Color3.fromRGB(18, 16, 26), Sidebar = Color3.fromRGB(12, 10, 18), Accent = Color3.fromRGB(165, 120, 255), Button = Color3.fromRGB(28, 22, 38), Text = Color3.fromRGB(240, 235, 255) },
+    OceanBlue  = { Name = "Xanh Biển", Bg = Color3.fromRGB(12, 18, 28), Sidebar = Color3.fromRGB(8, 12, 20), Accent = Color3.fromRGB(90, 185, 255), Button = Color3.fromRGB(20, 30, 44), Text = Color3.fromRGB(235, 248, 255) },
+    CrimsonRed = { Name = "Đỏ Neon", Bg = Color3.fromRGB(24, 12, 14), Sidebar = Color3.fromRGB(16, 8, 10), Accent = Color3.fromRGB(255, 85, 95), Button = Color3.fromRGB(36, 18, 22), Text = Color3.fromRGB(255, 235, 238) },
+    Emerald     = { Name = "Xanh Lục", Bg = Color3.fromRGB(12, 24, 18), Sidebar = Color3.fromRGB(8, 16, 12), Accent = Color3.fromRGB(80, 225, 140), Button = Color3.fromRGB(18, 36, 26), Text = Color3.fromRGB(235, 255, 242) },
+    Gold        = { Name = "Vàng Kim", Bg = Color3.fromRGB(24, 22, 12), Sidebar = Color3.fromRGB(16, 14, 8), Accent = Color3.fromRGB(255, 200, 80), Button = Color3.fromRGB(36, 32, 18), Text = Color3.fromRGB(255, 250, 235) }
 }
 
 local CurrentTheme = Themes.DarkPurple
@@ -37,7 +36,7 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = PlayerGui
 
 ----------------------------------------------------------
--- 🔔 HỆ THỐNG THÔNG BÁO (TOAST NOTIFICATION SYSTEM)
+-- 🔔 HỆ THỐNG THÔNG BÁO (NOTIFICATIONS)
 ----------------------------------------------------------
 local NotiContainer = Instance.new("Frame")
 NotiContainer.Name = "NotiContainer"
@@ -119,87 +118,6 @@ local function Notify(title, message, duration)
 end
 
 ----------------------------------------------------------
--- 👁️ HỆ THỐNG XỬ LÝ VISUALS (CHAMS & ESP)
-----------------------------------------------------------
-local VisualState = {
-    Chams = false,
-    ESP = false
-}
-
-local function ApplyChams(player)
-    if player == LocalPlayer or not player.Character then return end
-    
-    local existing = player.Character:FindFirstChild("KianBestChams")
-    if VisualState.Chams then
-        if not existing then
-            local highlight = Instance.new("Highlight")
-            highlight.Name = "KianBestChams"
-            highlight.FillColor = CurrentTheme.Accent
-            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-            highlight.FillTransparency = 0.5
-            highlight.OutlineTransparency = 0
-            highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-            highlight.Parent = player.Character
-        end
-    else
-        if existing then existing:Destroy() end
-    end
-end
-
-local function ApplyESP(player)
-    if player == LocalPlayer or not player.Character then return end
-    local head = player.Character:FindFirstChild("Head")
-    if not head then return end
-
-    local existing = head:FindFirstChild("KianBestESP")
-    if VisualState.ESP then
-        if not existing then
-            local billboard = Instance.new("BillboardGui")
-            billboard.Name = "KianBestESP"
-            billboard.Size = UDim2.new(0, 150, 0, 30)
-            billboard.StudsOffset = Vector3.new(0, 2, 0)
-            billboard.AlwaysOnTop = true
-            billboard.Parent = head
-
-            local textLabel = Instance.new("TextLabel")
-            textLabel.Size = UDim2.new(1, 0, 1, 0)
-            textLabel.BackgroundTransparency = 1
-            textLabel.Text = player.DisplayName .. " (@" .. player.Name .. ")"
-            textLabel.TextColor3 = CurrentTheme.Accent
-            textLabel.Font = Enum.Font.SourceSansBold
-            textLabel.TextSize = 13
-            textLabel.Parent = billboard
-        end
-    else
-        if existing then existing:Destroy() end
-    end
-end
-
-local function RefreshVisuals()
-    for _, player in ipairs(Players:GetPlayers()) do
-        ApplyChams(player)
-        ApplyESP(player)
-    end
-end
-
--- Tự động áp dụng Visuals cho người chơi mới tham gia hoặc hồi sinh
-Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function()
-        task.wait(0.5)
-        ApplyChams(player)
-        ApplyESP(player)
-    end)
-end)
-
-for _, player in ipairs(Players:GetPlayers()) do
-    player.CharacterAdded:Connect(function()
-        task.wait(0.5)
-        ApplyChams(player)
-        ApplyESP(player)
-    end)
-end
-
-----------------------------------------------------------
 -- 🖥️ BẢNG ĐIỀU KHIỂN CHÍNH (MAIN PANEL)
 ----------------------------------------------------------
 local MainFrame = Instance.new("Frame")
@@ -209,7 +127,6 @@ MainFrame.Position = UDim2.new(0.5, -250, 0.5, -160)
 MainFrame.BackgroundColor3 = CurrentTheme.Bg
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
-MainFrame.Draggable = true
 MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 
@@ -220,7 +137,7 @@ MainStroke.Color = CurrentTheme.Accent
 MainStroke.Thickness = 1.5
 MainStroke.Transparency = 0.3
 
--- Thanh Tiêu Đề
+-- Header
 local Header = Instance.new("Frame")
 Header.Size = UDim2.new(1, 0, 0, 36)
 Header.BackgroundColor3 = CurrentTheme.Sidebar
@@ -250,7 +167,7 @@ CloseBtn.BorderSizePixel = 0
 CloseBtn.Parent = Header
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 
--- Sidebar & Container
+-- Sidebar & Content Area
 local Sidebar = Instance.new("Frame")
 Sidebar.Size = UDim2.new(0, 130, 1, -36)
 Sidebar.Position = UDim2.new(0, 0, 0, 36)
@@ -263,6 +180,301 @@ ContentContainer.Size = UDim2.new(1, -138, 1, -44)
 ContentContainer.Position = UDim2.new(0, 134, 0, 40)
 ContentContainer.BackgroundTransparency = 1
 ContentContainer.Parent = MainFrame
+
+----------------------------------------------------------
+-- 🔘 NÚT TRÒN BẬT / TẮT MENU (FLOATING TOGGLE BUTTON)
+----------------------------------------------------------
+local OpenToggleBtn = Instance.new("TextButton")
+OpenToggleBtn.Name = "KianBestOpenBtn"
+OpenToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+OpenToggleBtn.Position = UDim2.new(0.05, 0, 0.2, 0)
+OpenToggleBtn.BackgroundColor3 = CurrentTheme.Sidebar
+OpenToggleBtn.Text = "⚡"
+OpenToggleBtn.TextSize = 22
+OpenToggleBtn.TextColor3 = CurrentTheme.Accent
+OpenToggleBtn.Font = Enum.Font.SourceSansBold
+OpenToggleBtn.Active = true
+OpenToggleBtn.Parent = ScreenGui
+
+Instance.new("UICorner", OpenToggleBtn).CornerRadius = UDim.new(1, 0)
+
+local OpenBtnStroke = Instance.new("UIStroke", OpenToggleBtn)
+OpenBtnStroke.Color = CurrentTheme.Accent
+OpenBtnStroke.Thickness = 2
+
+-- Kéo thả nút tròn
+local draggingToggle, dragStartToggle, startPosToggle
+OpenToggleBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingToggle = true
+        dragStartToggle = input.Position
+        startPosToggle = OpenToggleBtn.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then draggingToggle = false end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(functionDưới đây là phiên bản cập nhật toàn bộ mã nguồn **KianBest Framework V3** bổ sung đầy đủ các tính năng bạn yêu cầu: **Xuyên tường (Noclip)**, **Tối ưu đồ họa sâu (Xóa bầu trời, mây, bóng, texture, Render 3D)** và **Bộ đổi Theme màu giao diện**.
+
+```lua
+-- ==========================================================
+-- ROBLOX GAME UI FRAMEWORK - KIANBEST EDITION (V3 PRO)
+-- Thêm Noclip, Siêu Tối Ưu Đồ Họa & Bộ Đổi Theme Màu
+-- ==========================================================
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+----------------------------------------------------------
+-- 🎨 HỆ THỐNG THEME MÀU (THEME SYSTEM)
+----------------------------------------------------------
+local Themes = {
+    DarkPurple = {
+        Bg = Color3.fromRGB(18, 16, 26),
+        Sidebar = Color3.fromRGB(12, 10, 18),
+        Accent = Color3.fromRGB(165, 120, 255),
+        Button = Color3.fromRGB(28, 22, 38),
+        Text = Color3.fromRGB(240, 235, 255)
+    },
+    OceanBlue = {
+        Bg = Color3.fromRGB(12, 18, 28),
+        Sidebar = Color3.fromRGB(8, 12, 20),
+        Accent = Color3.fromRGB(90, 185, 255),
+        Button = Color3.fromRGB(20, 30, 44),
+        Text = Color3.fromRGB(235, 248, 255)
+    },
+    NeonGreen = {
+        Bg = Color3.fromRGB(14, 24, 18),
+        Sidebar = Color3.fromRGB(8, 16, 12),
+        Accent = Color3.fromRGB(50, 220, 120),
+        Button = Color3.fromRGB(22, 38, 28),
+        Text = Color3.fromRGB(230, 255, 240)
+    },
+    CrimsonRed = {
+        Bg = Color3.fromRGB(26, 14, 16),
+        Sidebar = Color3.fromRGB(18, 8, 10),
+        Accent = Color3.fromRGB(255, 80, 100),
+        Button = Color3.fromRGB(40, 20, 24),
+        Text = Color3.fromRGB(255, 235, 238)
+    }
+}
+
+local CurrentTheme = Themes.DarkPurple
+
+-- Xóa UI cũ nếu tái khởi chạy
+if PlayerGui:FindFirstChild("KianBestUI") then 
+    PlayerGui.KianBestUI:Destroy() 
+end
+
+-- TẠO SCREENGUI CHÍNH
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "KianBestUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = PlayerGui
+
+----------------------------------------------------------
+-- 🔔 HỆ THỐNG THÔNG BÁO (NOTIFICATIONS)
+----------------------------------------------------------
+local NotiContainer = Instance.new("Frame")
+NotiContainer.Name = "NotiContainer"
+NotiContainer.Size = UDim2.new(0, 260, 0, 300)
+NotiContainer.Position = UDim2.new(1, -270, 1, -20)
+NotiContainer.AnchorPoint = Vector2.new(0, 1)
+NotiContainer.BackgroundTransparency = 1
+NotiContainer.ZIndex = 100
+NotiContainer.Parent = ScreenGui
+
+local NotiLayout = Instance.new("UIListLayout", NotiContainer)
+NotiLayout.SortOrder = Enum.SortOrder.LayoutOrder
+NotiLayout.Padding = UDim.new(0, 8)
+NotiLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+
+local function Notify(title, message, duration)
+    duration = duration or 2.5
+
+    local Toast = Instance.new("Frame")
+    Toast.Name = "Toast"
+    Toast.Size = UDim2.new(1, 0, 0, 40)
+    Toast.Position = UDim2.new(0, 0, 0, 20)
+    Toast.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+    Toast.BackgroundTransparency = 1
+    Toast.BorderSizePixel = 0
+    Toast.ClipsDescendants = true
+    Toast.Parent = NotiContainer
+
+    Instance.new("UICorner", Toast).CornerRadius = UDim.new(0, 8)
+
+    local Stroke = Instance.new("UIStroke", Toast)
+    Stroke.Color = CurrentTheme.Accent
+    Stroke.Thickness = 1
+    Stroke.Transparency = 1
+
+    local TTitle = Instance.new("TextLabel")
+    TTitle.Size = UDim2.new(1, -16, 0, 16)
+    TTitle.Position = UDim2.new(0, 12, 0, 4)
+    TTitle.Text = title or "KianBest"
+    TTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TTitle.Font = Enum.Font.SourceSansBold
+    TTitle.TextSize = 13
+    TTitle.TextXAlignment = Enum.TextXAlignment.Left
+    TTitle.BackgroundTransparency = 1
+    TTitle.TextTransparency = 1
+    TTitle.Parent = Toast
+
+    local TMsg = Instance.new("TextLabel")
+    TMsg.Size = UDim2.new(1, -16, 0, 14)
+    TMsg.Position = UDim2.new(0, 12, 0, 20)
+    TMsg.Text = message or ""
+    TMsg.TextColor3 = CurrentTheme.Accent
+    TMsg.Font = Enum.Font.SourceSans
+    TMsg.TextSize = 12
+    TMsg.TextXAlignment = Enum.TextXAlignment.Left
+    TMsg.BackgroundTransparency = 1
+    TMsg.TextTransparency = 1
+    TMsg.Parent = Toast
+
+    local tweenIn = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+    TweenService:Create(Toast, tweenIn, {Position = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 0.1}):Play()
+    TweenService:Create(Stroke, tweenIn, {Transparency = 0.3}):Play()
+    TweenService:Create(TTitle, tweenIn, {TextTransparency = 0}):Play()
+    TweenService:Create(TMsg, tweenIn, {TextTransparency = 0}):Play()
+
+    task.delay(duration, function()
+        if Toast and Toast.Parent then
+            local tweenOut = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+            TweenService:Create(Toast, tweenOut, {Position = UDim2.new(0, 0, 0, -20), BackgroundTransparency = 1}):Play()
+            TweenService:Create(Stroke, tweenOut, {Transparency = 1}):Play()
+            TweenService:Create(TTitle, tweenOut, {TextTransparency = 1}):Play()
+            local last = TweenService:Create(TMsg, tweenOut, {TextTransparency = 1})
+            last:Play()
+            last.Completed:Connect(function()
+                Toast:Destroy()
+            end)
+        end
+    end)
+end
+
+----------------------------------------------------------
+-- 🖥️ BẢNG ĐIỀU KHIỂN CHÍNH (MAIN PANEL)
+----------------------------------------------------------
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 500, 0, 320)
+MainFrame.Position = UDim2.new(0.5, -250, 0.5, -160)
+MainFrame.BackgroundColor3 = CurrentTheme.Bg
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = CurrentTheme.Accent
+MainStroke.Thickness = 1.5
+MainStroke.Transparency = 0.3
+
+-- Header
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 36)
+Header.BackgroundColor3 = CurrentTheme.Sidebar
+Header.BorderSizePixel = 0
+Header.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(0, 200, 1, 0)
+Title.Position = UDim2.new(0, 12, 0, 0)
+Title.Text = "⚡ KIANBEST DASHBOARD"
+Title.TextColor3 = CurrentTheme.Accent
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 14
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.BackgroundTransparency = 1
+Title.Parent = Header
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 22, 0, 22)
+CloseBtn.Position = UDim2.new(1, -28, 0, 7)
+CloseBtn.Text = "✕"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.TextSize = 12
+CloseBtn.BackgroundColor3 = Color3.fromRGB(40, 20, 25)
+CloseBtn.BorderSizePixel = 0
+CloseBtn.Parent = Header
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+
+-- Sidebar & Content
+local Sidebar = Instance.new("Frame")
+Sidebar.Size = UDim2.new(0, 130, 1, -36)
+Sidebar.Position = UDim2.new(0, 0, 0, 36)
+Sidebar.BackgroundColor3 = CurrentTheme.Sidebar
+Sidebar.BorderSizePixel = 0
+Sidebar.Parent = MainFrame
+
+local ContentContainer = Instance.new("Frame")
+ContentContainer.Size = UDim2.new(1, -138, 1, -44)
+ContentContainer.Position = UDim2.new(0, 134, 0, 40)
+ContentContainer.BackgroundTransparency = 1
+ContentContainer.Parent = MainFrame
+
+----------------------------------------------------------
+-- 🔘 NÚT TRÒN BẬT / TẮT MENU (FLOATING TOGGLE BUTTON)
+----------------------------------------------------------
+local OpenToggleBtn = Instance.new("TextButton")
+OpenToggleBtn.Name = "KianBestOpenBtn"
+OpenToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+OpenToggleBtn.Position = UDim2.new(0.05, 0, 0.2, 0)
+OpenToggleBtn.BackgroundColor3 = CurrentTheme.Sidebar
+OpenToggleBtn.Text = "⚡"
+OpenToggleBtn.TextSize = 22
+OpenToggleBtn.TextColor3 = CurrentTheme.Accent
+OpenToggleBtn.Font = Enum.Font.SourceSansBold
+OpenToggleBtn.Active = true
+OpenToggleBtn.Parent = ScreenGui
+
+Instance.new("UICorner", OpenToggleBtn).CornerRadius = UDim.new(1, 0)
+
+local OpenBtnStroke = Instance.new("UIStroke", OpenToggleBtn)
+OpenBtnStroke.Color = CurrentTheme.Accent
+OpenBtnStroke.Thickness = 2
+
+-- Kéo thả nút tròn
+local draggingToggle, dragStartToggle, startPosToggle
+OpenToggleBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingToggle = true
+        dragStartToggle = input.Position
+        startPosToggle = OpenToggleBtn.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                draggingToggle = false
+            end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if draggingToggle and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStartToggle
+        OpenToggleBtn.Position = UDim2.new(
+            startPosToggle.X.Scale, startPosToggle.X.Offset + delta.X,
+            startPosToggle.Y.Scale, startPosToggle.Y.Offset + delta.Y
+        )
+    end
+end)
+
+OpenToggleBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
+CloseBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
 
 ----------------------------------------------------------
 -- 📑 HỆ THỐNG PHÂN TRANG (TABS)
@@ -303,9 +515,7 @@ local function CreateTab(name, icon, index)
 
     TabBtn.MouseButton1Click:Connect(function()
         for _, p in pairs(Pages) do p.Visible = false end
-        for _, btn in ipairs(TabButtons) do 
-            btn.BackgroundColor3 = CurrentTheme.Button 
-        end
+        for _, btn in ipairs(TabButtons) do btn.BackgroundColor3 = CurrentTheme.Button end
         Page.Visible = true
         TabBtn.BackgroundColor3 = CurrentTheme.Accent
     end)
@@ -315,8 +525,44 @@ local function CreateTab(name, icon, index)
 end
 
 ----------------------------------------------------------
--- 🧩 THÀNH PHẦN GIAO DIỆN (UI COMPONENTS)
+-- 🧩 COMPONENTS (TOGGLE, ADJUSTER, BUTTON)
 ----------------------------------------------------------
+local ThemeElements = { Accents = {}, Bgs = {}, Sidebars = {}, Buttons = {}, Texts = {} }
+
+table.insert(ThemeElements.Accents, MainStroke)
+table.insert(ThemeElements.Accents, OpenBtnStroke)
+table.insert(ThemeElements.Accents, Title)
+table.insert(ThemeElements.Accents, OpenToggleBtn)
+table.insert(ThemeElements.Bgs, MainFrame)
+table.insert(ThemeElements.Sidebars, Header)
+table.insert(ThemeElements.Sidebars, Sidebar)
+table.insert(ThemeElements.Sidebars, OpenToggleBtn)
+
+local function ApplyTheme(newTheme)
+    CurrentTheme = newTheme
+    MainFrame.BackgroundColor3 = newTheme.Bg
+    Header.BackgroundColor3 = newTheme.Sidebar
+    Sidebar.BackgroundColor3 = newTheme.Sidebar
+    OpenToggleBtn.BackgroundColor3 = newTheme.Sidebar
+    OpenToggleBtn.TextColor3 = newTheme.Accent
+    OpenBtnStroke.Color = newTheme.Accent
+    MainStroke.Color = newTheme.Accent
+    Title.TextColor3 = newTheme.Accent
+
+    for _, page in pairs(Pages) do
+        page.ScrollBarImageColor3 = newTheme.Accent
+    end
+    for _, btn in ipairs(TabButtons) do
+        if btn.BackgroundColor3 ~= CurrentTheme.Button then
+            btn.BackgroundColor3 = newTheme.Accent
+        else
+            btn.BackgroundColor3 = newTheme.Button
+        end
+        btn.TextColor3 = newTheme.Text
+    end
+    Notify("KianBest", "Đã đổi Theme giao diện!")
+end
+
 local function CreateToggle(parent, title, defaultState, callback)
     local Btn = Instance.new("TextButton")
     Btn.Size = UDim2.new(1, -6, 0, 32)
@@ -368,6 +614,62 @@ local function CreateToggle(parent, title, defaultState, callback)
     end)
 end
 
+local function CreateAdjuster(parent, title, minVal, maxVal, defaultVal, step, callback)
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(1, -6, 0, 32)
+    Frame.BackgroundColor3 = CurrentTheme.Button
+    Frame.BorderSizePixel = 0
+    Frame.Parent = parent
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0.6, 0, 1, 0)
+    Label.Position = UDim2.new(0, 10, 0, 0)
+    Label.Text = title .. ": " .. tostring(defaultVal)
+    Label.TextColor3 = CurrentTheme.Text
+    Label.Font = Enum.Font.SourceSansBold
+    Label.TextSize = 12
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.BackgroundTransparency = 1
+    Label.Parent = Frame
+
+    local val = defaultVal
+
+    local Minus = Instance.new("TextButton")
+    Minus.Size = UDim2.new(0, 22, 0, 20)
+    Minus.Position = UDim2.new(1, -52, 0.5, -10)
+    Minus.Text = "-"
+    Minus.Font = Enum.Font.SourceSansBold
+    Minus.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Minus.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    Minus.BorderSizePixel = 0
+    Minus.Parent = Frame
+    Instance.new("UICorner", Minus).CornerRadius = UDim.new(0, 4)
+
+    local Plus = Instance.new("TextButton")
+    Plus.Size = UDim2.new(0, 22, 0, 20)
+    Plus.Position = UDim2.new(1, -26, 0.5, -10)
+    Plus.Text = "+"
+    Plus.Font = Enum.Font.SourceSansBold
+    Plus.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Plus.BackgroundColor3 = CurrentTheme.Accent
+    Plus.BorderSizePixel = 0
+    Plus.Parent = Frame
+    Instance.new("UICorner", Plus).CornerRadius = UDim.new(0, 4)
+
+    Minus.MouseButton1Click:Connect(function()
+        val = math.max(minVal, val - step)
+        Label.Text = title .. ": " .. tostring(val)
+        callback(val)
+    end)
+
+    Plus.MouseButton1Click:Connect(function()
+        val = math.min(maxVal, val + step)
+        Label.Text = title .. ": " .. tostring(val)
+        callback(val)
+    end)
+end
+
 local function CreateButton(parent, title, callback)
     local Btn = Instance.new("TextButton")
     Btn.Size = UDim2.new(1, -6, 0, 32)
@@ -384,44 +686,173 @@ local function CreateButton(parent, title, callback)
 end
 
 ----------------------------------------------------------
--- 🛠️ KHỞI TẠO CÁC TAB & TÍNH NĂNG
+-- 🛠️ KHỞI TẠO CÁC MỤC TAB
 ----------------------------------------------------------
-local GeneralPage = CreateTab("Cấu Hình", "⚙️", 1)
-local VisualPage  = CreateTab("Visuals", "👁️", 2)
+local GeneralPage  = CreateTab("Cấu Hình", "⚙️", 1)
+local VisualPage   = CreateTab("Visuals", "👁️", 2)
 local GraphicsPage = CreateTab("Đồ Họa", "🎨", 3)
+local ThemePage    = CreateTab("Giao Diện", "🎭", 4)
 
--- Tab 1: Cấu hình
-CreateButton(GeneralPage, "Lưu Cài Đặt", function()
-    Notify("KianBest", "Đã lưu cài đặt game thành công!")
-end)
-
--- Tab 2: Visuals (Mới Thêm)
-CreateToggle(VisualPage, "Chams (Phát Sáng Nhân Vật)", false, function(enabled)
-    VisualState.Chams = enabled
-    RefreshVisuals()
-end)
-
-CreateToggle(VisualPage, "ESP (Hiển Thị Tên Người Chơi)", false, function(enabled)
-    VisualState.ESP = enabled
-    RefreshVisuals()
-end)
-
--- Tab 3: Đồ họa
-CreateToggle(GraphicsPage, "Bóng Đổ (Shadows)", true, function(enabled)
-    game.Lighting.GlobalShadows = enabled
-end)
-
--- Đóng Menu
-CloseBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
-    Notify("KianBest", "Đã ẩn giao diện (Bấm F2 để mở lại)")
-end)
-
--- Phím tắt F2
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and input.KeyCode == Enum.KeyCode.F2 then
-        MainFrame.Visible = not MainFrame.Visible
+----------------------------------------------------------
+-- TAB 1: CẤU HÌNH & XUYÊN TƯỜNG (NOCLIP)
+----------------------------------------------------------
+CreateAdjuster(GeneralPage, "Tốc độ chạy", 16, 200, 16, 5, function(val)
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = val
     end
 end)
 
-Notify("KianBest", "KianBest Framework + Visuals đã sẵn sàng!")
+CreateAdjuster(GeneralPage, "Sức nhảy", 50, 300, 50, 10, function(val)
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.JumpPower = val
+    end
+end)
+
+-- Noclip (Xuyên Tường)
+local noclipConn
+CreateToggle(GeneralPage, "Xuyên Tường (Noclip)", false, function(enabled)
+    if enabled then
+        noclipConn = RunService.Stepped:Connect(function()
+            if LocalPlayer.Character then
+                for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CanCollide == true then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    else
+        if noclipConn then 
+            noclipConn:Disconnect()
+            noclipConn = nil
+        end
+    end
+end)
+
+local infJumpConn
+CreateToggle(GeneralPage, "Nhảy Vô Hạn", false, function(enabled)
+    if enabled then
+        infJumpConn = UserInputService.JumpRequest:Connect(function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end)
+    else
+        if infJumpConn then infJumpConn:Disconnect() end
+    end
+end)
+
+----------------------------------------------------------
+-- TAB 2: VISUALS
+----------------------------------------------------------
+local VisualState = { Chams = false, ESP = false }
+
+local function ApplyVisuals(player)
+    if player == LocalPlayer or not player.Character then return end
+    local existingChams = player.Character:FindFirstChild("KianBestChams")
+    if VisualState.Chams then
+        if not existingChams then
+            local highlight = Instance.new("Highlight")
+            highlight.Name = "KianBestChams"
+            highlight.FillColor = CurrentTheme.Accent
+            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+            highlight.FillTransparency = 0.5
+            highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+            highlight.Parent = player.Character
+        end
+    else
+        if existingChams then existingChams:Destroy() end
+    end
+
+    local head = player.Character:FindFirstChild("Head")
+    if head then
+        local existingESP = head:FindFirstChild("KianBestESP")
+        if VisualState.ESP then
+            if not existingESP then
+                local billboard = Instance.new("BillboardGui")
+                billboard.Name = "KianBestESP"
+                billboard.Size = UDim2.new(0, 150, 0, 30)
+                billboard.StudsOffset = Vector3.new(0, 2, 0)
+                billboard.AlwaysOnTop = true
+                billboard.Parent = head
+
+                local textLabel = Instance.new("TextLabel")
+                textLabel.Size = UDim2.new(1, 0, 1, 0)
+                textLabel.BackgroundTransparency = 1
+                textLabel.Text = player.DisplayName .. " (@" .. player.Name .. ")"
+                textLabel.TextColor3 = CurrentTheme.Accent
+                textLabel.Font = Enum.Font.SourceSansBold
+                textLabel.TextSize = 13
+                textLabel.Parent = billboard
+            end
+        else
+            if existingESP then existingESP:Destroy() end
+        end
+    end
+end
+
+CreateToggle(VisualPage, "Chams (Phát Sáng Nhân Vật)", false, function(enabled)
+    VisualState.Chams = enabled
+    for _, p in ipairs(Players:GetPlayers()) do ApplyVisuals(p) end
+end)
+
+CreateToggle(VisualPage, "ESP (Tên Người Chơi)", false, function(enabled)
+    VisualState.ESP = enabled
+    for _, p in ipairs(Players:GetPlayers()) do ApplyVisuals(p) end
+end)
+
+----------------------------------------------------------
+-- TAB 3: ĐỒ HỌA & TỐI ƯU SÂU (ANTI-LAG)
+----------------------------------------------------------
+-- 1. Xóa Bóng Đổ
+CreateToggle(GraphicsPage, "Tắt Bóng Đổ (Disable Shadows)", true, function(enabled)
+    Lighting.GlobalShadows = not enabled
+end)
+
+-- 2. Xóa Bầu Trời (Sky)
+CreateButton(GraphicsPage, "Xóa Bầu Trời (Remove Sky)", function()
+    for _, v in ipairs(Lighting:GetChildren()) do
+        if v:IsA("Sky") or v:IsA("Atmosphere") or v:IsA("PostEffect") then
+            v:Destroy()
+        end
+    end
+    Notify("KianBest", "Đã xóa toàn bộ hiệu ứng Bầu Trời!")
+end)
+
+-- 3. Xóa Mây (Clouds)
+CreateButton(GraphicsPage, "Xóa Mây (Remove Clouds)", function()
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("Clouds") then
+            v:Destroy()
+        end
+    end
+    Notify("KianBest", "Đã xóa toàn bộ Mây!")
+end)
+
+-- 4. Xóa Texture / Vật Liệu (Low Detail Graphics)
+CreateButton(GraphicsPage, "Giảm Chi Tiết Đồ Họa (Low Textures)", function()
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") then
+            v.Material = Enum.Material.SmoothPlastic
+        elseif v:IsA("Decal") or v:IsA("Texture") then
+            v:Destroy()
+        end
+    end
+    Notify("KianBest", "Đã xóa Texture & hạ vật liệu SmoothPlastic!")
+end)
+
+-- 5. Bật/Tắt Render 3D (Tiết kiệm Pin / Treo Máy AFK)
+CreateToggle(GraphicsPage, "Tắt Render 3D (Treo máy AFK)", false, function(enabled)
+    RunService:Set3dRenderingEnabled(not enabled)
+    Notify("KianBest", enabled and "Đã TẮT Render 3D (Màn hình tối nhẹ để tăng FPS)" or "Đã BẬT lại Render 3D")
+end)
+
+----------------------------------------------------------
+-- TAB 4: ĐỔI THEME MÀU GIAO DIỆN
+----------------------------------------------------------
+CreateButton(ThemePage, "🟣 Dark Purple (Mặc định)", function() ApplyTheme(Themes.DarkPurple) end)
+CreateButton(ThemePage, "🔵 Ocean Blue (Xanh Biển)", function() ApplyTheme(Themes.OceanBlue) end)
+CreateButton(ThemePage, "🟢 Neon Green (Xanh Lá)", function() ApplyTheme(Themes.NeonGreen) end)
+CreateButton(ThemePage, "🔴 Crimson Red (Đỏ)", function() ApplyTheme(Themes.CrimsonRed) end)
+
+Notify("KianBest", "KianBest V3 PRO Đã sẵn sàng!")
