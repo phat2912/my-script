@@ -1,5 +1,5 @@
 -- ==========================================================
--- ROBLOX GAME UI FRAMEWORK - KIANBEST EDITION (V4.1 FIXED)
+-- ROBLOX GAME UI FRAMEWORK - KIANBEST EDITION (V4.2 BLACK SCREEN)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -59,6 +59,23 @@ ScreenGui.Name = "KianBestUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = PlayerGui
+
+----------------------------------------------------------
+-- 🌙 MÀN HÌNH ĐEN TIẾT KIỆM PIN / AFK
+----------------------------------------------------------
+local BlackScreen = Instance.new("TextButton")
+BlackScreen.Name = "BlackScreenOverlay"
+BlackScreen.Size = UDim2.new(1, 0, 1, 0)
+BlackScreen.Position = UDim2.new(0, 0, 0, 0)
+BlackScreen.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+BlackScreen.ZIndex = 999
+BlackScreen.Visible = false
+BlackScreen.AutoButtonColor = false
+BlackScreen.Text = "🌙 CHẾ ĐỘ MÀN HÌNH ĐEN (AFK)\n\n(Bấm vào bất kỳ đâu trên màn hình để bật lại)"
+BlackScreen.TextColor3 = Color3.fromRGB(180, 180, 180)
+BlackScreen.Font = Enum.Font.SourceSansBold
+BlackScreen.TextSize = 15
+BlackScreen.Parent = ScreenGui
 
 ----------------------------------------------------------
 -- 🔔 HỆ THỐNG THÔNG BÁO (NOTIFICATIONS)
@@ -171,7 +188,7 @@ Header.Parent = MainFrame
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(0, 200, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
-Title.Text = "⚡ KIANBEST DASHBOARD V4.1"
+Title.Text = "⚡ KIANBEST DASHBOARD V4.2"
 Title.TextColor3 = CurrentTheme.Accent
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 14
@@ -540,7 +557,6 @@ CreateButton(GeneralPage, "🔄 Vào Lại Server (Rejoin)", function()
     end
 end)
 
--- FIX: Đổi sang roproxy.com để tránh bị Roblox chặn HTTP Request
 CreateButton(GeneralPage, "🌐 Chuyển Server Ít Người", function()
     Notify("KianBest", "Đang tìm server ít người chơi...")
     task.spawn(function()
@@ -623,7 +639,7 @@ CreateToggle(VisualPage, "ESP (Tên Người Chơi)", false, function(enabled)
 end)
 
 ----------------------------------------------------------
--- TAB 3: ĐỒ HỌA
+-- TAB 3: ĐỒ HỌA & TẮT RENDER + TỐI MÀN HÌNH
 ----------------------------------------------------------
 CreateToggle(GraphicsPage, "Tắt Bóng Đổ (Disable Shadows)", true, function(enabled)
     Lighting.GlobalShadows = not enabled
@@ -649,16 +665,26 @@ CreateButton(GraphicsPage, "Giảm Chi Tiết Đồ Họa (Low Textures)", funct
     Notify("KianBest", "Đã hạ vật liệu SmoothPlastic!")
 end)
 
--- FIX: Bọc pcall tránh crash trên executor không hỗ trợ Render3D
-CreateToggle(GraphicsPage, "Tắt Render 3D (Treo máy AFK)", false, function(enabled)
-    local ok = pcall(function()
+-- CẬP NHẬT TÍNH NĂNG TẮT RENDER 3D VÀ LÀM TỐI MÀN HÌNH
+CreateToggle(GraphicsPage, "Tắt Render 3D & Tối Màn Hình", false, function(enabled)
+    BlackScreen.Visible = enabled
+    pcall(function()
         RunService:Set3dRenderingEnabled(not enabled)
     end)
-    if ok then
-        Notify("KianBest", enabled and "Đã TẮT Render 3D" or "Đã BẬT Render 3D")
+    if enabled then
+        Notify("KianBest", "Đã bật chế độ Tối Màn Hình AFK!")
     else
-        Notify("KianBest", "Executor không hỗ trợ Tắt Render 3D!")
+        Notify("KianBest", "Đã tắt chế độ Tối Màn Hình!")
     end
+end)
+
+-- Click vào màn hình đen để tắt chế độ AFK
+BlackScreen.MouseButton1Click:Connect(function()
+    BlackScreen.Visible = false
+    pcall(function()
+        RunService:Set3dRenderingEnabled(true)
+    end)
+    Notify("KianBest", "Đã mở lại màn hình!")
 end)
 
 ----------------------------------------------------------
@@ -669,4 +695,4 @@ CreateButton(ThemePage, "🔵 Ocean Blue", function() ApplyTheme(Themes.OceanBlu
 CreateButton(ThemePage, "🟢 Neon Green", function() ApplyTheme(Themes.NeonGreen) end)
 CreateButton(ThemePage, "🔴 Crimson Red", function() ApplyTheme(Themes.CrimsonRed) end)
 
-Notify("KianBest", "KianBest V4.1 Đã sẵn sàng!")
+Notify("KianBest", "KianBest V4.2 Đã sẵn sàng!")
