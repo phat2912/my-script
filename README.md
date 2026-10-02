@@ -1,9 +1,7 @@
 -- ==========================================================
--- KIANBEST HUB V17.1 - ULTRA PRO FIX EDITION
--- Fix: Bo tròn khung menu sắc nét (ClipsDescendants & Border Stroke)
--- Fix: Nút công tắc iOS trượt mượt & cập nhật màu Theme đồng bộ 100%
--- Fix: Notification Dynamic Island v3.0 luôn hiển thị chính xác
--- Upgrade: Giao diện Cyber-Glassmorphism cao cấp
+-- KIANBEST HUB V17.2 - STEALTH EDITION (STATUS NOTI UPDATE)
+-- Cập nhật: Thông báo trạng thái ON / OFF chi tiết
+-- Fix lỗi: 267 (CODE BAC-9514)
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -33,18 +31,18 @@ local Config = {
     GodMode = false,
     NoclipEnabled = false,
     SpeedEnabled = false,
-    SpeedValue = 35,
+    SpeedValue = 28,
     FlyEnabled = false,
-    FlySpeed = 75,
+    FlySpeed = 60,
     
     SelectedTarget = nil,
     AutoLockNearest = false,
     AutoTPTarget = false,
     AutoAttack = false,
     SuperM1Damage = false,
-    DamageMultiplier = 25,
+    DamageMultiplier = 10,
     HitboxExpander = false,
-    HitboxSize = 25,
+    HitboxSize = 15,
     
     GreySkyMode = false,
     PotatoMode = false,
@@ -64,33 +62,32 @@ local Themes = {
 }
 
 local CurrentTheme = Themes.ChillPurple
-local RegisteredToggles = {} -- Quản lý danh sách toggle để đổi màu đồng bộ
+local RegisteredToggles = {}
 local ParentGui = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
 
--- Dọn dẹp GUI cũ
-if ParentGui:FindFirstChild("KianbestMenuV17_1") then ParentGui.KianbestMenuV17_1:Destroy() end
+if ParentGui:FindFirstChild("KianbestMenuV17_2") then ParentGui.KianbestMenuV17_2:Destroy() end
 if ParentGui:FindFirstChild("iOSNotiGui") then ParentGui.iOSNotiGui:Destroy() end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "KianbestMenuV17_1"
+ScreenGui.Name = "KianbestMenuV17_2"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.DisplayOrder = 99999
 ScreenGui.Parent = ParentGui
 
 ----------------------------------------------------------
--- 📲 IOS DYNAMIC ISLAND NOTIFICATION ENGINE V3.0 (FIXED)
+-- 📲 IOS DYNAMIC ISLAND NOTIFICATION ENGINE (IMPROVED)
 ----------------------------------------------------------
 local NotiGui = Instance.new("ScreenGui")
 NotiGui.Name = "iOSNotiGui"
-NotiGui.DisplayOrder = 2147483647 -- Max ZIndex trên cùng màn hình
+NotiGui.DisplayOrder = 2147483647
 NotiGui.IgnoreGuiInset = true
 NotiGui.ResetOnSpawn = false
 NotiGui.Parent = ParentGui
 
 local NotiContainer = Instance.new("Frame")
 NotiContainer.Name = "iOSNotiContainer"
-NotiContainer.Size = UDim2.new(0, 300, 0, 350)
-NotiContainer.Position = UDim2.new(0.5, -150, 0, 12)
+NotiContainer.Size = UDim2.new(0, 310, 0, 350)
+NotiContainer.Position = UDim2.new(0.5, -155, 0, 12)
 NotiContainer.BackgroundTransparency = 1
 NotiContainer.ZIndex = 2147483647
 NotiContainer.Parent = NotiGui
@@ -105,13 +102,12 @@ local MAX_NOTIFICATIONS = 3
 
 local function Notify(title, text, duration)
     duration = duration or 2.2
-    
     local statusColor = Color3.fromRGB(10, 132, 255)
     local checkStr = (tostring(title) .. " " .. tostring(text)):lower()
     
-    if checkStr:find("bật") or checkStr:find("on") or checkStr:find("🟢") or checkStr:find("thành công") then
+    if checkStr:find("🟢") or checkStr:find("on") or checkStr:find("bật") or checkStr:find("thành công") then
         statusColor = Color3.fromRGB(48, 209, 88)
-    elseif checkStr:find("tắt") or checkStr:find("off") or checkStr:find("🔴") or checkStr:find("lỗi") then
+    elseif checkStr:find("🔴") or checkStr:find("off") or checkStr:find("tắt") or checkStr:find("lỗi") then
         statusColor = Color3.fromRGB(255, 69, 58)
     elseif checkStr:find("cảnh báo") or checkStr:find("⚠️") then
         statusColor = Color3.fromRGB(255, 159, 10)
@@ -119,14 +115,12 @@ local function Notify(title, text, duration)
 
     while #ActiveNotifications >= MAX_NOTIFICATIONS do
         local oldest = table.remove(ActiveNotifications, 1)
-        if oldest and oldest.Frame and oldest.Frame.Parent then
-            oldest.Frame:Destroy()
-        end
+        if oldest and oldest.Frame and oldest.Frame.Parent then oldest.Frame:Destroy() end
     end
 
     local Toast = Instance.new("Frame")
     Toast.Name = "iOSToast"
-    Toast.Size = UDim2.new(1, 0, 0, 40)
+    Toast.Size = UDim2.new(1, 0, 0, 42)
     Toast.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
     Toast.BackgroundTransparency = 1
     Toast.BorderSizePixel = 0
@@ -154,7 +148,7 @@ local function Notify(title, text, duration)
 
     local TTitle = Instance.new("TextLabel")
     TTitle.Size = UDim2.new(1, -30, 0, 16)
-    TTitle.Position = UDim2.new(0, 26, 0, 4)
+    TTitle.Position = UDim2.new(0, 26, 0, 5)
     TTitle.Text = title or "Thông báo"
     TTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
     TTitle.Font = Enum.Font.SourceSansBold
@@ -167,7 +161,7 @@ local function Notify(title, text, duration)
 
     local TText = Instance.new("TextLabel")
     TText.Size = UDim2.new(1, -30, 0, 14)
-    TText.Position = UDim2.new(0, 26, 0, 20)
+    TText.Position = UDim2.new(0, 26, 0, 21)
     TText.Text = text or ""
     TText.TextColor3 = statusColor
     TText.Font = Enum.Font.SourceSansSemiBold
@@ -183,7 +177,7 @@ local function Notify(title, text, duration)
 
     Toast.Size = UDim2.new(0.4, 0, 0, 0)
     local tweenInInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-    TweenService:Create(Toast, tweenInInfo, {Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 0.1}):Play()
+    TweenService:Create(Toast, tweenInInfo, {Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 0.1}):Play()
     TweenService:Create(Stroke, tweenInInfo, {Transparency = 0.2}):Play()
     TweenService:Create(Dot, tweenInInfo, {BackgroundTransparency = 0}):Play()
     TweenService:Create(TTitle, tweenInInfo, {TextTransparency = 0}):Play()
@@ -193,20 +187,15 @@ local function Notify(title, text, duration)
         pcall(function()
             if not Toast or not Toast.Parent then return end
             local tweenOutInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
-            
             TweenService:Create(Toast, tweenOutInfo, {Size = UDim2.new(0.4, 0, 0, 0), BackgroundTransparency = 1}):Play()
             TweenService:Create(Stroke, tweenOutInfo, {Transparency = 1}):Play()
             TweenService:Create(Dot, tweenOutInfo, {BackgroundTransparency = 1}):Play()
             TweenService:Create(TTitle, tweenOutInfo, {TextTransparency = 1}):Play()
             local lastTween = TweenService:Create(TText, tweenOutInfo, {TextTransparency = 1})
             lastTween:Play()
-
             lastTween.Completed:Connect(function()
                 for idx, item in ipairs(ActiveNotifications) do
-                    if item == notiData then
-                        table.remove(ActiveNotifications, idx)
-                        break
-                    end
+                    if item == notiData then table.remove(ActiveNotifications, idx) break end
                 end
                 Toast:Destroy()
             end)
@@ -215,23 +204,30 @@ local function Notify(title, text, duration)
 end
 
 ----------------------------------------------------------
--- 🛡️ ANTI-BAN SHIELD VIP
+-- 🛡️ ULTRA STEALTH ANTI-BAN ENGINE (BYPASS BAC-9514)
 ----------------------------------------------------------
+local clonefn = clonefunction or function(f) return f end
+local rawGetMethod = clonefn(getnamecallmethod)
+local checkCaller = clonefn(checkcaller)
+
 pcall(function()
     if not Config.AntiBanEnabled then return end
     if hookmetamethod then
         local oldNamecall
         oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-            local method = getnamecallmethod()
+            local method = rawGetMethod()
+
             if Config.AntiKick and (method == "Kick" or method == "kick") and self == LocalPlayer then
-                Notify("🛡️ Anti-Ban VIP", "Đã chặn 1 lệnh KICK!")
+                Notify("🛡️ Stealth Shield", "Đã chặn 1 lệnh KICK BAC-9514!")
                 return nil
             end
+
             if Config.AntiLog and (method == "FireServer" or method == "InvokeServer") then
                 local remoteName = tostring(self):lower()
-                local blockKeywords = {"ban", "kick", "flag", "cheat", "detect", "log", "ac", "security", "adonis", "anticheat"}
-                for _, word in ipairs(blockKeywords) do
-                    if remoteName:find(word) then return nil end
+                if remoteName:find("bac") or remoteName:find("ban") or remoteName:find("kick") 
+                   or remoteName:find("flag") or remoteName:find("cheat") or remoteName:find("detect") 
+                   or remoteName:find("report") or remoteName:find("check") or remoteName:find("ac") then
+                    return nil
                 end
             end
             return oldNamecall(self, ...)
@@ -239,7 +235,7 @@ pcall(function()
 
         local oldIndex
         oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, key)
-            if Config.SpoofStats and not checkcaller() and self:IsA("Humanoid") then
+            if Config.SpoofStats and not checkCaller() and self:IsA("Humanoid") then
                 if key == "WalkSpeed" then return 16 end
                 if key == "JumpPower" then return 50 end
             end
@@ -249,7 +245,7 @@ pcall(function()
 end)
 
 ----------------------------------------------------------
--- MAIN FRAME & BO TRÒN GIAO DIỆN CHUẨN
+-- MAIN FRAME
 ----------------------------------------------------------
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
@@ -260,11 +256,10 @@ MainFrame.BackgroundTransparency = Config.FrameTransparency
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
-MainFrame.ClipsDescendants = true -- QUAN TRỌNG: Ép các khung con bo tròn theo
+MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 
-local MainCorner = Instance.new("UICorner", MainFrame)
-MainCorner.CornerRadius = UDim.new(0, 14)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 14)
 
 local MainStroke = Instance.new("UIStroke", MainFrame)
 MainStroke.Color = CurrentTheme.Accent
@@ -293,7 +288,7 @@ Header.Parent = MainFrame
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(0, 300, 1, 0)
 Title.Position = UDim2.new(0, 14, 0, 0)
-Title.Text = "⚡ Kianbest Hub v17.1 ULTRA PRO"
+Title.Text = "⚡ Kianbest Hub v17.2 Stealth"
 Title.TextColor3 = CurrentTheme.Accent
 Title.TextSize = 13
 Title.Font = Enum.Font.FredokaOne
@@ -445,14 +440,14 @@ local function CreateTab(name, icon, posIndex)
     return Page
 end
 
-local AntiBanPage  = CreateTab("Anti-Ban Shield", "🛡", 1)
+local AntiBanPage  = CreateTab("Stealth Shield", "🛡", 1)
 local CombatPage   = CreateTab("Combat VIP", "⚔", 2)
 local MovementPage = CreateTab("Movement", "⚡", 3)
 local FixLagPage   = CreateTab("Fix Lag VIP", "🚀", 4)
 local SettingsPage = CreateTab("Settings & Chill", "☕", 5)
 
 ----------------------------------------------------------
--- 🎛️ IOS CÔNG TẮC TRƯỢT & UI BUILDERS (ĐỀU MÀU 100%)
+-- 🎛️ UI BUILDERS (CẬP NHẬT THÔNG BÁO ON / OFF)
 ----------------------------------------------------------
 local function CreateToggle(parent, text, defaultState, callback)
     local Btn = Instance.new("TextButton")
@@ -469,7 +464,6 @@ local function CreateToggle(parent, text, defaultState, callback)
     Btn.Parent = parent
     Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 8)
 
-    -- Khung công tắc trượt iOS
     local Track = Instance.new("Frame")
     Track.Size = UDim2.new(0, 38, 0, 20)
     Track.Position = UDim2.new(1, -44, 0.5, -10)
@@ -504,19 +498,21 @@ local function CreateToggle(parent, text, defaultState, callback)
 
     RefreshVisuals(false)
 
-    -- Đăng ký để tự động đổi màu khi switch Theme
-    table.insert(RegisteredToggles, {
-        Update = function() RefreshVisuals(true) end
-    })
+    table.insert(RegisteredToggles, { Update = function() RefreshVisuals(true) end })
 
     Btn.MouseButton1Click:Connect(function()
         state = not state
         RefreshVisuals(true)
         
-        -- Lọc tên ngắn gọn để thông báo
-        local cleanTitle = text:gsub("[%c%p%s]+", " "):match("^%s*(.-)%s*$")
-        cleanTitle = (cleanTitle and #cleanTitle > 0) and cleanTitle or "Tính năng"
-        Notify(cleanTitle, state and "Đã BẬT 🟢" or "Đã TẮT 🔴")
+        -- Lọc tên ngắn gọn cho thông báo
+        local cleanTitle = text:gsub("[%c%p%s]+", " "):match("^%s*(.-)%s*$") or "Tính năng"
+        
+        -- Thông báo rõ ràng trạng thái ON / OFF
+        if state then
+            Notify("🟢 ON | " .. cleanTitle, "Trạng thái: ĐÃ BẬT (ENABLED)")
+        else
+            Notify("🔴 OFF | " .. cleanTitle, "Trạng thái: ĐÃ TẮT (DISABLED)")
+        end
         
         callback(state)
     end)
@@ -626,23 +622,21 @@ local function CreateTextBox(parent, placeholder, callback)
     TBox.Parent = BoxFrame
 
     TBox.FocusLost:Connect(function(enterPressed)
-        if enterPressed and TBox.Text ~= "" then
-            callback(TBox.Text)
-        end
+        if enterPressed and TBox.Text ~= "" then callback(TBox.Text) end
     end)
 end
 
 ----------------------------------------------------------
--- TAB 1: ANTI-BAN SHIELD
+-- TAB 1: STEALTH SHIELD (ANTI-BAC)
 ----------------------------------------------------------
-CreateToggle(AntiBanPage, "🛡️ Chống Kick Tối Đa (Anti-Kick)", Config.AntiKick, function(state) Config.AntiKick = state end)
-CreateToggle(AntiBanPage, "🚫 Chặn Gửi Log/Report Cho Game", Config.AntiLog, function(state) Config.AntiLog = state end)
-CreateToggle(AntiBanPage, "🎭 Ngụy Trang Chỉ Số (Spoof Stats)", Config.SpoofStats, function(state) Config.SpoofStats = state end)
+CreateToggle(AntiBanPage, "🛡️ Bypass BAC Kick (Anti-Kick)", Config.AntiKick, function(state) Config.AntiKick = state end)
+CreateToggle(AntiBanPage, "🚫 Block Anti-Cheat Logging", Config.AntiLog, function(state) Config.AntiLog = state end)
+CreateToggle(AntiBanPage, "🎭 Spoof WalkSpeed & JumpPower", Config.SpoofStats, function(state) Config.SpoofStats = state end)
 CreateToggle(AntiBanPage, "👁️ Phát Hiện Admin/Mod Alert", Config.AntiAdmin, function(state) Config.AntiAdmin = state end)
 CreateToggle(AntiBanPage, "🏃 Auto Hop Server Khi Gặp Admin", Config.AutoHopOnAdmin, function(state) Config.AutoHopOnAdmin = state end)
 
 ----------------------------------------------------------
--- TAB 2: COMBAT VIP & GOD MODE
+-- TAB 2: COMBAT VIP
 ----------------------------------------------------------
 local TargetLabel = Instance.new("TextLabel")
 TargetLabel.Size = UDim2.new(1, 0, 0, 22)
@@ -676,7 +670,7 @@ local function GetNearestPlayer()
     return closest, math.floor(maxDist)
 end
 
-CreateToggle(CombatPage, "👑 Bất Tử GOD MODE (Chống M1)", Config.GodMode, function(state)
+CreateToggle(CombatPage, "👑 Bất Tử GOD MODE", Config.GodMode, function(state)
     Config.GodMode = state
     if not state and LocalPlayer.Character then
         for _, part in ipairs(LocalPlayer.Character:GetChildren()) do
@@ -685,21 +679,21 @@ CreateToggle(CombatPage, "👑 Bất Tử GOD MODE (Chống M1)", Config.GodMode
     end
 end)
 
-CreateButton(CombatPage, "🎯 Chọn Target Gần Nhất (Auto Nearest)", Color3.fromRGB(45, 25, 40), function()
+CreateButton(CombatPage, "🎯 Chọn Target Gần Nhất", Color3.fromRGB(45, 25, 40), function()
     local target, dist = GetNearestPlayer()
     if target then
         Config.SelectedTarget = target
-        Notify("Combat VIP", "Đã chọn: " .. target.DisplayName .. " (" .. dist .. "m)")
+        Notify("🟢 TARGET LOADED", target.DisplayName .. " (" .. dist .. "m)")
     else
-        Notify("Combat VIP", "Không có ai ở gần!")
+        Notify("🔴 TARGET ERROR", "Không tìm thấy ai ở gần!")
     end
 end)
 
 CreateToggle(CombatPage, "🔄 Auto Khóa Target Gần Nhất", Config.AutoLockNearest, function(state) Config.AutoLockNearest = state end)
-CreateToggle(CombatPage, "⚡ Hit Dame To Mượt (Super Damage M1)", Config.SuperM1Damage, function(state) Config.SuperM1Damage = state end)
-CreateValueAdjuster(CombatPage, "Số Hit Nhân Sát Thương", 5, 50, Config.DamageMultiplier, 5, function(val) Config.DamageMultiplier = val end)
+CreateToggle(CombatPage, "⚡ M1 Fast Combo (Safe Mode)", Config.SuperM1Damage, function(state) Config.SuperM1Damage = state end)
+CreateValueAdjuster(CombatPage, "Số Hit Multiplier (Max 15)", 2, 15, Config.DamageMultiplier, 1, function(val) Config.DamageMultiplier = val end)
 
-CreateToggle(CombatPage, "📦 Hitbox Rộng (Fixed Move Bug)", Config.HitboxExpander, function(state)
+CreateToggle(CombatPage, "📦 Hitbox Rộng Safe-BAC", Config.HitboxExpander, function(state)
     Config.HitboxExpander = state
     if not state then
         for _, p in ipairs(Players:GetPlayers()) do
@@ -714,7 +708,7 @@ CreateToggle(CombatPage, "📦 Hitbox Rộng (Fixed Move Bug)", Config.HitboxExp
         end
     end
 end)
-CreateValueAdjuster(CombatPage, "Kích Thước Hitbox Rộng", 5, 50, Config.HitboxSize, 5, function(val) Config.HitboxSize = val end)
+CreateValueAdjuster(CombatPage, "Kích Thước Hitbox Safe", 5, 25, Config.HitboxSize, 2, function(val) Config.HitboxSize = val end)
 
 CreateToggle(CombatPage, "⚡ Auto TP Áp Sát Lưng Target", Config.AutoTPTarget, function(state) Config.AutoTPTarget = state end)
 CreateToggle(CombatPage, "🥊 Auto Đấm M1 Tự Động", Config.AutoAttack, function(state) Config.AutoAttack = state end)
@@ -741,10 +735,10 @@ CreateToggle(MovementPage, "Bay 3D Smooth", Config.FlyEnabled, function(state)
     if not state then StopFlyEngine() end
 end)
 
-CreateValueAdjuster(MovementPage, "Tốc Độ Bay 3D", 20, 250, Config.FlySpeed, 10, function(val) Config.FlySpeed = val end)
+CreateValueAdjuster(MovementPage, "Tốc Độ Bay 3D", 20, 150, Config.FlySpeed, 10, function(val) Config.FlySpeed = val end)
 CreateToggle(MovementPage, "Đi Xuyên Tường (Noclip)", Config.NoclipEnabled, function(state) Config.NoclipEnabled = state end)
-CreateToggle(MovementPage, "Chạy Nhanh (Speed Hack)", Config.SpeedEnabled, function(state) Config.SpeedEnabled = state end)
-CreateValueAdjuster(MovementPage, "Tốc Độ Chạy", 16, 200, Config.SpeedValue, 10, function(val) Config.SpeedValue = val end)
+CreateToggle(MovementPage, "Chạy Nhanh (Safe Speed)", Config.SpeedEnabled, function(state) Config.SpeedEnabled = state end)
+CreateValueAdjuster(MovementPage, "Tốc Độ Chạy Safe", 16, 60, Config.SpeedValue, 2, function(val) Config.SpeedValue = val end)
 
 ----------------------------------------------------------
 -- TAB 4: FIX LAG VIP
@@ -756,7 +750,6 @@ local function ApplyGreySkyAndLighting()
                 v:Destroy()
             end
         end
-
         local GreySky = Instance.new("Sky")
         GreySky.Name = "CleanGreySky"
         GreySky.SkyboxBk = "rbxassetid://152955518"
@@ -766,7 +759,6 @@ local function ApplyGreySkyAndLighting()
         GreySky.SkyboxRt = "rbxassetid://152955518"
         GreySky.SkyboxUp = "rbxassetid://152955518"
         GreySky.Parent = Lighting
-
         Lighting.ClockTime = 12
         Lighting.GlobalShadows = false
         Lighting.Brightness = 1
@@ -776,12 +768,12 @@ local function ApplyGreySkyAndLighting()
     end)
 end
 
-CreateToggle(FixLagPage, "☁️ Bầu Trời Xám & Cân Bằng Ánh Sáng", Config.GreySkyMode, function(state)
+CreateToggle(FixLagPage, "☁️ Bầu Trời Xám & Light Balance", Config.GreySkyMode, function(state)
     Config.GreySkyMode = state
     if state then ApplyGreySkyAndLighting() end
 end)
 
-CreateButton(FixLagPage, "🚀 Kích Hoạt Max FPS (Xóa Texture Map)", Color3.fromRGB(35, 55, 35), function()
+CreateButton(FixLagPage, "🚀 Kích Hoạt Max FPS (Clear Map)", Color3.fromRGB(35, 55, 35), function()
     pcall(function()
         ApplyGreySkyAndLighting()
         for _, v in ipairs(Workspace:GetDescendants()) do
@@ -795,7 +787,7 @@ CreateButton(FixLagPage, "🚀 Kích Hoạt Max FPS (Xóa Texture Map)", Color3.
             end
         end
     end)
-    Notify("Fix Lag VIP", "Đã tối ưu hóa Map Max FPS! 🚀")
+    Notify("🟢 MAX FPS", "Đã dọn dẹp Map & Tối ưu FPS thành công!")
 end)
 
 CreateToggle(FixLagPage, "🥔 Chế Độ Potato Graphics", Config.PotatoMode, function(state)
@@ -816,7 +808,7 @@ CreateToggle(FixLagPage, "🧹 Auto Dọn Dẹp RAM Ngầm", Config.AutoMemoryCl
 ----------------------------------------------------------
 -- TAB 5: SETTINGS & CHILL
 ----------------------------------------------------------
-CreateButton(SettingsPage, "🎨 Đổi Theme Màu (Tự Động Cập Nhật Đều)", Color3.fromRGB(35, 30, 48), function()
+CreateButton(SettingsPage, "🎨 Đổi Theme Màu", Color3.fromRGB(35, 30, 48), function()
     if CurrentTheme == Themes.ChillPurple then CurrentTheme = Themes.SoftPink
     elseif CurrentTheme == Themes.SoftPink then CurrentTheme = Themes.OceanBlue
     elseif CurrentTheme == Themes.OceanBlue then CurrentTheme = Themes.MintGreen
@@ -832,22 +824,18 @@ CreateButton(SettingsPage, "🎨 Đổi Theme Màu (Tự Động Cập Nhật Đ
     TargetLabel.TextColor3 = CurrentTheme.Accent
 
     for _, btn in ipairs(TabButtons) do btn.BackgroundColor3 = CurrentTheme.Button end
-    
-    -- Cập nhật lại toàn bộ công tắc toggle để không bị lệch màu
-    for _, tog in ipairs(RegisteredToggles) do
-        tog.Update()
-    end
+    for _, tog in ipairs(RegisteredToggles) do tog.Update() end
 
-    Notify("Settings", "Đã đổi Theme: " .. CurrentTheme.Name)
+    Notify("🟢 THEME CHANGED", "Đã đổi Theme: " .. CurrentTheme.Name)
 end)
 
 CreateTextBox(SettingsPage, "Chèn ID Ảnh Background (VD: 6071575925)", function(text)
     local cleanedID = text:gsub("%D", "")
     if cleanedID ~= "" then
         BgImage.Image = "rbxassetid://" .. cleanedID
-        Notify("Settings", "Đã chèn ảnh ID: " .. cleanedID)
+        Notify("🟢 BG CHANGED", "Đã chèn nền ID: " .. cleanedID)
     else
-        Notify("Settings", "ID ảnh không hợp lệ!")
+        Notify("🔴 ERROR", "ID hình ảnh không hợp lệ!")
     end
 end)
 
@@ -859,7 +847,7 @@ end)
 CreateToggle(SettingsPage, "Chống Treo Máy (Anti-AFK 24/7)", Config.AntiAFK, function(state) Config.AntiAFK = state end)
 
 CreateButton(SettingsPage, "🌐 Đổi Server Khác (Server Hop)", Color3.fromRGB(28, 42, 55), function()
-    Notify("Server Hop", "Đang tìm server khác...", 3)
+    Notify("🟢 SERVER HOP", "Đang tìm server khác...", 3)
     pcall(function()
         local sfUrl = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
         local req = game:HttpGet(sfUrl)
@@ -876,7 +864,7 @@ CreateButton(SettingsPage, "🌐 Đổi Server Khác (Server Hop)", Color3.fromR
     end)
 end)
 
-CreateButton(SettingsPage, "🔄 Vào Lại Server Này (Rejoin)", Color3.fromRGB(45, 25, 35), function()
+CreateButton(SettingsPage, "🔄 Vào Lại Server (Rejoin)", Color3.fromRGB(45, 25, 35), function()
     TeleportService:Teleport(game.PlaceId, LocalPlayer)
 end)
 
@@ -887,21 +875,21 @@ CreateButton(SettingsPage, "🗑️ Tắt Menu Hoàn Toàn (Unload GUI)", Color3
 end)
 
 ----------------------------------------------------------
--- LOOPS ENGINE & CORE LOGIC
+-- CORE LOOPS ENGINE
 ----------------------------------------------------------
 local lastM1Tick = 0
 local function ExecuteM1KillProtocol()
-    if tick() - lastM1Tick < 0.05 then return end
+    if tick() - lastM1Tick < 0.12 then return end
     lastM1Tick = tick()
 
     local char = LocalPlayer.Character
     if not char then return end
     local cam = Workspace.CurrentCamera
     local tool = char:FindFirstChildOfClass("Tool")
-    local hits = Config.SuperM1Damage and Config.DamageMultiplier or 1
+    local hits = Config.SuperM1Damage and math.min(Config.DamageMultiplier, 12) or 1
 
     task.spawn(function()
-        for i = 1, math.min(hits, 35) do
+        for i = 1, hits do
             if tool then pcall(function() tool:Activate() end) end
             if VirtualUser then
                 pcall(function()
@@ -1014,7 +1002,7 @@ RunService.RenderStepped:Connect(function(dt)
                 local eHRP = p.Character:FindFirstChild("HumanoidRootPart")
                 if eHRP then
                     eHRP.Size = Vector3.new(Config.HitboxSize, Config.HitboxSize, Config.HitboxSize)
-                    eHRP.Transparency = 0.65
+                    eHRP.Transparency = 0.7
                     eHRP.Color = CurrentTheme.Accent
                     eHRP.Material = Enum.Material.Neon
                     eHRP.CanCollide = false
@@ -1050,4 +1038,4 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
-Notify("Kianbest Hub ULTRA", "Đã tải thành công Menu Pro! 🟢")
+Notify("🟢 SYSTEM LOADED", "Kianbest Hub v17.2 Stealth đã sẵn sàng!")
