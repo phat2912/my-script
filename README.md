@@ -1,8 +1,9 @@
 -- ==========================================================
--- KIANBEST HUB V17.1 - FIXED iOS DYNAMIC ISLAND EDITION
--- Fix: Đẩy Notification lên sát đỉnh màn hình (DisplayOrder 999999)
--- Fix: Hiệu ứng Fade Out mờ dần & thu nhỏ trơn tru không bị đè khung
--- Feature: Bất Tử GOD MODE, Hitbox VIP, Fly 3D, Super M1, Fix Lag
+-- KIANBEST HUB V17.1 - ULTRA PRO FIX EDITION
+-- Fix: Bo tròn khung menu sắc nét (ClipsDescendants & Border Stroke)
+-- Fix: Nút công tắc iOS trượt mượt & cập nhật màu Theme đồng bộ 100%
+-- Fix: Notification Dynamic Island v3.0 luôn hiển thị chính xác
+-- Upgrade: Giao diện Cyber-Glassmorphism cao cấp
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -51,80 +52,69 @@ local Config = {
     
     AntiAFK = true,
     BgTransparency = 0.2,
-    FrameTransparency = 0.15,
+    FrameTransparency = 0.12,
     ToggleKey = Enum.KeyCode.RightControl
 }
 
 local Themes = {
     ChillPurple = { Name = "Chill Lavender 🔮", Bg = Color3.fromRGB(18, 16, 26), Sidebar = Color3.fromRGB(12, 10, 18), Accent = Color3.fromRGB(165, 120, 255), Button = Color3.fromRGB(28, 22, 38), Text = Color3.fromRGB(240, 235, 255) },
-    SoftPink = { Name = "Soft Sakura 🌸", Bg = Color3.fromRGB(24, 16, 22), Sidebar = Color3.fromRGB(16, 10, 15), Accent = Color3.fromRGB(255, 140, 180), Button = Color3.fromRGB(36, 22, 32), Text = Color3.fromRGB(255, 240, 248) },
-    OceanBlue = { Name = "Midnight Ocean 🌊", Bg = Color3.fromRGB(12, 18, 28), Sidebar = Color3.fromRGB(8, 12, 20), Accent = Color3.fromRGB(90, 185, 255), Button = Color3.fromRGB(20, 30, 44), Text = Color3.fromRGB(235, 248, 255) },
-    MintGreen = { Name = "Chill Matcha 🍃", Bg = Color3.fromRGB(14, 22, 18), Sidebar = Color3.fromRGB(8, 15, 12), Accent = Color3.fromRGB(110, 220, 160), Button = Color3.fromRGB(20, 34, 28), Text = Color3.fromRGB(235, 255, 242) }
+    SoftPink    = { Name = "Soft Sakura 🌸",    Bg = Color3.fromRGB(24, 16, 22), Sidebar = Color3.fromRGB(16, 10, 15), Accent = Color3.fromRGB(255, 140, 180), Button = Color3.fromRGB(36, 22, 32), Text = Color3.fromRGB(255, 240, 248) },
+    OceanBlue   = { Name = "Midnight Ocean 🌊", Bg = Color3.fromRGB(12, 18, 28), Sidebar = Color3.fromRGB(8, 12, 20),  Accent = Color3.fromRGB(90, 185, 255), Button = Color3.fromRGB(20, 30, 44), Text = Color3.fromRGB(235, 248, 255) },
+    MintGreen   = { Name = "Chill Matcha 🍃",    Bg = Color3.fromRGB(14, 22, 18), Sidebar = Color3.fromRGB(8, 15, 12),  Accent = Color3.fromRGB(110, 220, 160), Button = Color3.fromRGB(20, 34, 28), Text = Color3.fromRGB(235, 255, 242) }
 }
 
 local CurrentTheme = Themes.ChillPurple
+local RegisteredToggles = {} -- Quản lý danh sách toggle để đổi màu đồng bộ
 local ParentGui = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
 
-if ParentGui:FindFirstChild("KianbestMenuV17_1") then
-    ParentGui.KianbestMenuV17_1:Destroy()
-end
+-- Dọn dẹp GUI cũ
+if ParentGui:FindFirstChild("KianbestMenuV17_1") then ParentGui.KianbestMenuV17_1:Destroy() end
+if ParentGui:FindFirstChild("iOSNotiGui") then ParentGui.iOSNotiGui:Destroy() end
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "KianbestMenuV17_1"
 ScreenGui.ResetOnSpawn = false
+ScreenGui.DisplayOrder = 99999
 ScreenGui.Parent = ParentGui
 
 ----------------------------------------------------------
--- 📲 IOS DYNAMIC ISLAND NOTIFICATION SYSTEM (FIXED V2.2)
+-- 📲 IOS DYNAMIC ISLAND NOTIFICATION ENGINE V3.0 (FIXED)
 ----------------------------------------------------------
-local NotiGui = ParentGui:FindFirstChild("iOSNotiGui")
-if NotiGui then NotiGui:Destroy() end
-
-NotiGui = Instance.new("ScreenGui")
+local NotiGui = Instance.new("ScreenGui")
 NotiGui.Name = "iOSNotiGui"
-NotiGui.DisplayOrder = 999999 -- Đặt đè lên mọi GUI khác
-NotiGui.IgnoreGuiInset = true -- Sát mép màn hình chuẩn Dynamic Island
+NotiGui.DisplayOrder = 2147483647 -- Max ZIndex trên cùng màn hình
+NotiGui.IgnoreGuiInset = true
 NotiGui.ResetOnSpawn = false
 NotiGui.Parent = ParentGui
 
 local NotiContainer = Instance.new("Frame")
 NotiContainer.Name = "iOSNotiContainer"
-NotiContainer.Size = UDim2.new(0, 280, 0, 300)
-NotiContainer.Position = UDim2.new(0.5, -140, 0, 10)
+NotiContainer.Size = UDim2.new(0, 300, 0, 350)
+NotiContainer.Position = UDim2.new(0.5, -150, 0, 12)
 NotiContainer.BackgroundTransparency = 1
-NotiContainer.ZIndex = 999999
+NotiContainer.ZIndex = 2147483647
 NotiContainer.Parent = NotiGui
 
 local NotiLayout = Instance.new("UIListLayout", NotiContainer)
 NotiLayout.SortOrder = Enum.SortOrder.LayoutOrder
 NotiLayout.Padding = UDim.new(0, 6)
 NotiLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-NotiLayout.VerticalAlignment = Enum.VerticalAlignment.Top
 
 local ActiveNotifications = {}
 local MAX_NOTIFICATIONS = 3
 
-local iOSColors = {
-    Success = Color3.fromRGB(48, 209, 88),   -- Xanh Lục iOS
-    Error   = Color3.fromRGB(255, 69, 58),   -- Đỏ iOS
-    Info    = Color3.fromRGB(10, 132, 255),  -- Xanh Dương iOS
-    Warning = Color3.fromRGB(255, 159, 10),  -- Cam iOS
-    Bg      = Color3.fromRGB(18, 18, 22),    -- Nền Cyber Dark
-    Text    = Color3.fromRGB(255, 255, 255)
-}
-
 local function Notify(title, text, duration)
-    duration = duration or 2.0
+    duration = duration or 2.2
     
-    local statusColor = iOSColors.Info
+    local statusColor = Color3.fromRGB(10, 132, 255)
     local checkStr = (tostring(title) .. " " .. tostring(text)):lower()
     
-    if checkStr:find("bật") or checkStr:find("on") or checkStr:find("🟢") or checkStr:find("thành công") or checkStr:find("kích hoạt") then
-        statusColor = iOSColors.Success
-    elseif checkStr:find("tắt") or checkStr:find("off") or checkStr:find("🔴") or checkStr:find("chặn") or checkStr:find("lỗi") then
-        statusColor = iOSColors.Error
+    if checkStr:find("bật") or checkStr:find("on") or checkStr:find("🟢") or checkStr:find("thành công") then
+        statusColor = Color3.fromRGB(48, 209, 88)
+    elseif checkStr:find("tắt") or checkStr:find("off") or checkStr:find("🔴") or checkStr:find("lỗi") then
+        statusColor = Color3.fromRGB(255, 69, 58)
     elseif checkStr:find("cảnh báo") or checkStr:find("⚠️") then
-        statusColor = iOSColors.Warning
+        statusColor = Color3.fromRGB(255, 159, 10)
     end
 
     while #ActiveNotifications >= MAX_NOTIFICATIONS do
@@ -136,20 +126,21 @@ local function Notify(title, text, duration)
 
     local Toast = Instance.new("Frame")
     Toast.Name = "iOSToast"
-    Toast.Size = UDim2.new(1, 0, 0, 42)
-    Toast.BackgroundColor3 = iOSColors.Bg
+    Toast.Size = UDim2.new(1, 0, 0, 40)
+    Toast.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
     Toast.BackgroundTransparency = 1
     Toast.BorderSizePixel = 0
     Toast.ClipsDescendants = true
-    Toast.ZIndex = 999999
+    Toast.ZIndex = 2147483647
     Toast.Parent = NotiContainer
 
-    Instance.new("UICorner", Toast).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", Toast).CornerRadius = UDim.new(0, 10)
 
     local Stroke = Instance.new("UIStroke", Toast)
     Stroke.Color = statusColor
     Stroke.Thickness = 1.2
     Stroke.Transparency = 1
+    Stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
     local Dot = Instance.new("Frame")
     Dot.Size = UDim2.new(0, 8, 0, 8)
@@ -157,26 +148,26 @@ local function Notify(title, text, duration)
     Dot.BackgroundColor3 = statusColor
     Dot.BorderSizePixel = 0
     Dot.BackgroundTransparency = 1
-    Dot.ZIndex = 1000000
+    Dot.ZIndex = 2147483647
     Dot.Parent = Toast
     Instance.new("UICorner", Dot).CornerRadius = UDim.new(1, 0)
 
     local TTitle = Instance.new("TextLabel")
     TTitle.Size = UDim2.new(1, -30, 0, 16)
-    TTitle.Position = UDim2.new(0, 26, 0, 5)
+    TTitle.Position = UDim2.new(0, 26, 0, 4)
     TTitle.Text = title or "Thông báo"
-    TTitle.TextColor3 = iOSColors.Text
+    TTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
     TTitle.Font = Enum.Font.SourceSansBold
     TTitle.TextSize = 13
     TTitle.TextXAlignment = Enum.TextXAlignment.Left
     TTitle.BackgroundTransparency = 1
     TTitle.TextTransparency = 1
-    TTitle.ZIndex = 1000000
+    TTitle.ZIndex = 2147483647
     TTitle.Parent = Toast
 
     local TText = Instance.new("TextLabel")
     TText.Size = UDim2.new(1, -30, 0, 14)
-    TText.Position = UDim2.new(0, 26, 0, 21)
+    TText.Position = UDim2.new(0, 26, 0, 20)
     TText.Text = text or ""
     TText.TextColor3 = statusColor
     TText.Font = Enum.Font.SourceSansSemiBold
@@ -184,16 +175,16 @@ local function Notify(title, text, duration)
     TText.TextXAlignment = Enum.TextXAlignment.Left
     TText.BackgroundTransparency = 1
     TText.TextTransparency = 1
-    TText.ZIndex = 1000000
+    TText.ZIndex = 2147483647
     TText.Parent = Toast
 
     local notiData = {Frame = Toast}
     table.insert(ActiveNotifications, notiData)
 
-    Toast.Size = UDim2.new(0.5, 0, 0, 0)
+    Toast.Size = UDim2.new(0.4, 0, 0, 0)
     local tweenInInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-    TweenService:Create(Toast, tweenInInfo, {Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 0.1}):Play()
-    TweenService:Create(Stroke, tweenInInfo, {Transparency = 0.3}):Play()
+    TweenService:Create(Toast, tweenInInfo, {Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 0.1}):Play()
+    TweenService:Create(Stroke, tweenInInfo, {Transparency = 0.2}):Play()
     TweenService:Create(Dot, tweenInInfo, {BackgroundTransparency = 0}):Play()
     TweenService:Create(TTitle, tweenInInfo, {TextTransparency = 0}):Play()
     TweenService:Create(TText, tweenInInfo, {TextTransparency = 0}):Play()
@@ -201,9 +192,9 @@ local function Notify(title, text, duration)
     task.delay(duration, function()
         pcall(function()
             if not Toast or not Toast.Parent then return end
-            local tweenOutInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+            local tweenOutInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
             
-            TweenService:Create(Toast, tweenOutInfo, {Size = UDim2.new(0.5, 0, 0, 0), BackgroundTransparency = 1}):Play()
+            TweenService:Create(Toast, tweenOutInfo, {Size = UDim2.new(0.4, 0, 0, 0), BackgroundTransparency = 1}):Play()
             TweenService:Create(Stroke, tweenOutInfo, {Transparency = 1}):Play()
             TweenService:Create(Dot, tweenOutInfo, {BackgroundTransparency = 1}):Play()
             TweenService:Create(TTitle, tweenOutInfo, {TextTransparency = 1}):Play()
@@ -228,7 +219,6 @@ end
 ----------------------------------------------------------
 pcall(function()
     if not Config.AntiBanEnabled then return end
-
     if hookmetamethod then
         local oldNamecall
         oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
@@ -259,25 +249,28 @@ pcall(function()
 end)
 
 ----------------------------------------------------------
--- MAIN FRAME & GUI UI
+-- MAIN FRAME & BO TRÒN GIAO DIỆN CHUẨN
 ----------------------------------------------------------
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 520, 0, 340)
-MainFrame.Position = UDim2.new(0.5, -260, 0.5, -170)
+MainFrame.Size = UDim2.new(0, 530, 0, 345)
+MainFrame.Position = UDim2.new(0.5, -265, 0.5, -172)
 MainFrame.BackgroundColor3 = CurrentTheme.Bg
 MainFrame.BackgroundTransparency = Config.FrameTransparency
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
-MainFrame.ClipsDescendants = true
+MainFrame.ClipsDescendants = true -- QUAN TRỌNG: Ép các khung con bo tròn theo
 MainFrame.Parent = ScreenGui
 
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+local MainCorner = Instance.new("UICorner", MainFrame)
+MainCorner.CornerRadius = UDim.new(0, 14)
+
 local MainStroke = Instance.new("UIStroke", MainFrame)
 MainStroke.Color = CurrentTheme.Accent
 MainStroke.Thickness = 1.5
-MainStroke.Transparency = 0.3
+MainStroke.Transparency = 0.25
+MainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 local BgImage = Instance.new("ImageLabel")
 BgImage.Name = "BgImage"
@@ -287,21 +280,20 @@ BgImage.ImageTransparency = Config.BgTransparency
 BgImage.ScaleType = Enum.ScaleType.Crop
 BgImage.ZIndex = 1
 BgImage.Parent = MainFrame
-Instance.new("UICorner", BgImage).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", BgImage).CornerRadius = UDim.new(0, 14)
 
 local Header = Instance.new("Frame")
-Header.Size = UDim2.new(1, 0, 0, 36)
+Header.Size = UDim2.new(1, 0, 0, 38)
 Header.BackgroundColor3 = CurrentTheme.Sidebar
-Header.BackgroundTransparency = 0.2
+Header.BackgroundTransparency = 0.15
 Header.BorderSizePixel = 0
 Header.ZIndex = 3
 Header.Parent = MainFrame
-Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 12)
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(0, 300, 1, 0)
-Title.Position = UDim2.new(0, 12, 0, 0)
-Title.Text = "⚡ Kianbest Hub v17.1 iOS EDITION"
+Title.Position = UDim2.new(0, 14, 0, 0)
+Title.Text = "⚡ Kianbest Hub v17.1 ULTRA PRO"
 Title.TextColor3 = CurrentTheme.Accent
 Title.TextSize = 13
 Title.Font = Enum.Font.FredokaOne
@@ -312,7 +304,7 @@ Title.Parent = Header
 
 local StatsLabel = Instance.new("TextLabel")
 StatsLabel.Size = UDim2.new(0, 180, 1, 0)
-StatsLabel.Position = UDim2.new(1, -210, 0, 0)
+StatsLabel.Position = UDim2.new(1, -215, 0, 0)
 StatsLabel.Text = "FPS: -- | Ping: --ms"
 StatsLabel.TextColor3 = Color3.fromRGB(220, 210, 235)
 StatsLabel.TextSize = 11
@@ -324,12 +316,12 @@ StatsLabel.Parent = Header
 
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Size = UDim2.new(0, 24, 0, 24)
-CloseBtn.Position = UDim2.new(1, -28, 0, 6)
+CloseBtn.Position = UDim2.new(1, -30, 0, 7)
 CloseBtn.Text = "✕"
 CloseBtn.TextColor3 = Color3.fromRGB(255, 120, 140)
 CloseBtn.TextSize = 12
 CloseBtn.Font = Enum.Font.SourceSansBold
-CloseBtn.BackgroundColor3 = Color3.fromRGB(40, 22, 32)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(45, 20, 30)
 CloseBtn.BorderSizePixel = 0
 CloseBtn.ZIndex = 4
 CloseBtn.Parent = Header
@@ -337,10 +329,10 @@ Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Name = "KianToggleButton"
-ToggleBtn.Size = UDim2.new(0, 44, 0, 44)
+ToggleBtn.Size = UDim2.new(0, 46, 0, 46)
 ToggleBtn.Position = UDim2.new(0, 15, 0.4, 0)
 ToggleBtn.BackgroundColor3 = CurrentTheme.Sidebar
-ToggleBtn.BackgroundTransparency = 0.2
+ToggleBtn.BackgroundTransparency = 0.15
 ToggleBtn.Text = "⚡"
 ToggleBtn.TextSize = 20
 ToggleBtn.Active = true
@@ -358,7 +350,7 @@ local function ToggleMenu()
     isMenuOpen = not isMenuOpen
     if isMenuOpen then
         MainFrame.Visible = true
-        TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 520, 0, 340)}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 530, 0, 345)}):Play()
     else
         local tween = TweenService:Create(MainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)})
         tween:Play()
@@ -378,17 +370,17 @@ end)
 -- SIDEBAR & PAGES
 ----------------------------------------------------------
 local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0, 130, 1, -36)
-Sidebar.Position = UDim2.new(0, 0, 0, 36)
+Sidebar.Size = UDim2.new(0, 135, 1, -38)
+Sidebar.Position = UDim2.new(0, 0, 0, 38)
 Sidebar.BackgroundColor3 = CurrentTheme.Sidebar
-Sidebar.BackgroundTransparency = 0.3
+Sidebar.BackgroundTransparency = 0.25
 Sidebar.BorderSizePixel = 0
 Sidebar.ZIndex = 3
 Sidebar.Parent = MainFrame
 
 local ContentContainer = Instance.new("Frame")
-ContentContainer.Size = UDim2.new(1, -138, 1, -44)
-ContentContainer.Position = UDim2.new(0, 134, 0, 40)
+ContentContainer.Size = UDim2.new(1, -143, 1, -46)
+ContentContainer.Position = UDim2.new(0, 139, 0, 42)
 ContentContainer.BackgroundTransparency = 1
 ContentContainer.ZIndex = 3
 ContentContainer.Parent = MainFrame
@@ -398,9 +390,9 @@ local TabButtons = {}
 
 local function CreateTab(name, icon, posIndex)
     local TabBtn = Instance.new("TextButton")
-    TabBtn.Size = UDim2.new(1, -10, 0, 32)
-    TabBtn.Position = UDim2.new(0, 5, 0, 6 + (posIndex - 1) * 36)
-    TabBtn.Text = icon .. "  " .. name
+    TabBtn.Size = UDim2.new(1, -12, 0, 32)
+    TabBtn.Position = UDim2.new(0, 6, 0, 6 + (posIndex - 1) * 36)
+    TabBtn.Text = "  " .. icon .. "  " .. name
     TabBtn.TextColor3 = CurrentTheme.Text
     TabBtn.Font = Enum.Font.SourceSansBold
     TabBtn.TextSize = 12
@@ -416,6 +408,7 @@ local function CreateTab(name, icon, posIndex)
     Page.Size = UDim2.new(1, 0, 1, 0)
     Page.BackgroundTransparency = 1
     Page.ScrollBarThickness = 3
+    Page.ScrollBarImageColor3 = CurrentTheme.Accent
     Page.Visible = (posIndex == 1)
     Page.ZIndex = 3
     Page.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -427,7 +420,7 @@ local function CreateTab(name, icon, posIndex)
     PList.Padding = UDim.new(0, 6)
 
     local PPadding = Instance.new("UIPadding", Page)
-    PPadding.PaddingTop = UDim.new(0, 4)
+    PPadding.PaddingTop = UDim.new(0, 2)
     PPadding.PaddingBottom = UDim.new(0, 10)
     PPadding.PaddingRight = UDim.new(0, 6)
 
@@ -442,29 +435,29 @@ local function CreateTab(name, icon, posIndex)
         end
         Page.Visible = true
         TabBtn.BackgroundColor3 = CurrentTheme.Accent
-        TabBtn.BackgroundTransparency = 0.1
+        TabBtn.BackgroundTransparency = 0.15
     end)
 
     if posIndex == 1 then 
         TabBtn.BackgroundColor3 = CurrentTheme.Accent 
-        TabBtn.BackgroundTransparency = 0.1
+        TabBtn.BackgroundTransparency = 0.15
     end
     return Page
 end
 
-local AntiBanPage = CreateTab("Anti-Ban Shield", "🛡", 1)
-local CombatPage = CreateTab("Combat VIP", "⚔", 2)
+local AntiBanPage  = CreateTab("Anti-Ban Shield", "🛡", 1)
+local CombatPage   = CreateTab("Combat VIP", "⚔", 2)
 local MovementPage = CreateTab("Movement", "⚡", 3)
-local FixLagPage = CreateTab("Fix Lag VIP", "🚀", 4)
+local FixLagPage   = CreateTab("Fix Lag VIP", "🚀", 4)
 local SettingsPage = CreateTab("Settings & Chill", "☕", 5)
 
 ----------------------------------------------------------
--- UI BUILDERS
+-- 🎛️ IOS CÔNG TẮC TRƯỢT & UI BUILDERS (ĐỀU MÀU 100%)
 ----------------------------------------------------------
 local function CreateToggle(parent, text, defaultState, callback)
     local Btn = Instance.new("TextButton")
-    Btn.Size = UDim2.new(1, 0, 0, 32)
-    Btn.Text = "  " .. text
+    Btn.Size = UDim2.new(1, 0, 0, 34)
+    Btn.Text = "   " .. text
     Btn.TextColor3 = CurrentTheme.Text
     Btn.Font = Enum.Font.SourceSansBold
     Btn.TextSize = 12
@@ -474,26 +467,60 @@ local function CreateToggle(parent, text, defaultState, callback)
     Btn.BorderSizePixel = 0
     Btn.ZIndex = 4
     Btn.Parent = parent
-    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 8)
 
-    local StatusInd = Instance.new("Frame")
-    StatusInd.Size = UDim2.new(0, 26, 0, 14)
-    StatusInd.Position = UDim2.new(1, -32, 0.5, -7)
-    StatusInd.BackgroundColor3 = defaultState and CurrentTheme.Accent or Color3.fromRGB(60, 65, 75)
-    StatusInd.BorderSizePixel = 0
-    StatusInd.ZIndex = 5
-    StatusInd.Parent = Btn
-    Instance.new("UICorner", StatusInd).CornerRadius = UDim.new(1, 0)
+    -- Khung công tắc trượt iOS
+    local Track = Instance.new("Frame")
+    Track.Size = UDim2.new(0, 38, 0, 20)
+    Track.Position = UDim2.new(1, -44, 0.5, -10)
+    Track.BorderSizePixel = 0
+    Track.ZIndex = 5
+    Track.Parent = Btn
+    Instance.new("UICorner", Track).CornerRadius = UDim.new(1, 0)
+
+    local Knob = Instance.new("Frame")
+    Knob.Size = UDim2.new(0, 16, 0, 16)
+    Knob.BorderSizePixel = 0
+    Knob.ZIndex = 6
+    Knob.Parent = Track
+    Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
 
     local state = defaultState
+
+    local function RefreshVisuals(animate)
+        local targetTrackColor = state and CurrentTheme.Accent or Color3.fromRGB(45, 48, 58)
+        local targetKnobPos = state and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+        local targetKnobColor = state and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(160, 165, 175)
+
+        if animate then
+            TweenService:Create(Track, TweenInfo.new(0.2), {BackgroundColor3 = targetTrackColor}):Play()
+            TweenService:Create(Knob, TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = targetKnobPos, BackgroundColor3 = targetKnobColor}):Play()
+        else
+            Track.BackgroundColor3 = targetTrackColor
+            Knob.Position = targetKnobPos
+            Knob.BackgroundColor3 = targetKnobColor
+        end
+    end
+
+    RefreshVisuals(false)
+
+    -- Đăng ký để tự động đổi màu khi switch Theme
+    table.insert(RegisteredToggles, {
+        Update = function() RefreshVisuals(true) end
+    })
+
     Btn.MouseButton1Click:Connect(function()
         state = not state
-        StatusInd.BackgroundColor3 = state and CurrentTheme.Accent or Color3.fromRGB(60, 65, 75)
-        local cleanTitle = text:gsub("^[%s%p%c]+", "")
-        cleanTitle = (cleanTitle and cleanTitle ~= "") and cleanTitle or "Tính năng"
+        RefreshVisuals(true)
+        
+        -- Lọc tên ngắn gọn để thông báo
+        local cleanTitle = text:gsub("[%c%p%s]+", " "):match("^%s*(.-)%s*$")
+        cleanTitle = (cleanTitle and #cleanTitle > 0) and cleanTitle or "Tính năng"
         Notify(cleanTitle, state and "Đã BẬT 🟢" or "Đã TẮT 🔴")
+        
         callback(state)
     end)
+
     return Btn
 end
 
@@ -505,11 +532,11 @@ local function CreateValueAdjuster(parent, title, minVal, maxVal, defaultVal, st
     Container.BorderSizePixel = 0
     Container.ZIndex = 4
     Container.Parent = parent
-    Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 6)
+    Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 8)
 
     local Label = Instance.new("TextLabel")
     Label.Size = UDim2.new(0.6, 0, 1, 0)
-    Label.Position = UDim2.new(0, 8, 0, 0)
+    Label.Position = UDim2.new(0, 10, 0, 0)
     Label.Text = title .. ": " .. tostring(defaultVal)
     Label.TextColor3 = CurrentTheme.Text
     Label.Font = Enum.Font.SourceSansBold
@@ -521,8 +548,8 @@ local function CreateValueAdjuster(parent, title, minVal, maxVal, defaultVal, st
 
     local current = defaultVal
     local MinusBtn = Instance.new("TextButton")
-    MinusBtn.Size = UDim2.new(0, 24, 0, 20)
-    MinusBtn.Position = UDim2.new(1, -56, 0.5, -10)
+    MinusBtn.Size = UDim2.new(0, 24, 0, 22)
+    MinusBtn.Position = UDim2.new(1, -56, 0.5, -11)
     MinusBtn.Text = "-"
     MinusBtn.TextColor3 = Color3.fromRGB(240, 240, 240)
     MinusBtn.Font = Enum.Font.SourceSansBold
@@ -531,11 +558,11 @@ local function CreateValueAdjuster(parent, title, minVal, maxVal, defaultVal, st
     MinusBtn.BorderSizePixel = 0
     MinusBtn.ZIndex = 5
     MinusBtn.Parent = Container
-    Instance.new("UICorner", MinusBtn).CornerRadius = UDim.new(0, 4)
+    Instance.new("UICorner", MinusBtn).CornerRadius = UDim.new(0, 5)
 
     local PlusBtn = Instance.new("TextButton")
-    PlusBtn.Size = UDim2.new(0, 24, 0, 20)
-    PlusBtn.Position = UDim2.new(1, -28, 0.5, -10)
+    PlusBtn.Size = UDim2.new(0, 24, 0, 22)
+    PlusBtn.Position = UDim2.new(1, -28, 0.5, -11)
     PlusBtn.Text = "+"
     PlusBtn.TextColor3 = Color3.fromRGB(240, 240, 240)
     PlusBtn.Font = Enum.Font.SourceSansBold
@@ -544,7 +571,7 @@ local function CreateValueAdjuster(parent, title, minVal, maxVal, defaultVal, st
     PlusBtn.BorderSizePixel = 0
     PlusBtn.ZIndex = 5
     PlusBtn.Parent = Container
-    Instance.new("UICorner", PlusBtn).CornerRadius = UDim.new(0, 4)
+    Instance.new("UICorner", PlusBtn).CornerRadius = UDim.new(0, 5)
 
     MinusBtn.MouseButton1Click:Connect(function()
         current = math.max(minVal, current - step)
@@ -560,7 +587,7 @@ end
 
 local function CreateButton(parent, text, bgColor, callback)
     local Btn = Instance.new("TextButton")
-    Btn.Size = UDim2.new(1, 0, 0, 32)
+    Btn.Size = UDim2.new(1, 0, 0, 34)
     Btn.Text = text
     Btn.TextColor3 = Color3.fromRGB(245, 245, 245)
     Btn.Font = Enum.Font.SourceSansBold
@@ -570,20 +597,20 @@ local function CreateButton(parent, text, bgColor, callback)
     Btn.BorderSizePixel = 0
     Btn.ZIndex = 4
     Btn.Parent = parent
-    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 8)
     Btn.MouseButton1Click:Connect(callback)
     return Btn
 end
 
 local function CreateTextBox(parent, placeholder, callback)
     local BoxFrame = Instance.new("Frame")
-    BoxFrame.Size = UDim2.new(1, 0, 0, 32)
+    BoxFrame.Size = UDim2.new(1, 0, 0, 34)
     BoxFrame.BackgroundColor3 = CurrentTheme.Button
     BoxFrame.BackgroundTransparency = 0.25
     BoxFrame.BorderSizePixel = 0
     BoxFrame.ZIndex = 4
     BoxFrame.Parent = parent
-    Instance.new("UICorner", BoxFrame).CornerRadius = UDim.new(0, 6)
+    Instance.new("UICorner", BoxFrame).CornerRadius = UDim.new(0, 8)
 
     local TBox = Instance.new("TextBox")
     TBox.Size = UDim2.new(1, -12, 1, 0)
@@ -608,10 +635,10 @@ end
 ----------------------------------------------------------
 -- TAB 1: ANTI-BAN SHIELD
 ----------------------------------------------------------
-CreateToggle(AntiBanPage, "🛡️ Chống Kick Tối Đa (Anti-Kick Interceptor)", Config.AntiKick, function(state) Config.AntiKick = state end)
+CreateToggle(AntiBanPage, "🛡️ Chống Kick Tối Đa (Anti-Kick)", Config.AntiKick, function(state) Config.AntiKick = state end)
 CreateToggle(AntiBanPage, "🚫 Chặn Gửi Log/Report Cho Game", Config.AntiLog, function(state) Config.AntiLog = state end)
-CreateToggle(AntiBanPage, "🎭 Ngụy Trang Chỉ Số (Spoof Humanoid Stats)", Config.SpoofStats, function(state) Config.SpoofStats = state end)
-CreateToggle(AntiBanPage, "👁️ Phát Hiện Admin/Mod (Anti-Staff Alert)", Config.AntiAdmin, function(state) Config.AntiAdmin = state end)
+CreateToggle(AntiBanPage, "🎭 Ngụy Trang Chỉ Số (Spoof Stats)", Config.SpoofStats, function(state) Config.SpoofStats = state end)
+CreateToggle(AntiBanPage, "👁️ Phát Hiện Admin/Mod Alert", Config.AntiAdmin, function(state) Config.AntiAdmin = state end)
 CreateToggle(AntiBanPage, "🏃 Auto Hop Server Khi Gặp Admin", Config.AutoHopOnAdmin, function(state) Config.AutoHopOnAdmin = state end)
 
 ----------------------------------------------------------
@@ -649,28 +676,26 @@ local function GetNearestPlayer()
     return closest, math.floor(maxDist)
 end
 
-CreateToggle(CombatPage, "👑 Bất Tử GOD MODE (Chống M1 & Chiêu)", Config.GodMode, function(state)
+CreateToggle(CombatPage, "👑 Bất Tử GOD MODE (Chống M1)", Config.GodMode, function(state)
     Config.GodMode = state
     if not state and LocalPlayer.Character then
         for _, part in ipairs(LocalPlayer.Character:GetChildren()) do
-            if part:IsA("BasePart") then
-                part.CanTouch = true
-            end
+            if part:IsA("BasePart") then part.CanTouch = true end
         end
     end
 end)
 
-CreateButton(CombatPage, "🎯 Tự Chọn Người Gần Nhất (Auto Nearest)", Color3.fromRGB(45, 25, 40), function()
+CreateButton(CombatPage, "🎯 Chọn Target Gần Nhất (Auto Nearest)", Color3.fromRGB(45, 25, 40), function()
     local target, dist = GetNearestPlayer()
     if target then
         Config.SelectedTarget = target
-        Notify("Combat VIP", "Đã chọn target: " .. target.DisplayName .. " (" .. dist .. "m)")
+        Notify("Combat VIP", "Đã chọn: " .. target.DisplayName .. " (" .. dist .. "m)")
     else
-        Notify("Combat VIP", "Không tìm thấy người chơi ở gần!")
+        Notify("Combat VIP", "Không có ai ở gần!")
     end
 end)
 
-CreateToggle(CombatPage, "🔄 Tự Khóa Target Gần Nhất (Auto Lock)", Config.AutoLockNearest, function(state) Config.AutoLockNearest = state end)
+CreateToggle(CombatPage, "🔄 Auto Khóa Target Gần Nhất", Config.AutoLockNearest, function(state) Config.AutoLockNearest = state end)
 CreateToggle(CombatPage, "⚡ Hit Dame To Mượt (Super Damage M1)", Config.SuperM1Damage, function(state) Config.SuperM1Damage = state end)
 CreateValueAdjuster(CombatPage, "Số Hit Nhân Sát Thương", 5, 50, Config.DamageMultiplier, 5, function(val) Config.DamageMultiplier = val end)
 
@@ -691,7 +716,7 @@ CreateToggle(CombatPage, "📦 Hitbox Rộng (Fixed Move Bug)", Config.HitboxExp
 end)
 CreateValueAdjuster(CombatPage, "Kích Thước Hitbox Rộng", 5, 50, Config.HitboxSize, 5, function(val) Config.HitboxSize = val end)
 
-CreateToggle(CombatPage, "⚡ Auto TP Áp Sát Lưng (Fixed Hitbox)", Config.AutoTPTarget, function(state) Config.AutoTPTarget = state end)
+CreateToggle(CombatPage, "⚡ Auto TP Áp Sát Lưng Target", Config.AutoTPTarget, function(state) Config.AutoTPTarget = state end)
 CreateToggle(CombatPage, "🥊 Auto Đấm M1 Tự Động", Config.AutoAttack, function(state) Config.AutoAttack = state end)
 
 ----------------------------------------------------------
@@ -711,13 +736,13 @@ local function StopFlyEngine()
     end)
 end
 
-CreateToggle(MovementPage, "Bay 3D Smooth (Fixed Noti)", Config.FlyEnabled, function(state)
+CreateToggle(MovementPage, "Bay 3D Smooth", Config.FlyEnabled, function(state)
     Config.FlyEnabled = state
     if not state then StopFlyEngine() end
 end)
 
 CreateValueAdjuster(MovementPage, "Tốc Độ Bay 3D", 20, 250, Config.FlySpeed, 10, function(val) Config.FlySpeed = val end)
-CreateToggle(MovementPage, "Đi Xuyên Tường Smooth (Noclip)", Config.NoclipEnabled, function(state) Config.NoclipEnabled = state end)
+CreateToggle(MovementPage, "Đi Xuyên Tường (Noclip)", Config.NoclipEnabled, function(state) Config.NoclipEnabled = state end)
 CreateToggle(MovementPage, "Chạy Nhanh (Speed Hack)", Config.SpeedEnabled, function(state) Config.SpeedEnabled = state end)
 CreateValueAdjuster(MovementPage, "Tốc Độ Chạy", 16, 200, Config.SpeedValue, 10, function(val) Config.SpeedValue = val end)
 
@@ -791,7 +816,7 @@ CreateToggle(FixLagPage, "🧹 Auto Dọn Dẹp RAM Ngầm", Config.AutoMemoryCl
 ----------------------------------------------------------
 -- TAB 5: SETTINGS & CHILL
 ----------------------------------------------------------
-CreateButton(SettingsPage, "🎨 Đổi Theme Màu (Purple/Pink/Ocean/Mint)", Color3.fromRGB(35, 30, 48), function()
+CreateButton(SettingsPage, "🎨 Đổi Theme Màu (Tự Động Cập Nhật Đều)", Color3.fromRGB(35, 30, 48), function()
     if CurrentTheme == Themes.ChillPurple then CurrentTheme = Themes.SoftPink
     elseif CurrentTheme == Themes.SoftPink then CurrentTheme = Themes.OceanBlue
     elseif CurrentTheme == Themes.OceanBlue then CurrentTheme = Themes.MintGreen
@@ -807,6 +832,12 @@ CreateButton(SettingsPage, "🎨 Đổi Theme Màu (Purple/Pink/Ocean/Mint)", Co
     TargetLabel.TextColor3 = CurrentTheme.Accent
 
     for _, btn in ipairs(TabButtons) do btn.BackgroundColor3 = CurrentTheme.Button end
+    
+    -- Cập nhật lại toàn bộ công tắc toggle để không bị lệch màu
+    for _, tog in ipairs(RegisteredToggles) do
+        tog.Update()
+    end
+
     Notify("Settings", "Đã đổi Theme: " .. CurrentTheme.Name)
 end)
 
@@ -920,9 +951,7 @@ RunService.RenderStepped:Connect(function(dt)
 
     if Config.GodMode and char then
         for _, part in ipairs(char:GetChildren()) do
-            if part:IsA("BasePart") then
-                part.CanTouch = false
-            end
+            if part:IsA("BasePart") then part.CanTouch = false end
         end
     end
 
@@ -1021,4 +1050,4 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
-Notify("Kianbest Hub", "Đã fix thông báo iOS mượt mà! 🟢🔴")
+Notify("Kianbest Hub ULTRA", "Đã tải thành công Menu Pro! 🟢")
