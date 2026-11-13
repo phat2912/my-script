@@ -1,145 +1,144 @@
 
---==================================================
--- KIANBEST V7.1 - ULTIMATE ANIME DASHBOARD
--- Roblox Studio - LocalScript
+--========================================================
+-- KIANBEST V7.3 | CUTE ANIME EDITION
+-- LocalScript
 -- StarterPlayer > StarterPlayerScripts
---==================================================
+--========================================================
 
 local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local UIS = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- REMOVE OLD GUI
-local old = playerGui:FindFirstChild("KianBestV71")
-if old then old:Destroy() end
+-- THAY BẰNG IMAGE ID CỦA ẢNH ANIME ĐÃ UPLOAD
+local ANIME_IMAGE = "rbxassetid://YOUR_IMAGE_ID"
 
+--========================================================
 -- COLORS
+--========================================================
+
 local C = {
-    BG = Color3.fromRGB(23, 18, 36),
-    PANEL = Color3.fromRGB(37, 29, 55),
-    PANEL2 = Color3.fromRGB(51, 40, 73),
-    PURPLE = Color3.fromRGB(177, 139, 255),
-    PINK = Color3.fromRGB(255, 177, 220),
-    WHITE = Color3.fromRGB(248, 243, 255),
-    MUTED = Color3.fromRGB(180, 167, 204),
-    GREEN = Color3.fromRGB(45, 190, 100),
-    ORANGE = Color3.fromRGB(255, 116, 55),
-    BLACK = Color3.fromRGB(0, 0, 0)
+    Background = Color3.fromRGB(20, 15, 32),
+    Panel = Color3.fromRGB(36, 27, 53),
+    Panel2 = Color3.fromRGB(49, 37, 70),
+    Purple = Color3.fromRGB(165, 115, 255),
+    Pink = Color3.fromRGB(245, 165, 220),
+    White = Color3.fromRGB(250, 245, 255),
+    Muted = Color3.fromRGB(185, 170, 205),
+    Green = Color3.fromRGB(45, 190, 100),
+    Orange = Color3.fromRGB(255, 120, 65),
+    Line = Color3.fromRGB(75, 60, 95)
 }
 
---==================================================
--- UI HELPERS
---==================================================
+--========================================================
+-- CLEAN OLD GUI
+--========================================================
 
-local function create(class, props, parent)
+local old = playerGui:FindFirstChild("KianBestV73")
+if old then
+    old:Destroy()
+end
+
+--========================================================
+-- HELPERS
+--========================================================
+
+local function make(class, props, parent)
     local obj = Instance.new(class)
 
-    for k, v in pairs(props or {}) do
-        obj[k] = v
+    for key, value in pairs(props or {}) do
+        obj[key] = value
     end
 
     obj.Parent = parent
     return obj
 end
 
-local function round(obj, radius)
-    create("UICorner", {
-        CornerRadius = UDim.new(0, radius or 10)
+local function corner(obj, radius)
+    make("UICorner", {
+        CornerRadius = UDim.new(0, radius)
     }, obj)
 end
 
-local function outline(obj, color, transparency)
-    create("UIStroke", {
-        Color = color or C.PURPLE,
-        Thickness = 1,
-        Transparency = transparency or 0.45
+local function stroke(obj, color, thickness)
+    make("UIStroke", {
+        Color = color or C.Line,
+        Thickness = thickness or 1
     }, obj)
 end
 
-local function label(parent, text, size, color, font)
-    return create("TextLabel", {
+local function text(parent, value, size, color, font)
+    return make("TextLabel", {
         BackgroundTransparency = 1,
-        Text = text,
-        TextColor3 = color or C.WHITE,
+        Text = value,
+        TextColor3 = color or C.White,
         TextSize = size or 14,
         Font = font or Enum.Font.Gotham,
         TextXAlignment = Enum.TextXAlignment.Left,
-        TextYAlignment = Enum.TextYAlignment.Center
+        TextYAlignment = Enum.TextYAlignment.Center,
+        TextWrapped = true
     }, parent)
 end
 
-local function button(parent, text, height)
-    local b = create("TextButton", {
-        Size = UDim2.new(1, 0, 0, height or 40),
-        BackgroundColor3 = C.PANEL2,
-        Text = text,
-        TextColor3 = C.WHITE,
+local function newButton(parent, value, height)
+    local b = make("TextButton", {
+        Size = UDim2.new(1, 0, 0, height or 42),
+        BackgroundColor3 = C.Panel2,
+        Text = value,
+        TextColor3 = C.White,
         TextSize = 13,
         Font = Enum.Font.GothamMedium,
         AutoButtonColor = false
     }, parent)
 
-    round(b, 10)
-    outline(b)
+    corner(b, 10)
 
     b.MouseEnter:Connect(function()
         TweenService:Create(b, TweenInfo.new(0.15), {
-            BackgroundColor3 = Color3.fromRGB(78, 59, 110)
+            BackgroundColor3 = Color3.fromRGB(78, 57, 108)
         }):Play()
     end)
 
     b.MouseLeave:Connect(function()
         TweenService:Create(b, TweenInfo.new(0.15), {
-            BackgroundColor3 = C.PANEL2
+            BackgroundColor3 = C.Panel2
         }):Play()
     end)
 
     return b
 end
 
-local function notify(message)
-    noticeId += 1
-    local current = noticeId
+--========================================================
+-- SCREEN GUI
+--========================================================
 
-    notification.Text = "♡  " .. message
-    notification.Visible = true
-
-    task.delay(2.5, function()
-        if current == noticeId and notification.Parent then
-            notification.Visible = false
-        end
-    end)
-end
-
---==================================================
--- MAIN GUI
---==================================================
-
-local gui = create("ScreenGui", {
-    Name = "KianBestV71",
+local gui = make("ScreenGui", {
+    Name = "KianBestV73",
     ResetOnSpawn = false,
     IgnoreGuiInset = true,
     DisplayOrder = 50
 }, playerGui)
 
-local main = create("Frame", {
+--========================================================
+-- MAIN WINDOW
+--========================================================
+
+local main = make("Frame", {
     Name = "Main",
     AnchorPoint = Vector2.new(0.5, 0.5),
     Position = UDim2.fromScale(0.5, 0.5),
     Size = UDim2.fromOffset(850, 550),
-    BackgroundColor3 = C.BG,
+    BackgroundColor3 = C.Background,
     ClipsDescendants = true
 }, gui)
 
-round(main, 18)
-outline(main, C.PURPLE, 0.2)
+corner(main, 18)
+stroke(main, C.Purple, 2)
 
--- RESPONSIVE SCALE
-local scale = create("UIScale", {
+local uiScale = make("UIScale", {
     Scale = 1
 }, main)
 
@@ -149,165 +148,177 @@ local function updateScale()
 
     local size = camera.ViewportSize
 
-    scale.Scale = math.clamp(
+    uiScale.Scale = math.clamp(
         math.min(size.X / 900, size.Y / 600),
-        0.48,
+        0.45,
         1
     )
 end
 
 updateScale()
 
-local camera = workspace.CurrentCamera
-if camera then
-    camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateScale)
+if workspace.CurrentCamera then
+    workspace.CurrentCamera:GetPropertyChangedSignal(
+        "ViewportSize"
+    ):Connect(updateScale)
 end
 
---==================================================
+--========================================================
 -- HEADER
---==================================================
+--========================================================
 
-local header = create("Frame", {
-    Size = UDim2.new(1, 0, 0, 62),
-    BackgroundColor3 = Color3.fromRGB(41, 31, 60)
+local header = make("Frame", {
+    Size = UDim2.new(1, 0, 0, 65),
+    BackgroundColor3 = Color3.fromRGB(43, 29, 65)
 }, main)
 
-round(header, 18)
+local logo = text(header, "✦ KIANBEST", 23, C.White,
+    Enum.Font.GothamBold)
 
-local title = label(
-    header,
-    "✦ KIANBEST",
-    21,
-    C.WHITE,
-    Enum.Font.GothamBold
-)
+logo.Position = UDim2.fromOffset(20, 5)
+logo.Size = UDim2.fromOffset(260, 30)
 
-title.Position = UDim2.fromOffset(20, 5)
-title.Size = UDim2.fromOffset(220, 28)
+local subtitle = text(header,
+    "V7.3 ULTIMATE ANIME EDITION ♡",
+    11, C.Pink)
 
-local subtitle = label(
-    header,
-    "V7.1 ULTIMATE ANIME EDITION",
-    10,
-    C.PINK
-)
+subtitle.Position = UDim2.fromOffset(22, 35)
+subtitle.Size = UDim2.fromOffset(280, 20)
 
-subtitle.Position = UDim2.fromOffset(22, 33)
-subtitle.Size = UDim2.fromOffset(240, 18)
-
-local close = create("TextButton", {
-    Size = UDim2.fromOffset(36, 36),
-    Position = UDim2.new(1, -49, 0, 13),
-    BackgroundColor3 = Color3.fromRGB(105, 57, 88),
+local close = make("TextButton", {
+    Size = UDim2.fromOffset(38, 38),
+    Position = UDim2.new(1, -50, 0, 13),
+    BackgroundColor3 = Color3.fromRGB(100, 55, 90),
     Text = "×",
-    TextColor3 = C.WHITE,
+    TextColor3 = C.White,
     TextSize = 23,
     Font = Enum.Font.GothamBold
 }, header)
 
-round(close, 10)
+corner(close, 10)
 
-close.MouseButton1Click:Connect(function()
-    gui.Enabled = false
-end)
+--========================================================
+-- FLOATING ACCESSIBILITY BUTTON
+--========================================================
 
---==================================================
+local assist = make("TextButton", {
+    Name = "AccessibilityButton",
+    Size = UDim2.fromOffset(58, 58),
+    Position = UDim2.new(1, -80, 0.65, 0),
+    BackgroundColor3 = Color3.fromRGB(115, 70, 185),
+    Text = "♡",
+    TextColor3 = C.White,
+    TextSize = 29,
+    Font = Enum.Font.GothamBold,
+    Visible = false,
+    Active = true,
+    AutoButtonColor = true,
+    ZIndex = 100
+}, gui)
+
+corner(assist, 100)
+stroke(assist, C.Pink, 2)
+
+--========================================================
 -- SIDEBAR
---==================================================
+--========================================================
 
-local sidebar = create("Frame", {
-    Position = UDim2.fromOffset(13, 75),
-    Size = UDim2.new(0, 175, 1, -88),
-    BackgroundColor3 = C.PANEL
+local sidebar = make("Frame", {
+    Position = UDim2.fromOffset(12, 77),
+    Size = UDim2.new(0, 175, 1, -89),
+    BackgroundColor3 = C.Panel
 }, main)
 
-round(sidebar, 14)
+corner(sidebar, 13)
 
-local menuTitle = label(
-    sidebar,
-    "♡ MAIN MENU",
-    12,
-    C.PINK,
-    Enum.Font.GothamBold
-)
+local menuHeading = text(sidebar, "♡ MAIN MENU", 13, C.Pink,
+    Enum.Font.GothamBold)
 
-menuTitle.Position = UDim2.fromOffset(14, 12)
-menuTitle.Size = UDim2.new(1, -20, 0, 25)
+menuHeading.Position = UDim2.fromOffset(13, 8)
+menuHeading.Size = UDim2.new(1, -20, 0, 30)
 
-local menu = create("ScrollingFrame", {
-    Position = UDim2.fromOffset(8, 45),
-    Size = UDim2.new(1, -16, 1, -55),
+local menu = make("ScrollingFrame", {
+    Position = UDim2.fromOffset(8, 43),
+    Size = UDim2.new(1, -16, 1, -50),
     BackgroundTransparency = 1,
     BorderSizePixel = 0,
     ScrollBarThickness = 3,
-    ScrollBarImageColor3 = C.PURPLE,
+    ScrollBarImageColor3 = C.Purple,
     AutomaticCanvasSize = Enum.AutomaticSize.Y,
     CanvasSize = UDim2.new()
 }, sidebar)
 
-create("UIListLayout", {
+make("UIListLayout", {
     Padding = UDim.new(0, 8),
     SortOrder = Enum.SortOrder.LayoutOrder
 }, menu)
 
---==================================================
--- CONTENT
---==================================================
+--========================================================
+-- CONTENT AREA
+--========================================================
 
-local content = create("Frame", {
-    Position = UDim2.fromOffset(202, 75),
-    Size = UDim2.new(1, -215, 1, -88),
+local content = make("Frame", {
+    Position = UDim2.fromOffset(200, 77),
+    Size = UDim2.new(1, -212, 1, -89),
     BackgroundTransparency = 1
 }, main)
 
-local pageTitle = label(
-    content,
-    "Welcome back ♡",
-    21,
-    C.WHITE,
-    Enum.Font.GothamBold
-)
+local pageTitle = text(content, "Welcome back ♡", 21,
+    C.White, Enum.Font.GothamBold)
 
-pageTitle.Position = UDim2.fromOffset(5, 3)
+pageTitle.Position = UDim2.fromOffset(5, 0)
 pageTitle.Size = UDim2.new(1, -10, 0, 34)
 
-local pageSubtitle = label(
-    content,
-    "Your cute control center is ready.",
-    12,
-    C.MUTED
-)
+local pageSubtitle = text(content,
+    "Cute control center • KianBest V7.3",
+    12, C.Muted)
 
-pageSubtitle.Position = UDim2.fromOffset(6, 35)
-pageSubtitle.Size = UDim2.new(1, -10, 0, 22)
+pageSubtitle.Position = UDim2.fromOffset(6, 34)
+pageSubtitle.Size = UDim2.new(1, -10, 0, 23)
 
+--========================================================
 -- NOTIFICATION
-local noticeId = 0
+--========================================================
 
-local notification = create("TextLabel", {
+local notification = make("TextLabel", {
     AnchorPoint = Vector2.new(1, 1),
     Position = UDim2.new(1, -15, 1, -12),
-    Size = UDim2.fromOffset(260, 42),
-    BackgroundColor3 = C.PANEL2,
+    Size = UDim2.fromOffset(245, 42),
+    BackgroundColor3 = C.Panel2,
     Text = "",
-    TextColor3 = C.WHITE,
+    TextColor3 = C.White,
     TextSize = 12,
     Font = Enum.Font.GothamMedium,
     Visible = false,
-    ZIndex = 20
+    ZIndex = 120
 }, main)
 
-round(notification, 10)
-outline(notification)
+corner(notification, 10)
 
---==================================================
+local noticeToken = 0
+
+local function notify(message)
+    noticeToken += 1
+    local token = noticeToken
+
+    notification.Text = "♡  " .. message
+    notification.Visible = true
+
+    task.delay(2.5, function()
+        if token == noticeToken and notification.Parent then
+            notification.Visible = false
+        end
+    end)
+end
+
+--========================================================
 -- PAGE SYSTEM
---==================================================
+--========================================================
 
 local pages = {}
 local menuButtons = {}
 
-local function clearPage()
+local function clearContent()
     for _, child in ipairs(content:GetChildren()) do
         if child ~= pageTitle and child ~= pageSubtitle then
             child:Destroy()
@@ -316,148 +327,159 @@ local function clearPage()
 end
 
 local function newPage(name, description)
-    clearPage()
+    clearContent()
 
     pageTitle.Text = name
-    pageSubtitle.Text = description or "KianBest V7.1"
+    pageSubtitle.Text = description or ""
 
-    local scroll = create("ScrollingFrame", {
-        Position = UDim2.fromOffset(0, 67),
-        Size = UDim2.new(1, 0, 1, -72),
+    local scroll = make("ScrollingFrame", {
+        Position = UDim2.fromOffset(0, 65),
+        Size = UDim2.new(1, 0, 1, -68),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        ScrollBarThickness = 4,
-        ScrollBarImageColor3 = C.PURPLE,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = C.Purple,
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
         CanvasSize = UDim2.new()
     }, content)
 
-    create("UIListLayout", {
-        Padding = UDim.new(0, 11),
+    make("UIListLayout", {
+        Padding = UDim.new(0, 10),
         SortOrder = Enum.SortOrder.LayoutOrder
     }, scroll)
 
     return scroll
 end
 
-local function section(parent, name)
-    local box = create("Frame", {
+local function addSection(parent, heading)
+    local frame = make("Frame", {
         Size = UDim2.new(1, -5, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
-        BackgroundColor3 = C.PANEL
+        BackgroundColor3 = C.Panel
     }, parent)
 
-    round(box, 13)
-    outline(box)
+    corner(frame, 12)
+    stroke(frame, C.Line, 1)
 
-    local heading = label(
-        box,
-        name,
-        14,
-        C.PINK,
-        Enum.Font.GothamBold
-    )
+    local title = text(frame, heading, 14, C.Pink,
+        Enum.Font.GothamBold)
 
-    heading.Position = UDim2.fromOffset(13, 8)
-    heading.Size = UDim2.new(1, -25, 0, 25)
+    title.Position = UDim2.fromOffset(12, 7)
+    title.Size = UDim2.new(1, -24, 0, 27)
 
-    local inner = create("Frame", {
+    local inner = make("Frame", {
         Position = UDim2.fromOffset(12, 40),
         Size = UDim2.new(1, -24, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundTransparency = 1
-    }, box)
+    }, frame)
 
-    create("UIListLayout", {
-        Padding = UDim.new(0, 8)
+    make("UIListLayout", {
+        Padding = UDim.new(0, 7),
+        SortOrder = Enum.SortOrder.LayoutOrder
     }, inner)
 
-    create("UIPadding", {
+    make("UIPadding", {
         PaddingBottom = UDim.new(0, 12)
     }, inner)
 
-    return box, inner
+    return inner
 end
 
-local function addInfo(parent, text)
-    local l = label(parent, text, 12, C.MUTED)
+local function addInfo(parent, value)
+    local l = text(parent, value, 12, C.Muted)
     l.Size = UDim2.new(1, 0, 0, 25)
     return l
 end
 
-local function addAction(parent, text, callback)
-    local b = button(parent, text)
+local function addAction(parent, value, callback)
+    local b = newButton(parent, value, 39)
     b.MouseButton1Click:Connect(callback)
     return b
 end
 
--- TOGGLE MODULE
-local function addToggle(parent, name, default, callback)
-    local state = default == true
-
-    local b = create("TextButton", {
-        Size = UDim2.new(1, 0, 0, 42),
-        BackgroundColor3 = C.PANEL2,
-        Text = "",
-        AutoButtonColor = false
-    }, parent)
-
-    round(b, 10)
-
-    local titleLabel = label(b, name, 13, C.WHITE)
-    titleLabel.Position = UDim2.fromOffset(12, 0)
-    titleLabel.Size = UDim2.new(0.68, 0, 1, 0)
-
-    local status = create("TextLabel", {
-        Size = UDim2.fromOffset(65, 25),
-        Position = UDim2.new(1, -76, 0.5, -12),
-        BackgroundTransparency = 1,
-        TextSize = 11,
-        Font = Enum.Font.GothamBold
-    }, b)
-
-    local function update()
-        if state then
-            status.Text = "● ON"
-            status.TextColor3 = Color3.fromRGB(80, 255, 160)
-            b.BackgroundColor3 = Color3.fromRGB(28, 67, 52)
-        else
-            status.Text = "● OFF"
-            status.TextColor3 = Color3.fromRGB(180, 170, 195)
-            b.BackgroundColor3 = C.PANEL2
-        end
-    end
-
-    b.MouseButton1Click:Connect(function()
-        state = not state
-        update()
-
-        if callback then
-            callback(state)
-        end
-    end)
-
-    update()
-    return b
-end
-
---==================================================
+--========================================================
 -- DASHBOARD PAGE
---==================================================
+--========================================================
 
 pages["Dashboard"] = function()
     local p = newPage(
         "Welcome back, " .. player.DisplayName .. " ♡",
-        "Cute control center • KianBest V7.1"
+        "Cute control center • KianBest V7.3"
     )
 
-    local box, inner = section(p, "✦ LIVE SYSTEM STATUS")
+    -- Anime image panel
+    local anime = make("ImageLabel", {
+        Size = UDim2.new(1, -5, 0, 175),
+        BackgroundColor3 = C.Panel2,
+        BackgroundTransparency = 0,
+        Image = ANIME_IMAGE,
+        ImageTransparency = 0.05,
+        ScaleType = Enum.ScaleType.Crop
+    }, p)
 
-    local fps = addInfo(inner, "FPS: Calculating...")
-    local ping = addInfo(inner, "Ping: Calculating...")
-    local playerCount = addInfo(inner, "Players: Calculating...")
+    corner(anime, 13)
+    stroke(anime, C.Purple, 1)
 
-    local quickBox, quick = section(p, "♡ QUICK ACCESS")
+    local animeCaption = make("TextLabel", {
+        AnchorPoint = Vector2.new(0, 1),
+        Position = UDim2.new(0, 10, 1, -10),
+        Size = UDim2.new(1, -20, 0, 30),
+        BackgroundColor3 = C.Background,
+        BackgroundTransparency = 0.2,
+        Text = "Welcome to KianBest ♡",
+        TextColor3 = C.White,
+        TextSize = 14,
+        Font = Enum.Font.GothamBold
+    }, anime)
+
+    corner(animeCaption, 8)
+
+    if ANIME_IMAGE:find("YOUR_IMAGE_ID") then
+        anime.Image = ""
+        animeCaption.Text = "Upload anime image and set your Image ID ♡"
+    end
+
+    -- LIVE STATUS
+    local live = addSection(p, "✦ LIVE SYSTEM STATUS")
+
+    local fpsLabel = addInfo(live, "FPS: Calculating...")
+    local pingLabel = addInfo(live, "Ping: Calculating...")
+    local playerLabel = addInfo(live, "Players: Calculating...")
+
+    task.spawn(function()
+        local frames = 0
+        local elapsed = 0
+
+        while gui.Parent and fpsLabel.Parent do
+            local dt = RunService.RenderStepped:Wait()
+
+            frames += 1
+            elapsed += dt
+
+            if elapsed >= 1 then
+                fpsLabel.Text = "FPS: " ..
+                    tostring(math.floor(frames / elapsed))
+
+                local ok, result = pcall(function()
+                    return math.floor(player:GetNetworkPing() * 1000)
+                end)
+
+                pingLabel.Text = ok and
+                    ("Ping: " .. result .. " ms")
+                    or "Ping: N/A"
+
+                playerLabel.Text = "Players: " ..
+                    tostring(#Players:GetPlayers())
+
+                frames = 0
+                elapsed = 0
+            end
+        end
+    end)
+
+    -- QUICK ACCESS
+    local quick = addSection(p, "♡ QUICK ACCESS")
 
     addAction(quick, "☁ Server Manager", function()
         pages["Server Manager"]()
@@ -471,216 +493,109 @@ pages["Dashboard"] = function()
         pages["Performance"]()
     end)
 
-    local welcomeBox, welcome = section(p, "🌸 WELCOME")
+    -- WELCOME
+    local welcome = addSection(p, "🌸 WELCOME")
 
-    addInfo(welcome, "Hello, " .. player.DisplayName .. "!")
-    addInfo(welcome, "Welcome to your anime dashboard.")
+    addInfo(welcome, "Thank you for using KianBest!")
     addInfo(welcome, "Have a wonderful day ♡")
-
-    task.spawn(function()
-        local frames = 0
-        local elapsed = 0
-
-        while fps.Parent do
-            local dt = RunService.RenderStepped:Wait()
-
-            frames += 1
-            elapsed += dt
-
-            if elapsed >= 1 then
-                fps.Text = "FPS: " .. math.floor(frames / elapsed)
-
-                local ok, value = pcall(function()
-                    return math.floor(player:GetNetworkPing() * 1000)
-                end)
-
-                ping.Text = ok and ("Ping: " .. value .. " ms")
-                    or "Ping: N/A"
-
-                playerCount.Text = "Players: " .. #Players:GetPlayers()
-
-                frames = 0
-                elapsed = 0
-            end
-        end
-    end)
 end
 
---==================================================
--- STATUS PAGE - STYLE FROM YOUR IMAGE
---==================================================
+--========================================================
+-- STATUS PAGE
+--========================================================
 
 pages["Trạng thái"] = function()
-    local p = newPage(
-        "Trạng thái",
-        "Tình trạng hoạt động của các module"
-    )
+    local p = newPage("Trạng thái", "Tình trạng các module")
 
-    local tableFrame = create("Frame", {
-        Size = UDim2.new(1, -5, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-        BackgroundColor3 = C.BLACK
-    }, p)
-
-    local heading = label(
-        tableFrame,
-        "Trạng thái",
-        26,
-        Color3.fromRGB(255, 255, 255),
-        Enum.Font.GothamBold
-    )
-
-    heading.Position = UDim2.fromOffset(15, 10)
-    heading.Size = UDim2.new(1, -30, 0, 48)
+    local box = addSection(p, "SYSTEM STATUS")
 
     local entries = {
-        {"Dashboard", "Hoạt động", "green"},
-        {"FPS / Ping", "Hoạt động", "green"},
-        {"Player Tools", "Cơ bản", "green"},
-        {"Monster Database", "Dữ liệu mẫu", "green"},
-        {"Server Manager", "Chờ tích hợp", "orange"},
-        {"Performance", "Cơ bản", "green"},
-        {"Visual Settings", "Cơ bản", "green"}
+        {"Dashboard", "Hoạt động", true},
+        {"FPS / Ping", "Hoạt động", true},
+        {"Player Tools", "Cơ bản", true},
+        {"Monster Database", "Dữ liệu mẫu", true},
+        {"Server Manager", "Chờ tích hợp", false},
+        {"Performance", "Cơ bản", true},
+        {"Visual Settings", "Cơ bản", true}
     }
 
-    local y = 65
-
     for _, item in ipairs(entries) do
-        local separator = create("Frame", {
-            Position = UDim2.fromOffset(0, y),
-            Size = UDim2.new(1, 0, 0, 2),
-            BackgroundColor3 = Color3.fromRGB(48, 48, 48),
+        local row = make("Frame", {
+            Size = UDim2.new(1, 0, 0, 53),
+            BackgroundTransparency = 1
+        }, box)
+
+        make("Frame", {
+            Position = UDim2.new(0, 0, 1, -1),
+            Size = UDim2.new(1, 0, 0, 1),
+            BackgroundColor3 = C.Line,
             BorderSizePixel = 0
-        }, tableFrame)
+        }, row)
 
-        local isOrange = item[3] == "orange"
+        local isReady = item[3]
 
-        local badge = create("TextLabel", {
-            Position = UDim2.fromOffset(15, y + 14),
-            Size = UDim2.fromOffset(210, 43),
-            BackgroundColor3 = isOrange
-                and Color3.fromRGB(40, 20, 12)
-                or Color3.fromRGB(0, 38, 20),
+        local badge = make("TextLabel", {
+            Position = UDim2.fromOffset(5, 5),
+            Size = UDim2.fromOffset(205, 40),
+            BackgroundColor3 = isReady
+                and Color3.fromRGB(0, 38, 20)
+                or Color3.fromRGB(45, 24, 12),
             Text = item[2],
-            TextColor3 = isOrange and C.ORANGE or C.GREEN,
-            TextSize = 19,
+            TextColor3 = isReady and C.Green or C.Orange,
+            TextSize = 17,
             Font = Enum.Font.GothamBold
-        }, tableFrame)
+        }, row)
 
-        round(badge, 8)
-
-        y += 76
+        corner(badge, 8)
     end
-
-    create("Frame", {
-        Position = UDim2.fromOffset(0, y),
-        Size = UDim2.new(1, 0, 0, 2),
-        BackgroundColor3 = Color3.fromRGB(48, 48, 48),
-        BorderSizePixel = 0
-    }, tableFrame)
-
-    tableFrame.Size = UDim2.new(1, -5, 0, y + 5)
 end
 
---==================================================
+--========================================================
 -- PLAYER TOOLS
---==================================================
+--========================================================
 
 pages["Player Tools"] = function()
-    local p = newPage(
-        "Player Tools ♡",
-        "Character information and safe utilities"
-    )
+    local p = newPage("Player Tools", "Thông tin nhân vật")
 
-    local box, inner = section(p, "✦ CHARACTER INFORMATION")
+    local box = addSection(p, "✦ PLAYER INFORMATION")
 
-    addInfo(inner, "Username: " .. player.Name)
-    addInfo(inner, "Display Name: " .. player.DisplayName)
-    addInfo(inner, "User ID: " .. player.UserId)
+    addInfo(box, "Username: " .. player.Name)
+    addInfo(box, "Display Name: " .. player.DisplayName)
+    addInfo(box, "User ID: " .. player.UserId)
 
-    local actions, actionInner = section(p, "♡ CHARACTER ACTIONS")
-
-    addAction(actionInner, "Reset Character", function()
-        local character = player.Character
-        local humanoid = character and
-            character:FindFirstChildOfClass("Humanoid")
-
-        if humanoid then
-            humanoid.Health = 0
-        end
-    end)
-
-    addAction(actionInner, "Refresh Character Info", function()
-        notify("Character information refreshed.")
+    addAction(box, "Refresh Information", function()
+        notify("Đã cập nhật thông tin!")
     end)
 end
 
---==================================================
+--========================================================
 -- VISUAL SETTINGS
---==================================================
+--========================================================
 
 pages["Visual Settings"] = function()
-    local p = newPage(
-        "Visual Settings ✧",
-        "Visual options for your own experience"
-    )
+    local p = newPage("Visual Settings", "Tùy chỉnh giao diện")
 
-    local box, inner = section(p, "✦ VISUAL MODULES")
+    local box = addSection(p, "✦ THEME INFORMATION")
 
-    addToggle(inner, "Visual Effects UI", false, function(state)
-        notify("Visual Effects UI: " .. tostring(state))
+    addInfo(box, "Theme: Purple Pastel")
+    addInfo(box, "Style: Cute Anime")
+    addInfo(box, "Status: Green / Orange")
+
+    addAction(box, "Show theme information", function()
+        notify("KianBest Purple Theme ♡")
     end)
-
-    addToggle(inner, "Cute Theme", true, function(state)
-        notify("Cute Theme: " .. tostring(state))
-    end)
-
-    addToggle(inner, "Compact Interface", false, function(state)
-        notify("Compact Interface: " .. tostring(state))
-    end)
-
-    local info, infoInner = section(p, "♡ INFORMATION")
-
-    addInfo(infoInner, "These settings control the dashboard.")
 end
 
---==================================================
+--========================================================
 -- MONSTER DATABASE
---==================================================
+--========================================================
 
 pages["Monster Database"] = function()
-    local p = newPage(
-        "Monster Database ♡",
-        "Manage monster data in your own game"
-    )
+    local p = newPage("Monster Database", "Dữ liệu NPC mẫu")
 
-    local box, inner = section(p, "✦ MONSTER SEARCH")
+    local box = addSection(p, "✦ SAMPLE MONSTERS")
 
-    local search = create("TextBox", {
-        Size = UDim2.new(1, 0, 0, 40),
-        BackgroundColor3 = C.PANEL2,
-        PlaceholderText = "Search monster...",
-        PlaceholderColor3 = C.MUTED,
-        Text = "",
-        TextColor3 = C.WHITE,
-        TextSize = 13,
-        Font = Enum.Font.Gotham,
-        ClearTextOnFocus = false
-    }, inner)
-
-    round(search, 10)
-
-    local list = create("Frame", {
-        Size = UDim2.new(1, 0, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-        BackgroundTransparency = 1
-    }, inner)
-
-    create("UIListLayout", {
-        Padding = UDim.new(0, 7)
-    }, list)
-
-    local monsters = {
+    local names = {
         "Training Dummy",
         "Forest Guardian",
         "Shadow Beast",
@@ -688,135 +603,77 @@ pages["Monster Database"] = function()
         "Ancient Dragon"
     }
 
-    local function refresh()
-        for _, child in ipairs(list:GetChildren()) do
-            if child:IsA("TextButton") then
-                child:Destroy()
-            end
-        end
-
-        local query = string.lower(search.Text)
-
-        for _, name in ipairs(monsters) do
-            if string.find(string.lower(name), query, 1, true) then
-                local b = button(list, "✧ " .. name)
-
-                b.MouseButton1Click:Connect(function()
-                    notify("Selected: " .. name)
-                end)
-            end
-        end
+    for _, name in ipairs(names) do
+        addInfo(box, "♡  " .. name)
     end
 
-    search:GetPropertyChangedSignal("Text"):Connect(refresh)
-    refresh()
-
-    local info, infoInner = section(p, "♡ NOTE")
-    addInfo(infoInner, "Sample data only.")
-    addInfo(infoInner, "Connect your own NPC database to populate it.")
+    addInfo(box, "Đây là dữ liệu mẫu, chưa quét NPC.")
 end
 
---==================================================
+--========================================================
 -- SERVER MANAGER
---==================================================
+--========================================================
 
 pages["Server Manager"] = function()
-    local p = newPage(
-        "Server Manager ☁",
-        "Server information and connection tools"
-    )
+    local p = newPage("Server Manager", "Thông tin máy chủ hiện tại")
 
-    local box, inner = section(p, "✦ CURRENT SERVER")
+    local box = addSection(p, "✦ CURRENT SERVER")
 
-    addInfo(inner, "Place ID: " .. tostring(game.PlaceId))
-    addInfo(inner, "Players: " .. tostring(#Players:GetPlayers()))
+    addInfo(box, "Place ID: " .. tostring(game.PlaceId))
+    addInfo(box, "Players: " .. tostring(#Players:GetPlayers()))
 
-    local job = create("TextBox", {
-        Size = UDim2.new(1, 0, 0, 40),
-        BackgroundColor3 = C.PANEL2,
-        Text = game.JobId,
-        TextColor3 = C.WHITE,
-        TextSize = 10,
-        Font = Enum.Font.Code,
-        ClearTextOnFocus = false
-    }, inner)
+    addInfo(box, "Server finder cần tích hợp API hợp lệ.")
 
-    round(job, 8)
-
-    local server, serverInner = section(p, "♡ SERVER FINDER")
-
-    addInfo(serverInner, "Server discovery needs an authorized")
-    addInfo(serverInner, "server listing and teleport integration.")
-
-    addAction(serverInner, "Refresh Server Info", function()
-        notify("Server information refreshed.")
-    end)
-
-    addAction(serverInner, "Copy Job ID", function()
-        job:CaptureFocus()
-        job.CursorPosition = #job.Text + 1
-        notify("Select the Job ID and copy it.")
+    addAction(box, "Refresh Server Information", function()
+        notify("Đã làm mới thông tin server!")
     end)
 end
 
---==================================================
+--========================================================
 -- PERFORMANCE
---==================================================
+--========================================================
 
 pages["Performance"] = function()
-    local p = newPage(
-        "Performance Monitor ◈",
-        "Live client performance information"
-    )
+    local p = newPage("Performance", "Theo dõi hiệu năng")
 
-    local box, inner = section(p, "✦ PERFORMANCE")
+    local box = addSection(p, "✦ MONITOR")
 
-    addInfo(inner, "FPS is available on Dashboard.")
-    addInfo(inner, "Ping is available on Dashboard.")
-    addInfo(inner, "Player count is updated live.")
+    addInfo(box, "FPS và Ping được hiển thị ở Dashboard.")
+    addInfo(box, "Số người chơi cập nhật tự động.")
 
-    local settings, settingsInner = section(p, "♡ DISPLAY OPTIONS")
-
-    addToggle(settingsInner, "Low Detail UI Mode", false, function(state)
-        notify("Low Detail UI: " .. tostring(state))
+    addAction(box, "Refresh", function()
+        notify("Performance page refreshed!")
     end)
 end
 
---==================================================
+--========================================================
 -- SETTINGS
---==================================================
+--========================================================
 
 pages["Settings"] = function()
-    local p = newPage(
-        "Settings ⚙",
-        "Customize your dashboard"
-    )
+    local p = newPage("Settings", "Cài đặt KianBest")
 
-    local box, inner = section(p, "✦ INTERFACE")
+    local box = addSection(p, "✦ ACCESSIBILITY")
 
-    addToggle(inner, "Notifications", true, function(state)
-        notify("Notifications: " .. tostring(state))
+    addAction(box, "Hide Dashboard", function()
+        main.Visible = false
+        assist.Visible = true
     end)
 
-    addToggle(inner, "Cute Theme", true, function(state)
-        notify("Cute Theme: " .. tostring(state))
+    addAction(box, "Show Dashboard", function()
+        main.Visible = true
+        assist.Visible = false
     end)
 
-    addAction(inner, "Hide Dashboard", function()
-        gui.Enabled = false
-    end)
-
-    addAction(inner, "Show Dashboard", function()
-        gui.Enabled = true
-        notify("Welcome back!")
-    end)
+    addInfo(box, "Right Shift: Toggle on PC.")
+    addInfo(box, "Floating heart: Open on mobile.")
 end
 
---==================================================
--- MENU NAVIGATION
---==================================================
+--========================================================
+-- NAVIGATION
+--========================================================
 
-local menuItems = {
+local items = {
     {"⌂", "Dashboard"},
     {"◷", "Trạng thái"},
     {"♧", "Player Tools"},
@@ -832,18 +689,19 @@ local function openPage(name)
 
     pages[name]()
 
-    for pageName, b in pairs(menuButtons) do
-        b.BackgroundColor3 =
+    for pageName, button in pairs(menuButtons) do
+        button.BackgroundColor3 =
             pageName == name
-            and Color3.fromRGB(83, 62, 119)
-            or C.PANEL2
+            and Color3.fromRGB(88, 60, 130)
+            or C.Panel2
     end
 end
 
-for _, item in ipairs(menuItems) do
-    local icon, name = item[1], item[2]
+for _, item in ipairs(items) do
+    local name = item[2]
 
-    local b = button(menu, icon .. "   " .. name, 40)
+    local b = newButton(menu, item[1] .. "   " .. name, 40)
+
     menuButtons[name] = b
 
     b.MouseButton1Click:Connect(function()
@@ -851,39 +709,60 @@ for _, item in ipairs(menuItems) do
     end)
 end
 
---==================================================
--- DRAG WINDOW - MOUSE + TOUCH
---==================================================
+--========================================================
+-- MINIMIZE / RESTORE
+--========================================================
+
+close.MouseButton1Click:Connect(function()
+    main.Visible = false
+    assist.Visible = true
+end)
+
+assist.MouseButton1Click:Connect(function()
+    main.Visible = true
+    assist.Visible = false
+end)
+
+--========================================================
+-- DRAG FLOATING BUTTON
+--========================================================
 
 local dragging = false
 local dragStart
 local startPosition
-local activeInput
+local activeTouch
+local moved = false
 
-header.InputBegan:Connect(function(input)
+assist.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
+    or input.UserInputType == Enum.UserInputType.Touch then
 
         dragging = true
+        moved = false
         dragStart = input.Position
-        startPosition = main.Position
+        startPosition = assist.Position
 
         if input.UserInputType == Enum.UserInputType.Touch then
-            activeInput = input
+            activeTouch = input
         end
     end
 end)
 
 UIS.InputChanged:Connect(function(input)
-    local isMouse = input.UserInputType ==
-        Enum.UserInputType.MouseMovement
+    local isMouse =
+        input.UserInputType == Enum.UserInputType.MouseMovement
 
-    local isTouch = activeInput and input == activeInput
+    local isTouch =
+        activeTouch and input == activeTouch
 
     if dragging and (isMouse or isTouch) then
         local delta = input.Position - dragStart
 
-        main.Position = UDim2.new(
+        if math.abs(delta.X) > 5 or math.abs(delta.Y) > 5 then
+            moved = true
+        end
+
+        assist.Position = UDim2.new(
             startPosition.X.Scale,
             startPosition.X.Offset + delta.X,
             startPosition.Y.Scale,
@@ -894,30 +773,30 @@ end)
 
 UIS.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-
+    or input.UserInputType == Enum.UserInputType.Touch then
         dragging = false
-        activeInput = nil
+        activeTouch = nil
     end
 end)
 
---==================================================
--- SHOW / HIDE WITH RIGHT SHIFT
---==================================================
+--========================================================
+-- RIGHT SHIFT FOR PC
+--========================================================
 
 UIS.InputBegan:Connect(function(input, processed)
     if processed then return end
 
     if input.KeyCode == Enum.KeyCode.RightShift then
-        gui.Enabled = not gui.Enabled
+        main.Visible = not main.Visible
+        assist.Visible = not main.Visible
     end
 end)
 
---==================================================
+--========================================================
 -- START
---==================================================
+--========================================================
 
 openPage("Dashboard")
-notify("KianBest V7.1 loaded successfully!")
+notify("KianBest V7.3 đã khởi động!")
 
-print("KianBest V7.1 loaded!")
+print("KianBest V7.3 loaded successfully!")
