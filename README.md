@@ -1,397 +1,378 @@
 
 --========================================================
--- KIANBEST V5.3 ULTRA
--- GALAXY ANIME EDITION
--- Medium Responsive Dashboard
--- Roblox LocalScript | Touch + PC
+-- KIANBEST V5.4 GALAXY ANIME EDITION
+-- MASTER SOURCE FILE
+--
+-- GITHUB: KianBestV54.lua
+--
+-- INSTALL:
+-- 1. Copy SERVER SECTION into Script:
+--    ServerScriptService/KianBestAdmin
+--
+-- 2. Copy CLIENT SECTION into LocalScript:
+--    StarterPlayer/StarterPlayerScripts/KianBestDashboard
+--
+-- 3. Change ADMIN USER ID in SERVER SECTION.
+--
+-- Commands:
+-- .tp UserId
+-- .kick UserId
 --========================================================
 
+
+--########################################################
+--                    SERVER SECTION
+--########################################################
+
+-- COPY FROM HERE INTO A NORMAL SCRIPT
+-- LOCATION: ServerScriptService
+
+local SERVER_CODE = [==[
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local ADMINS = {
+    [123456789] = true, -- CHANGE TO YOUR USER ID
+}
+
+local remote = ReplicatedStorage:FindFirstChild("KianBestRemote")
+
+if not remote then
+    remote = Instance.new("RemoteEvent")
+    remote.Name = "KianBestRemote"
+    remote.Parent = ReplicatedStorage
+end
+
+local cooldowns = {}
+local COOLDOWN = 3
+
+local function notify(player, message, success)
+    if player and player.Parent == Players then
+        remote:FireClient(player, "STATUS", {
+            message = message,
+            success = success
+        })
+    end
+end
+
+local function findPlayer(userId)
+    for _, target in ipairs(Players:GetPlayers()) do
+        if target.UserId == userId then
+            return target
+        end
+    end
+end
+
+local function executeCommand(admin, message)
+    if not ADMINS[admin.UserId] then
+        return
+    end
+
+    local command, id = message:match("^%.(%a+)%s+(%d+)%s*$")
+    if not command or not id then
+        return
+    end
+
+    command = command:lower()
+    id = tonumber(id)
+
+    if command ~= "tp" and command ~= "kick" then
+        return
+    end
+
+    local now = os.clock()
+    if now - (cooldowns[admin.UserId] or 0) < COOLDOWN then
+        notify(admin, "Please wait before using another command.", false)
+        return
+    end
+
+    cooldowns[admin.UserId] = now
+
+    local target = findPlayer(id)
+
+    if not target then
+        notify(admin, "Player not found in this server.", false)
+        return
+    end
+
+    if target == admin then
+        notify(admin, "You cannot target yourself.", false)
+        return
+    end
+
+    if command == "tp" then
+        local character = admin.Character
+        local targetCharacter = target.Character
+
+        local targetRoot = targetCharacter
+            and targetCharacter:FindFirstChild("HumanoidRootPart")
+
+        if not character or not targetRoot then
+            notify(admin, "Character is not ready.", false)
+            return
+        end
+
+        character:PivotTo(targetRoot.CFrame * CFrame.new(3, 0, 0))
+        notify(admin, "Teleported to " .. target.Name, true)
+
+    elseif command == "kick" then
+        local targetName = target.Name
+        target:Kick("Removed by a game administrator.")
+        notify(admin, "Kicked " .. targetName, true)
+    end
+end
+
+local function setupPlayer(player)
+    player.Chatted:Connect(function(message)
+        executeCommand(player, message)
+    end)
+end
+
+Players.PlayerAdded:Connect(setupPlayer)
+
+for _, player in ipairs(Players:GetPlayers()) do
+    setupPlayer(player)
+end
+
+print("[KianBest V5.4] Server commands ready")
+]==]
+
+
+--########################################################
+--                    CLIENT SECTION
+--########################################################
+
+-- COPY FROM HERE INTO A LOCALSCRIPT
+-- LOCATION: StarterPlayer/StarterPlayerScripts
+
+local CLIENT_CODE = [==[
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats")
-local TweenService = game:GetService("TweenService")
-local HttpService = game:GetService("HttpService")
+local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local LP = Players.LocalPlayer
-local PG = LP:WaitForChild("PlayerGui")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local remote = ReplicatedStorage:WaitForChild("KianBestRemote")
 
---========================================================
 -- CONFIGURATION
---========================================================
 
-local Config = {
-    Theme = "Galaxy",
-    Hex = "#A78BFA",
-    Language = "VI",
-    Effect = "Stars",
-    Background = "",
-    BackgroundEnabled = true,
-    Particles = true,
-    ParticleAmount = 20,
-    FastMode = false,
-    Compact = false,
-    Blur = 20,
+local CONFIG = {
+    Title = "KIANBEST V5.4",
+    BackgroundImage = "",
+    Accent = Color3.fromRGB(167, 139, 250),
+    Background = Color3.fromRGB(20, 17, 35),
+    Panel = Color3.fromRGB(34, 29, 55),
+    Text = Color3.fromRGB(245, 240, 255),
+    Muted = Color3.fromRGB(170, 160, 195)
 }
 
-local Themes = {
-    Galaxy  = Color3.fromRGB(167,139,250),
-    Purple  = Color3.fromRGB(167,139,250),
-    Sakura  = Color3.fromRGB(249,168,212),
-    Ocean   = Color3.fromRGB(56,189,248),
-    Emerald = Color3.fromRGB(52,211,153),
-    Ruby    = Color3.fromRGB(251,113,133),
-    Gold    = Color3.fromRGB(251,191,36),
-    Cyber   = Color3.fromRGB(34,211,238),
-    White   = Color3.fromRGB(226,232,240),
-}
+local accent = CONFIG.Accent
+local dashboardOpen = true
+local frameCount = 0
+local fps = 0
+local lastFPSUpdate = os.clock()
+local oldLighting
 
-local Accent = Themes.Galaxy
-local BackgroundColor = Color3.fromRGB(20,15,37)
-
-local function SaveConfig()
-    -- Session configuration.
-    -- Persistent saving requires a server DataStore.
-    Config.Hex = string.format(
-        "#%02X%02X%02X",
-        math.floor(Accent.R * 255),
-        math.floor(Accent.G * 255),
-        math.floor(Accent.B * 255)
-    )
-end
-
---========================================================
--- LANGUAGE
---========================================================
-
-local Languages = {
-    VI = {
-        HOME = "Trang chủ",
-        PERFORMANCE = "Hiệu năng",
-        PLAYERS = "Người chơi",
-        WORLD = "Thế giới",
-        SERVER = "Máy chủ",
-        SETTINGS = "Cài đặt",
-        FPS = "FPS thiết bị",
-        PING = "Ping kết nối",
-        MINFPS = "FPS thấp nhất",
-        MAXFPS = "FPS cao nhất",
-        ONLINE = "ĐANG HOẠT ĐỘNG",
-        OFFLINE = "KHÔNG HOẠT ĐỘNG",
-        SEARCH = "Tìm người chơi...",
-        THEME = "Bảng màu",
-        BACKGROUND = "Hình nền anime",
-        EFFECT = "Hiệu ứng",
-        SAVE = "Lưu cấu hình phiên",
-        FAST = "Chế độ tăng tốc",
-        LANGUAGE = "Ngôn ngữ",
-        RESET = "Đặt lại",
-        UPLOAD = "Áp dụng ảnh",
-        CUSTOM = "Màu HEX tùy chỉnh",
-        SNOW = "Tuyết rơi",
-        SAKURA = "Hoa anh đào",
-        STARS = "Sao vũ trụ",
-        HEARTS = "Trái tim",
-        NONE = "Tắt hiệu ứng",
-    },
-    EN = {
-        HOME = "Home",
-        PERFORMANCE = "Performance",
-        PLAYERS = "Players",
-        WORLD = "World",
-        SERVER = "Server",
-        SETTINGS = "Settings",
-        FPS = "Device FPS",
-        PING = "Connection Ping",
-        MINFPS = "Minimum FPS",
-        MAXFPS = "Maximum FPS",
-        ONLINE = "ACTIVE",
-        OFFLINE = "INACTIVE",
-        SEARCH = "Search players...",
-        THEME = "Color themes",
-        BACKGROUND = "Anime background",
-        EFFECT = "Effects",
-        SAVE = "Save session config",
-        FAST = "Boost mode",
-        LANGUAGE = "Language",
-        RESET = "Reset",
-        UPLOAD = "Apply image",
-        CUSTOM = "Custom HEX color",
-        SNOW = "Snow fall",
-        SAKURA = "Sakura fall",
-        STARS = "Galaxy stars",
-        HEARTS = "Floating hearts",
-        NONE = "Disable effects",
-    }
-}
-
-local function T(key)
-    return Languages[Config.Language][key] or key
-end
-
---========================================================
 -- CLEANUP
---========================================================
 
-local old = PG:FindFirstChild("KianBestV53")
+local old = playerGui:FindFirstChild("KianBestV54")
 if old then
     old:Destroy()
 end
 
---========================================================
--- GUI ROOT
---========================================================
+local gui = Instance.new("ScreenGui")
+gui.Name = "KianBestV54"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Parent = playerGui
 
-local Gui = Instance.new("ScreenGui")
-Gui.Name = "KianBestV53"
-Gui.ResetOnSpawn = false
-Gui.IgnoreGuiInset = false
-Gui.DisplayOrder = 100
-Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-Gui.Parent = PG
+-- UI HELPERS
 
-local UIScale = Instance.new("UIScale")
-UIScale.Parent = Gui
+local function round(object, radius)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, radius or 10)
+    c.Parent = object
+end
 
-local function UpdateScale()
+local function outline(object, color, thickness)
+    local s = Instance.new("UIStroke")
+    s.Color = color or accent
+    s.Thickness = thickness or 1
+    s.Transparency = 0.2
+    s.Parent = object
+end
+
+local function frame(parent, size, position, color)
+    local f = Instance.new("Frame")
+    f.Size = size
+    f.Position = position
+    f.BackgroundColor3 = color or CONFIG.Panel
+    f.BorderSizePixel = 0
+    f.Parent = parent
+    round(f, 10)
+    return f
+end
+
+local function label(parent, text, size, position, textSize)
+    local l = Instance.new("TextLabel")
+    l.Size = size
+    l.Position = position
+    l.BackgroundTransparency = 1
+    l.Text = text
+    l.TextColor3 = CONFIG.Text
+    l.Font = Enum.Font.GothamMedium
+    l.TextSize = textSize or 13
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.Parent = parent
+    return l
+end
+
+local function button(parent, text, callback)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(1, -4, 0, 36)
+    b.BackgroundColor3 = CONFIG.Panel
+    b.Text = text
+    b.TextColor3 = CONFIG.Text
+    b.Font = Enum.Font.GothamSemibold
+    b.TextSize = 12
+    b.Parent = parent
+    round(b, 8)
+    outline(b, accent, 1)
+
+    b.Activated:Connect(function()
+        if callback then
+            callback(b)
+        end
+    end)
+
+    return b
+end
+
+local function info(parent, text)
+    local box = frame(
+        parent,
+        UDim2.new(1, -4, 0, 36),
+        UDim2.new(),
+        CONFIG.Panel
+    )
+
+    local textLabel = label(
+        box,
+        text,
+        UDim2.new(1, -16, 1, 0),
+        UDim2.new(0, 9, 0, 0),
+        12
+    )
+
+    return box, textLabel
+end
+
+-- MAIN WINDOW
+
+local main = frame(
+    gui,
+    UDim2.new(0, 520, 0, 350),
+    UDim2.new(0.5, -260, 0.5, -175),
+    CONFIG.Background
+)
+
+main.Name = "Dashboard"
+main.ClipsDescendants = true
+outline(main, accent, 1.5)
+
+local sizeLimit = Instance.new("UISizeConstraint")
+sizeLimit.MinSize = Vector2.new(300, 280)
+sizeLimit.MaxSize = Vector2.new(650, 500)
+sizeLimit.Parent = main
+
+local scale = Instance.new("UIScale")
+scale.Parent = main
+
+local function updateScale()
     local camera = workspace.CurrentCamera
     if not camera then return end
 
     local viewport = camera.ViewportSize
-
-    UIScale.Scale = math.clamp(
-        math.min(viewport.X / 430, viewport.Y / 650),
-        0.72,
-        1
-    )
+    scale.Scale = math.min(1, viewport.X / 600, viewport.Y / 430)
 end
 
-UpdateScale()
+updateScale()
 
 if workspace.CurrentCamera then
-    workspace.CurrentCamera:GetPropertyChangedSignal(
-        "ViewportSize"
-    ):Connect(UpdateScale)
+    workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateScale)
 end
 
---========================================================
--- UI HELPERS
---========================================================
+-- BACKGROUND
 
-local function New(class, props, parent)
-    local obj = Instance.new(class)
+local background = Instance.new("ImageLabel")
+background.Name = "AnimeBackground"
+background.Size = UDim2.fromScale(1, 1)
+background.BackgroundTransparency = 1
+background.Image = CONFIG.BackgroundImage
+background.ImageTransparency = 0.78
+background.ScaleType = Enum.ScaleType.Crop
+background.ZIndex = 0
+background.Parent = main
 
-    for k, v in pairs(props or {}) do
-        obj[k] = v
-    end
+local overlay = Instance.new("Frame")
+overlay.Size = UDim2.fromScale(1, 1)
+overlay.BackgroundColor3 = CONFIG.Background
+overlay.BackgroundTransparency = 0.12
+overlay.BorderSizePixel = 0
+overlay.ZIndex = 0
+overlay.Parent = main
 
-    obj.Parent = parent
-    return obj
-end
-
-local function Corner(obj, radius)
-    New("UICorner", {
-        CornerRadius = UDim.new(0, radius or 12)
-    }, obj)
-end
-
-local function AddStroke(obj, color, thickness)
-    return New("UIStroke", {
-        Color = color or Accent,
-        Thickness = thickness or 1,
-        Transparency = 0.2
-    }, obj)
-end
-
-local function Label(parent, text, size, color)
-    return New("TextLabel", {
-        BackgroundTransparency = 1,
-        Text = text,
-        TextSize = size or 13,
-        TextColor3 = color or Color3.new(1,1,1),
-        Font = Enum.Font.GothamMedium,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextYAlignment = Enum.TextYAlignment.Center,
-        Size = UDim2.new(1,-16,0,25)
-    }, parent)
-end
-
-local function Button(parent, text, height)
-    local b = New("TextButton", {
-        Size = UDim2.new(1,-20,0,height or 36),
-        BackgroundColor3 = Color3.fromRGB(48,37,69),
-        Text = text,
-        TextColor3 = Color3.new(1,1,1),
-        TextSize = 12,
-        Font = Enum.Font.GothamSemibold,
-        AutoButtonColor = true,
-        BorderSizePixel = 0
-    }, parent)
-
-    Corner(b,10)
-    return b
-end
-
-local function Section(parent,text)
-    local label = Label(
-        parent,
-        text,
-        13,
-        Color3.fromRGB(209,185,255)
-    )
-    label.Font = Enum.Font.GothamBold
-    return label
-end
-
-local function NewPage(parent)
-    local page = New("ScrollingFrame", {
-        Size = UDim2.fromScale(1,1),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ScrollBarThickness = 3,
-        ScrollBarImageColor3 = Accent,
-        CanvasSize = UDim2.new(),
-        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        Visible = false
-    }, parent)
-
-    New("UIPadding", {
-        PaddingTop = UDim.new(0,10),
-        PaddingBottom = UDim.new(0,15),
-        PaddingLeft = UDim.new(0,10),
-        PaddingRight = UDim.new(0,10)
-    }, page)
-
-    New("UIListLayout", {
-        Padding = UDim.new(0,9),
-        SortOrder = Enum.SortOrder.LayoutOrder
-    }, page)
-
-    return page
-end
-
---========================================================
--- MAIN WINDOW
---========================================================
-
-local Main = New("Frame", {
-    Name = "MainDashboard",
-    Size = UDim2.fromOffset(370,500),
-    Position = UDim2.new(0.5,-185,0.5,-250),
-    BackgroundColor3 = BackgroundColor,
-    BorderSizePixel = 0,
-    ClipsDescendants = true,
-    Visible = false
-}, Gui)
-
-Corner(Main,20)
-
-local MainOutline = AddStroke(Main,Accent,1.5)
-
---========================================================
--- ANIME BACKGROUND
---========================================================
-
-local Background = New("ImageLabel", {
-    Name = "AnimeBackground",
-    Size = UDim2.fromScale(1,1),
-    BackgroundTransparency = 1,
-    Image = Config.Background,
-    ImageTransparency = 0.35,
-    ScaleType = Enum.ScaleType.Crop,
-    ZIndex = 0
-}, Main)
-
-local DarkOverlay = New("Frame", {
-    Size = UDim2.fromScale(1,1),
-    BackgroundColor3 = Color3.fromRGB(18,13,34),
-    BackgroundTransparency = 0.17,
-    BorderSizePixel = 0,
-    ZIndex = 1
-}, Main)
-
---========================================================
 -- HEADER
---========================================================
 
-local Header = New("Frame", {
-    Name = "DragHeader",
-    Size = UDim2.new(1,0,0,65),
-    BackgroundColor3 = Color3.fromRGB(35,25,58),
-    BackgroundTransparency = 0.05,
-    BorderSizePixel = 0,
-    ZIndex = 3,
-    Active = true
-}, Main)
+local header = frame(
+    main,
+    UDim2.new(1, 0, 0, 48),
+    UDim2.new(),
+    CONFIG.Panel
+)
 
-local HeaderTitle = New("TextLabel", {
-    Size = UDim2.new(1,-85,0,28),
-    Position = UDim2.fromOffset(14,7),
-    BackgroundTransparency = 1,
-    Text = "✦ KianBest V5.3",
-    TextColor3 = Color3.fromRGB(245,235,255),
-    TextSize = 17,
-    Font = Enum.Font.GothamBold,
-    TextXAlignment = Enum.TextXAlignment.Left,
-    ZIndex = 4
-}, Header)
+header.Name = "Header"
+header.ZIndex = 2
 
-local HeaderSubtitle = New("TextLabel", {
-    Size = UDim2.new(1,-85,0,18),
-    Position = UDim2.fromOffset(15,35),
-    BackgroundTransparency = 1,
-    Text = "GALAXY ANIME EDITION",
-    TextColor3 = Color3.fromRGB(195,173,230),
-    TextSize = 9,
-    Font = Enum.Font.GothamBold,
-    TextXAlignment = Enum.TextXAlignment.Left,
-    ZIndex = 4
-}, Header)
+local title = label(
+    header,
+    CONFIG.Title .. "  ✦",
+    UDim2.new(0.7, 0, 1, 0),
+    UDim2.new(0, 14, 0, 0),
+    16
+)
 
-local Close = New("TextButton", {
-    Size = UDim2.fromOffset(34,34),
-    Position = UDim2.new(1,-45,0,14),
-    BackgroundColor3 = Color3.fromRGB(62,45,83),
-    Text = "×",
-    TextSize = 22,
-    TextColor3 = Color3.new(1,1,1),
-    ZIndex = 5
-}, Header)
+title.Font = Enum.Font.GothamBold
+title.ZIndex = 3
 
-Corner(Close,12)
+local close = button(header, "×", function()
+    main.Visible = false
+    dashboardOpen = false
+end)
 
---========================================================
--- DRAG SYSTEM
--- Works with mouse and touch.
--- Only the header is draggable.
---========================================================
+close.Size = UDim2.new(0, 32, 0, 32)
+close.Position = UDim2.new(1, -42, 0, 7)
+close.ZIndex = 4
 
-local function MakeDraggable(handle, target)
+-- DRAG SUPPORT: TOUCH AND MOUSE
+
+local function draggable(object, handle)
     local dragging = false
     local dragStart
     local startPosition
-    local dragInput
+    local activeInput
 
     handle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
-
             dragging = true
+            activeInput = input
             dragStart = input.Position
-            startPosition = target.Position
-
-            if input.UserInputType == Enum.UserInputType.Touch then
-                dragInput = input
-            end
-        end
-    end)
-
-    handle.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement
-        or input.UserInputType == Enum.UserInputType.Touch then
-            if input.UserInputType == Enum.UserInputType.Touch then
-                dragInput = input
-            end
+            startPosition = object.Position
         end
     end)
 
@@ -399,985 +380,412 @@ local function MakeDraggable(handle, target)
         if not dragging then return end
 
         if input.UserInputType == Enum.UserInputType.MouseMovement
-        or input == dragInput then
-
+        or input.UserInputType == Enum.UserInputType.Touch then
             local delta = input.Position - dragStart
 
-            local camera = workspace.CurrentCamera
-            if not camera then return end
-
-            local view = camera.ViewportSize
-            local scale = UIScale.Scale
-
-            local width = target.AbsoluteSize.X / scale
-            local height = target.AbsoluteSize.Y / scale
-
-            local x = math.clamp(
-                startPosition.X.Offset + delta.X / scale,
-                0,
-                math.max(0,view.X / scale - width)
+            object.Position = UDim2.new(
+                startPosition.X.Scale,
+                startPosition.X.Offset + delta.X,
+                startPosition.Y.Scale,
+                startPosition.Y.Offset + delta.Y
             )
-
-            local y = math.clamp(
-                startPosition.Y.Offset + delta.Y / scale,
-                0,
-                math.max(0,view.Y / scale - height)
-            )
-
-            target.Position = UDim2.fromOffset(x,y)
         end
     end)
 
     UIS.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
+        if input == activeInput
+        or input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = false
-            dragInput = nil
+            activeInput = nil
         end
     end)
 end
 
-MakeDraggable(Header,Main)
+draggable(main, header)
 
-Close.Activated:Connect(function()
-    Main.Visible = false
+-- FLOATING HOME BUTTON
+
+local home = Instance.new("TextButton")
+home.Name = "HomeButton"
+home.Size = UDim2.new(0, 52, 0, 52)
+home.Position = UDim2.new(0, 18, 0.55, 0)
+home.BackgroundColor3 = CONFIG.Panel
+home.Text = "⌂"
+home.TextColor3 = CONFIG.Text
+home.TextSize = 25
+home.Font = Enum.Font.GothamBold
+home.Parent = gui
+round(home, 50)
+outline(home, accent, 2)
+
+home.Activated:Connect(function()
+    dashboardOpen = not dashboardOpen
+    main.Visible = dashboardOpen
 end)
 
---========================================================
--- NAVIGATION
---========================================================
+draggable(home, home)
 
-local Nav = New("ScrollingFrame", {
-    Position = UDim2.fromOffset(0,65),
-    Size = UDim2.new(1,0,0,44),
-    BackgroundColor3 = Color3.fromRGB(29,22,47),
-    BorderSizePixel = 0,
-    ScrollBarThickness = 2,
-    ScrollingDirection = Enum.ScrollingDirection.X,
-    CanvasSize = UDim2.fromOffset(0,0),
-    AutomaticCanvasSize = Enum.AutomaticSize.X,
-    ZIndex = 3
-}, Main)
+-- NAVIGATION AND PAGES
 
-New("UIListLayout", {
-    FillDirection = Enum.FillDirection.Horizontal,
-    Padding = UDim.new(0,5),
-    SortOrder = Enum.SortOrder.LayoutOrder
-}, Nav)
+local nav = frame(
+    main,
+    UDim2.new(0, 115, 1, -58),
+    UDim2.new(0, 8, 0, 53),
+    CONFIG.Panel
+)
 
-New("UIPadding", {
-    PaddingLeft = UDim.new(0,7),
-    PaddingTop = UDim.new(0,5),
-    PaddingRight = UDim.new(0,7)
-}, Nav)
+local content = frame(
+    main,
+    UDim2.new(1, -137, 1, -62),
+    UDim2.new(0, 128, 0, 53),
+    Color3.fromRGB(25, 21, 42)
+)
 
-local Content = New("Frame", {
-    Position = UDim2.fromOffset(0,109),
-    Size = UDim2.new(1,0,1,-109),
-    BackgroundTransparency = 1,
-    ZIndex = 2
-}, Main)
+local pages = {}
 
-local Tabs = {
-    "HOME",
-    "PERFORMANCE",
-    "PLAYERS",
-    "WORLD",
-    "SERVER",
-    "SETTINGS"
-}
-
-local Pages = {}
-local TabButtons = {}
-local CurrentTab = "HOME"
-
-for i,name in ipairs(Tabs) do
-    local page = NewPage(Content)
+local function createPage(name)
+    local page = Instance.new("ScrollingFrame")
     page.Name = name
-    Pages[name] = page
+    page.Size = UDim2.fromScale(1, 1)
+    page.BackgroundTransparency = 1
+    page.BorderSizePixel = 0
+    page.ScrollBarThickness = 3
+    page.ScrollBarImageColor3 = accent
+    page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    page.CanvasSize = UDim2.new(0, 0, 0, 0)
+    page.Visible = false
+    page.Parent = content
 
-    local b = New("TextButton", {
-        Size = UDim2.fromOffset(100,33),
-        BackgroundColor3 = name == "HOME"
-            and Accent
-            or Color3.fromRGB(48,37,69),
-        Text = name,
-        TextColor3 = Color3.new(1,1,1),
-        TextSize = 10,
-        Font = Enum.Font.GothamBold,
-        LayoutOrder = i,
-        ZIndex = 4
-    },Nav)
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0, 8)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Parent = page
 
-    Corner(b,9)
-    TabButtons[name] = b
+    local padding = Instance.new("UIPadding")
+    padding.PaddingTop = UDim.new(0, 10)
+    padding.PaddingLeft = UDim.new(0, 10)
+    padding.PaddingRight = UDim.new(0, 10)
+    padding.PaddingBottom = UDim.new(0, 10)
+    padding.Parent = page
 
-    b.Activated:Connect(function()
-        CurrentTab = name
-
-        for n,p in pairs(Pages) do
-            p.Visible = n == name
-        end
-
-        for n,button in pairs(TabButtons) do
-            button.BackgroundColor3 =
-                n == name and Accent
-                or Color3.fromRGB(48,37,69)
-        end
-    end)
+    pages[name] = page
+    return page
 end
 
-Pages.HOME.Visible = true
-
---========================================================
--- UI COMPONENTS
---========================================================
-
-local function Card(parent,title,value)
-    local frame = New("Frame", {
-        Size = UDim2.new(0.5,-5,0,75),
-        BackgroundColor3 = Color3.fromRGB(43,33,65),
-        BorderSizePixel = 0
-    },parent)
-
-    Corner(frame,12)
-    AddStroke(frame,Accent,0.7)
-
-    Label(frame,title,10,Color3.fromRGB(195,175,226)).Position =
-        UDim2.fromOffset(10,6)
-
-    local number = Label(frame,value,22,Color3.new(1,1,1))
-    number.Position = UDim2.fromOffset(10,30)
-    number.Name = "Value"
-
-    return number
+local function showPage(name)
+    for pageName, page in pairs(pages) do
+        page.Visible = pageName == name
+    end
 end
 
-local function Toggle(parent,text,initial,callback)
-    local row = New("Frame", {
-        Size = UDim2.new(1,0,0,43),
-        BackgroundColor3 = Color3.fromRGB(42,32,61),
-        BorderSizePixel = 0
-    },parent)
-
-    Corner(row,10)
-
-    local title = Label(row,text,11)
-    title.Position = UDim2.fromOffset(10,5)
-    title.Size = UDim2.new(1,-80,1,-10)
-
-    local enabled = initial == true
-
-    local b = New("TextButton", {
-        Size = UDim2.fromOffset(48,25),
-        Position = UDim2.new(1,-58,0,9),
-        BackgroundColor3 = enabled and Accent
-            or Color3.fromRGB(82,72,95),
-        Text = enabled and "ON" or "OFF",
-        TextColor3 = Color3.new(1,1,1),
-        TextSize = 10,
-        Font = Enum.Font.GothamBold
-    },row)
-
-    Corner(b,20)
-
-    b.Activated:Connect(function()
-        enabled = not enabled
-
-        b.Text = enabled and "ON" or "OFF"
-        b.BackgroundColor3 = enabled and Accent
-            or Color3.fromRGB(82,72,95)
-
-        callback(enabled)
-    end)
-
-    return row
-end
-
-local function SmallButton(parent,text,callback)
-    local b = Button(parent,text,34)
-
-    b.Activated:Connect(callback)
-
-    return b
-end
-
---========================================================
--- HOME PAGE
---========================================================
-
-local HomePage = Pages.HOME
-
-Section(HomePage,"✦ SYSTEM OVERVIEW")
-
-local Metrics = New("Frame", {
-    Size = UDim2.new(1,0,0,160),
-    BackgroundTransparency = 1
-},HomePage)
-
-local Grid = New("UIGridLayout", {
-    CellSize = UDim2.new(0.5,-5,0,73),
-    CellPadding = UDim2.fromOffset(8,8),
-    SortOrder = Enum.SortOrder.LayoutOrder
-},Metrics)
-
-local FPSValue = Card(Metrics,"DEVICE FPS","0")
-local PingValue = Card(Metrics,"CONNECTION PING","--")
-local MinValue = Card(Metrics,"MINIMUM FPS","--")
-local MaxValue = Card(Metrics,"MAXIMUM FPS","--")
-
-Section(HomePage,"✦ DEVICE INFORMATION")
-
-local DeviceCard = New("Frame", {
-    Size = UDim2.new(1,0,0,90),
-    BackgroundColor3 = Color3.fromRGB(42,32,62)
-},HomePage)
-
-Corner(DeviceCard,12)
-
-local DeviceType = UIS.TouchEnabled and "MOBILE / TOUCH"
-    or "DESKTOP / PC"
-
-Label(DeviceCard,"DEVICE: "..DeviceType,11).Position =
-    UDim2.fromOffset(10,5)
-
-local PlayerCount = Label(DeviceCard,"PLAYERS: 0",11)
-PlayerCount.Position = UDim2.fromOffset(10,29)
-
-local PlaceInfo = Label(
-    DeviceCard,
-    "PLACE ID: "..tostring(game.PlaceId),
-    10
-)
-
-PlaceInfo.Position = UDim2.fromOffset(10,53)
-
---========================================================
--- PERFORMANCE PAGE
---========================================================
-
-local PerformancePage = Pages.PERFORMANCE
-
-Section(PerformancePage,"✦ PERFORMANCE CONTROL")
-
-Toggle(
-    PerformancePage,
-    "Fast Mode",
-    Config.FastMode,
-    function(v)
-        Config.FastMode = v
-        Config.ParticleAmount = v and 3 or 20
-        Config.Particles = not v
-
-        Background.ImageTransparency = v and 0.65 or 0.35
-    end
-)
-
-Toggle(
-    PerformancePage,
-    "Galaxy Particles",
-    Config.Particles,
-    function(v)
-        Config.Particles = v
-    end
-)
-
-Toggle(
-    PerformancePage,
-    "Anime Background",
-    Config.BackgroundEnabled,
-    function(v)
-        Config.BackgroundEnabled = v
-        Background.Visible = v
-    end
-)
-
-Toggle(
-    PerformancePage,
-    "Compact Layout",
-    Config.Compact,
-    function(v)
-        Config.Compact = v
-        Main.Size = v
-            and UDim2.fromOffset(340,450)
-            or UDim2.fromOffset(370,500)
-    end
-)
-
-Section(PerformancePage,"✦ EFFECT SETTINGS")
-
-local AmountLabel = Label(
-    PerformancePage,
-    "Particle amount: "..Config.ParticleAmount,
-    11
-)
-
-local AmountSlider = New("Frame", {
-    Size = UDim2.new(1,0,0,28),
-    BackgroundColor3 = Color3.fromRGB(45,35,63)
-},PerformancePage)
-
-Corner(AmountSlider,12)
-
-local AmountFill = New("Frame", {
-    Size = UDim2.new(Config.ParticleAmount/60,0,1,0),
-    BackgroundColor3 = Accent
-},AmountSlider)
-
-Corner(AmountFill,12)
-
-local AmountButton = New("TextButton", {
-    Size = UDim2.fromScale(1,1),
-    BackgroundTransparency = 1,
-    Text = "",
-    Active = true
-},AmountSlider)
-
-local function SetAmount(x)
-    local width = AmountSlider.AbsoluteSize.X
-    if width <= 0 then return end
-
-    local value = math.clamp(
-        math.floor((x-AmountSlider.AbsolutePosition.X)/width*60),
-        0,60
+local function section(page, text)
+    local l = label(
+        page,
+        text,
+        UDim2.new(1, -4, 0, 27),
+        UDim2.new(),
+        14
     )
-
-    Config.ParticleAmount = value
-    AmountFill.Size = UDim2.new(value/60,0,1,0)
-    AmountLabel.Text = "Particle amount: "..value
+    l.Font = Enum.Font.GothamBold
+    l.TextColor3 = accent
 end
 
-local sliding = false
+-- HOME PAGE
 
-AmountButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-    or input.UserInputType == Enum.UserInputType.Touch then
-        sliding = true
-        SetAmount(input.Position.X)
+local homePage = createPage("HOME")
+
+section(homePage, "✦ KIANBEST CONTROL CENTER")
+info(homePage, "Welcome, " .. player.DisplayName)
+info(homePage, "User ID: " .. player.UserId)
+info(homePage, "Version: V5.4 Galaxy Edition")
+info(homePage, "Platform: " ..
+    (UIS.TouchEnabled and "Touch" or "Keyboard / Mouse"))
+info(homePage, "Dashboard: Online")
+
+-- PERFORMANCE PAGE
+
+local performancePage = createPage("PERFORMANCE")
+
+section(performancePage, "✦ PERFORMANCE MONITOR")
+
+local _, fpsText = info(performancePage, "FPS: Calculating...")
+local _, pingText = info(performancePage, "Ping: Calculating...")
+
+button(performancePage, "Toggle Compact Mode", function(b)
+    if main.Size.X.Offset > 400 then
+        main.Size = UDim2.new(0, 360, 0, 300)
+        b.Text = "Restore Dashboard Size"
+    else
+        main.Size = UDim2.new(0, 520, 0, 350)
+        b.Text = "Toggle Compact Mode"
     end
 end)
 
-UIS.InputChanged:Connect(function(input)
-    if sliding and (
-        input.UserInputType == Enum.UserInputType.MouseMovement
-        or input.UserInputType == Enum.UserInputType.Touch
-    ) then
-        SetAmount(input.Position.X)
-    end
+button(performancePage, "Reset Dashboard Position", function()
+    main.Position = UDim2.new(0.5, -260, 0.5, -175)
 end)
 
-UIS.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-    or input.UserInputType == Enum.UserInputType.Touch then
-        sliding = false
-    end
-end)
+-- PLAYER PAGE
 
---========================================================
--- PLAYER MONITOR
---========================================================
+local playerPage = createPage("PLAYERS")
 
-local PlayerPage = Pages.PLAYERS
+section(playerPage, "✦ PLAYER DIRECTORY")
 
-Section(PlayerPage,"✦ PLAYER MONITOR")
+local playerList = Instance.new("Frame")
+playerList.Size = UDim2.new(1, -4, 0, 0)
+playerList.AutomaticSize = Enum.AutomaticSize.Y
+playerList.BackgroundTransparency = 1
+playerList.Parent = playerPage
 
-local SearchBox = New("TextBox", {
-    Size = UDim2.new(1,0,0,37),
-    BackgroundColor3 = Color3.fromRGB(43,33,63),
-    TextColor3 = Color3.new(1,1,1),
-    PlaceholderText = T("SEARCH"),
-    Text = "",
-    ClearTextOnFocus = false,
-    TextSize = 12,
-    Font = Enum.Font.Gotham
-},PlayerPage)
+local playerLayout = Instance.new("UIListLayout")
+playerLayout.Padding = UDim.new(0, 5)
+playerLayout.Parent = playerList
 
-Corner(SearchBox,10)
-
-local PlayerContainer = New("Frame", {
-    Size = UDim2.new(1,0,0,0),
-    AutomaticSize = Enum.AutomaticSize.Y,
-    BackgroundTransparency = 1
-},PlayerPage)
-
-New("UIListLayout", {
-    Padding = UDim.new(0,7),
-    SortOrder = Enum.SortOrder.LayoutOrder
-},PlayerContainer)
-
-local function RefreshPlayerList()
-    for _,child in ipairs(PlayerContainer:GetChildren()) do
-        if child:IsA("Frame") then
+local function refreshPlayers()
+    for _, child in ipairs(playerList:GetChildren()) do
+        if child:IsA("TextLabel") then
             child:Destroy()
         end
     end
 
-    local query = SearchBox.Text:lower()
-
-    for _,plr in ipairs(Players:GetPlayers()) do
-        if plr.Name:lower():find(query,1,true)
-        or plr.DisplayName:lower():find(query,1,true) then
-
-            local card = New("Frame", {
-                Size = UDim2.new(1,0,0,76),
-                BackgroundColor3 = Color3.fromRGB(43,33,63)
-            },PlayerContainer)
-
-            Corner(card,11)
-
-            Label(
-                card,
-                plr.DisplayName,
-                13
-            ).Position = UDim2.fromOffset(10,4)
-
-            Label(
-                card,
-                "@"..plr.Name,
-                10,
-                Color3.fromRGB(192,170,225)
-            ).Position = UDim2.fromOffset(10,24)
-
-            Label(
-                card,
-                "USER ID: "..plr.UserId,
-                9,
-                Color3.fromRGB(185,190,220)
-            ).Position = UDim2.fromOffset(10,44)
-
-            Label(
-                card,
-                plr == LP and "LOCAL PLAYER"
-                or "CONNECTED",
-                9,
-                Color3.fromRGB(110,225,165)
-            ).Position = UDim2.fromOffset(10,59)
-
-            local copy = New("TextButton", {
-                Size = UDim2.fromOffset(65,26),
-                Position = UDim2.new(1,-75,0,25),
-                BackgroundColor3 = Accent,
-                Text = "COPY ID",
-                TextColor3 = Color3.new(1,1,1),
-                TextSize = 9,
-                Font = Enum.Font.GothamBold
-            },card)
-
-            Corner(copy,8)
-
-            copy.Activated:Connect(function()
-                -- Copy to a visible text field for portability.
-                SearchBox.Text = tostring(plr.UserId)
-                SearchBox:CaptureFocus()
-            end)
-        end
+    for _, target in ipairs(Players:GetPlayers()) do
+        local item = Instance.new("TextLabel")
+        item.Size = UDim2.new(1, -4, 0, 30)
+        item.BackgroundColor3 = CONFIG.Panel
+        item.TextColor3 = CONFIG.Text
+        item.Font = Enum.Font.Gotham
+        item.TextSize = 11
+        item.TextXAlignment = Enum.TextXAlignment.Left
+        item.Text = "  " .. target.Name .. "  |  " .. target.UserId
+        item.Parent = playerList
+        round(item, 6)
     end
 end
 
-SearchBox:GetPropertyChangedSignal("Text"):Connect(
-    RefreshPlayerList
-)
+refreshPlayers()
+Players.PlayerAdded:Connect(refreshPlayers)
+Players.PlayerRemoving:Connect(refreshPlayers)
 
-Players.PlayerAdded:Connect(RefreshPlayerList)
-Players.PlayerRemoving:Connect(RefreshPlayerList)
+button(playerPage, "Refresh Player List", refreshPlayers)
 
-RefreshPlayerList()
-
---========================================================
 -- WORLD PAGE
---========================================================
 
-local WorldPage = Pages.WORLD
+local worldPage = createPage("WORLD")
 
-Section(WorldPage,"✦ WORLD INFORMATION")
+section(worldPage, "✦ WORLD SETTINGS")
 
-local WorldCard = New("Frame", {
-    Size = UDim2.new(1,0,0,105),
-    BackgroundColor3 = Color3.fromRGB(43,33,63)
-},WorldPage)
+local _, lightingStatus = info(worldPage, "Lighting: Default")
 
-Corner(WorldCard,12)
+button(worldPage, "Toggle Galaxy Lighting", function(b)
+    if not oldLighting then
+        oldLighting = {
+            Brightness = Lighting.Brightness,
+            ClockTime = Lighting.ClockTime,
+            Ambient = Lighting.Ambient
+        }
 
-Label(
-    WorldCard,
-    "PLACE NAME: "..game.Name,
-    11
-).Position = UDim2.fromOffset(10,7)
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 0
+        Lighting.Ambient = Color3.fromRGB(100, 80, 160)
 
-Label(
-    WorldCard,
-    "PLACE ID: "..game.PlaceId,
-    10
-).Position = UDim2.fromOffset(10,34)
+        lightingStatus.Text = "Lighting: Galaxy"
+        b.Text = "Restore Lighting"
+    else
+        Lighting.Brightness = oldLighting.Brightness
+        Lighting.ClockTime = oldLighting.ClockTime
+        Lighting.Ambient = oldLighting.Ambient
 
-Label(
-    WorldCard,
-    "MONSTER DATABASE: NOT CONNECTED",
-    9,
-    Color3.fromRGB(255,195,120)
-).Position = UDim2.fromOffset(10,60)
+        oldLighting = nil
+        lightingStatus.Text = "Lighting: Default"
+        b.Text = "Toggle Galaxy Lighting"
+    end
+end)
 
-local WorldNote = Label(
-    WorldPage,
-    "NPC and monster data can be connected to an authorized game database.",
-    10,
-    Color3.fromRGB(195,180,220)
-)
-
-WorldNote.TextWrapped = true
-WorldNote.Size = UDim2.new(1,0,0,50)
-
---========================================================
 -- SERVER PAGE
---========================================================
 
-local ServerPage = Pages.SERVER
+local serverPage = createPage("SERVER")
 
-Section(ServerPage,"✦ SERVER INFORMATION")
+section(serverPage, "✦ SERVER INFORMATION")
 
-local ServerFields = {}
+info(serverPage, "Place ID: " .. game.PlaceId)
+info(serverPage, "Job ID: " .. game.JobId)
 
-local function ServerInfo(name,value)
-    local card = New("Frame", {
-        Size = UDim2.new(1,0,0,48),
-        BackgroundColor3 = Color3.fromRGB(43,33,63)
-    },ServerPage)
-
-    Corner(card,10)
-
-    local label = Label(card,name,10)
-    label.Position = UDim2.fromOffset(10,2)
-
-    local val = Label(card,value,11,Color3.fromRGB(211,195,245))
-    val.Position = UDim2.fromOffset(10,22)
-
-    ServerFields[name] = val
-end
-
-ServerInfo("PLACE ID",tostring(game.PlaceId))
-ServerInfo("JOB ID",tostring(game.JobId))
-ServerInfo("PLAYER COUNT",tostring(#Players:GetPlayers()))
-
-local RefreshServer = Button(
-    ServerPage,
-    "REFRESH SERVER INFO",
-    35
+local _, playerCount = info(
+    serverPage,
+    "Players: " .. #Players:GetPlayers()
 )
 
-RefreshServer.Activated:Connect(function()
-    ServerFields["PLAYER COUNT"].Text =
-        tostring(#Players:GetPlayers())
+local function updatePlayerCount()
+    playerCount.Text = "Players: " .. #Players:GetPlayers()
+end
+
+Players.PlayerAdded:Connect(updatePlayerCount)
+Players.PlayerRemoving:Connect(function()
+    task.defer(updatePlayerCount)
 end)
 
---========================================================
 -- SETTINGS PAGE
---========================================================
 
-local SettingsPage = Pages.SETTINGS
+local settingsPage = createPage("SETTINGS")
 
-Section(SettingsPage,"✦ GALAXY COLOR STUDIO")
+section(settingsPage, "✦ COLOR STUDIO")
 
-local function ApplyTheme(name,color)
-    Accent = color
-    Config.Theme = name
-
-    MainOutline.Color = color
-    Nav.ScrollBarImageColor3 = color
-
-    for tabName,b in pairs(TabButtons) do
-        b.BackgroundColor3 =
-            tabName == CurrentTab and color
-            or Color3.fromRGB(48,37,69)
-    end
-
-    AmountFill.BackgroundColor3 = color
-
-    for _,child in ipairs(SettingsPage:GetChildren()) do
-        if child:IsA("TextButton") then
-            child.BackgroundColor3 = color
-        end
-    end
-
-    SaveConfig()
-end
-
-for name,color in pairs(Themes) do
-    local b = Button(SettingsPage,name,34)
-
-    b.Activated:Connect(function()
-        ApplyTheme(name,color)
-    end)
-end
-
-Section(SettingsPage,T("CUSTOM"))
-
-local HexBox = New("TextBox", {
-    Size = UDim2.new(1,0,0,36),
-    BackgroundColor3 = Color3.fromRGB(43,33,63),
-    TextColor3 = Color3.new(1,1,1),
-    PlaceholderText = "#A78BFA",
-    Text = "",
-    TextSize = 12,
-    ClearTextOnFocus = false
-},SettingsPage)
-
-Corner(HexBox,10)
-
-local HexApply = Button(SettingsPage,"APPLY HEX COLOR",35)
-
-HexApply.Activated:Connect(function()
-    local hex = HexBox.Text:gsub("#","")
-
-    if #hex == 6 and hex:match("^%x+$") then
-        local r = tonumber(hex:sub(1,2),16)
-        local g = tonumber(hex:sub(3,4),16)
-        local b = tonumber(hex:sub(5,6),16)
-
-        ApplyTheme("Custom",Color3.fromRGB(r,g,b))
-        Config.Hex = "#" .. hex:upper()
-    end
-end)
-
-Section(SettingsPage,T("BACKGROUND"))
-
-local ImageBox = New("TextBox", {
-    Size = UDim2.new(1,0,0,36),
-    BackgroundColor3 = Color3.fromRGB(43,33,63),
-    TextColor3 = Color3.new(1,1,1),
-    PlaceholderText = "Roblox Image Asset ID",
-    Text = "",
-    ClearTextOnFocus = false,
-    TextSize = 11
-},SettingsPage)
-
-Corner(ImageBox,10)
-
-local ImageApply = Button(SettingsPage,T("UPLOAD"),35)
-
-ImageApply.Activated:Connect(function()
-    local id = ImageBox.Text:match("%d+")
-
-    if id then
-        Config.Background = "rbxassetid://"..id
-        Background.Image = Config.Background
-        Background.Visible = true
-        Config.BackgroundEnabled = true
-    end
-end)
-
-SmallButton(SettingsPage,"RESET BACKGROUND",function()
-    Config.Background = ""
-    Background.Image = ""
-    Background.BackgroundColor3 = BackgroundColor
-end)
-
-Section(SettingsPage,T("EFFECT"))
-
-local Effects = {
-    "Stars",
-    "Snow",
-    "Sakura",
-    "Hearts",
-    "None"
+local colors = {
+    {"Galaxy Purple", Color3.fromRGB(167, 139, 250)},
+    {"Ocean Blue", Color3.fromRGB(80, 160, 255)},
+    {"Rose Pink", Color3.fromRGB(255, 130, 190)},
+    {"Mint Green", Color3.fromRGB(100, 230, 180)},
+    {"Sunset Orange", Color3.fromRGB(255, 160, 100)},
+    {"Ice Cyan", Color3.fromRGB(100, 220, 255)},
+    {"Gold", Color3.fromRGB(255, 210, 100)},
+    {"White", Color3.fromRGB(235, 235, 245)}
 }
 
-for _,effect in ipairs(Effects) do
-    local b = Button(SettingsPage,effect,32)
+local function setTheme(color)
+    accent = color
 
-    b.Activated:Connect(function()
-        Config.Effect = effect
-        Config.Particles = effect ~= "None"
+    for _, object in ipairs(gui:GetDescendants()) do
+        if object:IsA("UIStroke") then
+            object.Color = color
+        end
+    end
+
+    for _, page in pairs(pages) do
+        for _, object in ipairs(page:GetChildren()) do
+            if object:IsA("TextLabel") then
+                object.TextColor3 = color
+            end
+        end
+    end
+end
+
+for _, data in ipairs(colors) do
+    local name, color = data[1], data[2]
+
+    button(settingsPage, "● " .. name, function()
+        setTheme(color)
     end)
 end
 
-Section(SettingsPage,T("LANGUAGE"))
+section(settingsPage, "✦ BACKGROUND IMAGE")
 
-local LanguageButton = Button(
-    SettingsPage,
-    "VI / EN",
-    35
-)
+local imageInput = Instance.new("TextBox")
+imageInput.Size = UDim2.new(1, -4, 0, 36)
+imageInput.BackgroundColor3 = CONFIG.Panel
+imageInput.TextColor3 = CONFIG.Text
+imageInput.PlaceholderColor3 = CONFIG.Muted
+imageInput.PlaceholderText = "Image ID or rbxassetid://..."
+imageInput.Text = ""
+imageInput.ClearTextOnFocus = false
+imageInput.Font = Enum.Font.Gotham
+imageInput.TextSize = 12
+imageInput.Parent = settingsPage
+round(imageInput, 8)
 
-LanguageButton.Activated:Connect(function()
-    Config.Language =
-        Config.Language == "VI" and "EN" or "VI"
+button(settingsPage, "Apply Anime Background", function()
+    local value = imageInput.Text:gsub("%s+", "")
 
-    SearchBox.PlaceholderText = T("SEARCH")
-    LanguageButton.Text = T("LANGUAGE")..": "..Config.Language
+    if value:match("^%d+$") then
+        value = "rbxassetid://" .. value
+    end
+
+    if value:match("^rbxassetid://%d+$") then
+        background.Image = value
+    else
+        warn("[KianBest] Invalid image asset ID")
+    end
 end)
 
-SmallButton(SettingsPage,T("RESET"),function()
-    Config.Theme = "Galaxy"
-    Config.Hex = "#A78BFA"
-    Config.Effect = "Stars"
+-- NAV BUTTONS
 
-    ApplyTheme("Galaxy",Themes.Galaxy)
-end)
-
---========================================================
--- FLOATING HOME BUTTON
---========================================================
-
-local HomeButton = New("TextButton", {
-    Name = "FloatingHome",
-    Size = UDim2.fromOffset(56,56),
-    Position = UDim2.new(0,18,0.5,-28),
-    BackgroundColor3 = Accent,
-    Text = "KB",
-    TextColor3 = Color3.fromRGB(36,23,52),
-    TextSize = 19,
-    Font = Enum.Font.GothamBold,
-    ZIndex = 20,
-    Active = true
-},Gui)
-
-Corner(HomeButton,100)
-AddStroke(HomeButton,Color3.fromRGB(235,220,255),2)
-
--- Independent drag handler for HOME.
-local function MakeHomeDraggable(handle)
-    local dragging = false
-    local moved = false
-    local startInput
-    local startPos
-    local activeTouch
-
-    handle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-
-            dragging = true
-            moved = false
-            startInput = input.Position
-            startPos = handle.Position
-
-            if input.UserInputType == Enum.UserInputType.Touch then
-                activeTouch = input
-            end
-        end
-    end)
-
-    UIS.InputChanged:Connect(function(input)
-        if not dragging then return end
-
-        if input.UserInputType == Enum.UserInputType.MouseMovement
-        or input == activeTouch then
-
-            local delta = input.Position - startInput
-
-            if delta.Magnitude > 6 then
-                moved = true
-            end
-
-            if moved then
-                local camera = workspace.CurrentCamera
-                if not camera then return end
-
-                local view = camera.ViewportSize
-                local scale = UIScale.Scale
-
-                local x = math.clamp(
-                    startPos.X.Offset + delta.X / scale,
-                    0,
-                    math.max(0,view.X/scale-56)
-                )
-
-                local y = math.clamp(
-                    startPos.Y.Offset + delta.Y / scale,
-                    0,
-                    math.max(0,view.Y/scale-56)
-                )
-
-                handle.Position = UDim2.fromOffset(x,y)
-            end
-        end
-    end)
-
-    UIS.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input == activeTouch then
-
-            if dragging and not moved then
-                Main.Visible = not Main.Visible
-            end
-
-            dragging = false
-            activeTouch = nil
-        end
-    end)
-end
-
-MakeHomeDraggable(HomeButton)
-
---========================================================
--- GALAXY PARTICLE ENGINE
---========================================================
-
-local ParticleLayer = New("Frame", {
-    Size = UDim2.fromScale(1,1),
-    BackgroundTransparency = 1,
-    ClipsDescendants = true,
-    ZIndex = 2
-},Main)
-
-local ParticleObjects = {}
-
-local Symbols = {
-    Stars = {"✦","✧","⋆","✴"},
-    Snow = {"❄","❅","❆"},
-    Sakura = {"🌸","✿","❀"},
-    Hearts = {"♡","♥","💜"}
+local navItems = {
+    {"HOME", "⌂"},
+    {"PERFORMANCE", "◈"},
+    {"PLAYERS", "♙"},
+    {"WORLD", "✧"},
+    {"SERVER", "◎"},
+    {"SETTINGS", "⚙"}
 }
 
-local function RebuildParticles()
-    for _,p in ipairs(ParticleObjects) do
-        p:Destroy()
-    end
+for index, data in ipairs(navItems) do
+    local name, icon = data[1], data[2]
 
-    table.clear(ParticleObjects)
+    local b = button(nav, icon .. "  " .. name, function()
+        showPage(name)
+    end)
 
-    if not Config.Particles or Config.Effect == "None" then
-        return
-    end
-
-    local symbols = Symbols[Config.Effect]
-    if not symbols then return end
-
-    local count = Config.FastMode and 3
-        or math.clamp(Config.ParticleAmount,0,60)
-
-    for i = 1,count do
-        local p = New("TextLabel", {
-            BackgroundTransparency = 1,
-            Text = symbols[math.random(1,#symbols)],
-            TextColor3 = Config.Effect == "Snow"
-                and Color3.fromRGB(220,240,255)
-                or Accent,
-            TextSize = math.random(12,20),
-            Size = UDim2.fromOffset(25,25),
-            Position = UDim2.new(
-                math.random(),0,
-                math.random(),0
-            ),
-            ZIndex = 2
-        },ParticleLayer)
-
-        table.insert(ParticleObjects,p)
-    end
+    b.Position = UDim2.new(0, 5, 0, 6 + (index - 1) * 43)
+    b.Size = UDim2.new(1, -10, 0, 36)
+    b.TextSize = 10
 end
 
-RebuildParticles()
+showPage("HOME")
 
-local EffectClock = 0
+-- FPS + PING
 
-RunService.RenderStepped:Connect(function(dt)
-    if not Main.Visible or not Config.Particles then
-        return
-    end
+RunService.RenderStepped:Connect(function()
+    frameCount += 1
 
-    EffectClock += dt
+    local now = os.clock()
 
-    if EffectClock < 0.04 then return end
-    EffectClock = 0
+    if now - lastFPSUpdate >= 1 then
+        fps = frameCount
+        frameCount = 0
+        lastFPSUpdate = now
 
-    for _,p in ipairs(ParticleObjects) do
-        if p.Parent then
-            local speed = Config.FastMode and 0.0008 or 0.0025
+        fpsText.Text = "FPS: " .. fps
 
-            local y = p.Position.Y.Scale + speed
-            local x = p.Position.X.Scale
-
-            if y > 1 then
-                y = -0.05
-                x = math.random()
-            end
-
-            p.Position = UDim2.new(x,0,y,0)
-        end
-    end
-end)
-
---========================================================
--- LIVE LOCAL FPS
---========================================================
-
-local FPSCounter = 0
-local FPSTime = 0
-local FPS = 0
-local MinFPS = math.huge
-local MaxFPS = 0
-
-RunService.RenderStepped:Connect(function(dt)
-    FPSCounter += 1
-    FPSTime += dt
-
-    if FPSTime >= 1 then
-        FPS = math.floor(FPSCounter/FPSTime + 0.5)
-
-        MinFPS = math.min(MinFPS,FPS)
-        MaxFPS = math.max(MaxFPS,FPS)
-
-        FPSValue.Text = tostring(FPS)
-        MinValue.Text = tostring(MinFPS)
-        MaxValue.Text = tostring(MaxFPS)
-
-        FPSCounter = 0
-        FPSTime = 0
-    end
-end)
-
---========================================================
--- LIVE PING
---========================================================
-
-task.spawn(function()
-    while Gui.Parent do
-        local success,value = pcall(function()
-            return Stats.Network.ServerStatsItem[
-                "Data Ping"
-            ]:GetValue()
+        local success, ping = pcall(function()
+            return Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
         end)
 
-        PingValue.Text = success and value
-            and tostring(math.floor(value)).." ms"
-            or "--"
-
-        PlayerCount.Text =
-            "PLAYERS: "..#Players:GetPlayers()
-
-        task.wait(1)
+        if success then
+            pingText.Text = "Ping: " .. math.floor(ping) .. " ms"
+        else
+            pingText.Text = "Ping: Unavailable"
+        end
     end
 end)
 
---========================================================
--- STATUS INDICATOR
---========================================================
+-- ADMIN COMMAND STATUS NOTIFICATIONS
 
-local Status = New("TextLabel", {
-    Size = UDim2.fromOffset(125,20),
-    Position = UDim2.new(1,-135,1,-23),
-    BackgroundTransparency = 1,
-    Text = "● SYSTEM READY",
-    TextColor3 = Color3.fromRGB(74,222,128),
-    TextSize = 9,
-    Font = Enum.Font.GothamBold,
-    TextXAlignment = Enum.TextXAlignment.Right,
-    ZIndex = 20
-},Main)
+remote.OnClientEvent:Connect(function(action, data)
+    if action ~= "STATUS" or type(data) ~= "table" then
+        return
+    end
 
---========================================================
--- FINAL INITIALIZATION
---========================================================
+    local color = data.success
+        and Color3.fromRGB(100, 230, 150)
+        or Color3.fromRGB(255, 100, 110)
 
-ApplyTheme("Galaxy",Accent)
+    local notification = Instance.new("TextLabel")
+    notification.Size = UDim2.new(0, 280, 0, 42)
+    notification.Position = UDim2.new(0.5, -140, 0, 20)
+    notification.BackgroundColor3 = CONFIG.Panel
+    notification.TextColor3 = color
+    notification.Text = tostring(data.message)
+    notification.TextSize = 12
+    notification.Font = Enum.Font.GothamBold
+    notification.Parent = gui
+    round(notification, 10)
+    outline(notification, color, 1)
 
-Main.Visible = false
+    task.delay(3, function()
+        if notification.Parent then
+            notification:Destroy()
+        end
+    end)
+end)
 
-print("====================================")
-print("KIANBEST V5.3 ULTRA")
-print("GALAXY ANIME EDITION")
-print("UI: READY")
-print("TOUCH: SUPPORTED")
-print("PC: SUPPORTED")
-print("THEME: GALAXY")
-print("====================================")
+print("[KianBest V5.4] Dashboard loaded")
+]==]
+
+
+--########################################################
+-- END OF MASTER SOURCE
+--########################################################
+
+-- NOTE:
+-- SERVER_CODE and CLIENT_CODE above are source templates.
+-- They are intentionally not executed by this master file.
+-- Copy each block into its matching Roblox script.
