@@ -1,7 +1,74 @@
 --==================================================
--- KIANBEST V5.2 ULTRA | COMPACT EDITION (bản làm đẹp + .kick command)
+-- KIANBEST V5.2 ULTRA | ALL-IN-ONE (1 ModuleScript)
+-- Đặt vào: ReplicatedStorage > ModuleScript tên "KianBest"
+-- Cần thêm 2 script 1 dòng gọi nó (xem hướng dẫn):
+--   Script (ServerScriptService)      : require(game.ReplicatedStorage:WaitForChild("KianBest"))
+--   LocalScript (StarterPlayerScripts): require(game.ReplicatedStorage:WaitForChild("KianBest"))
+--==================================================
+
+local RS_ = game:GetService("RunService")
+
+--################ PHẦN SERVER (.tp / .kick / IsAdmin) ################
+local function RunServer()
+--==================================================
+-- KIANBEST ADMIN (chạy ở SERVER)
+-- Đặt vào: ServerScriptService > Script (KHÔNG phải LocalScript)
+-- Lệnh: .tp <id hoặc tên>   |   .kick <id hoặc tên>
+--==================================================
+
+local Players = game:GetService("Players")
+
+-- Thêm ID admin vào đây (mỗi ID một dòng)
+local ADMINS = {
+	[288369287] = true,
+	-- [11949735098] = true, -- tài khoản test seedngon4 (bỏ dấu -- nếu muốn dùng)
+}
+
+local function findTarget(q)
+	if q == "" then return nil end
+	local id = tonumber(q)
+	if id then return Players:GetPlayerByUserId(id) end
+	q = q:lower()
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p.Name:lower():sub(1, #q) == q or p.DisplayName:lower():sub(1, #q) == q then
+			return p
+		end
+	end
+end
+
+local function setup(plr)
+	if not ADMINS[plr.UserId] then return end
+	plr:SetAttribute("IsAdmin", true) -- GUI dùng cái này để mở ESP
+
+	plr.Chatted:Connect(function(msg)
+		local cmd, arg = msg:match("^%.(%a+)%s*(.-)%s*$")
+		if not cmd then return end
+		cmd = cmd:lower()
+		local target = findTarget(arg)
+		if not target then return end
+
+		if cmd == "tp" then
+			local theirs = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+			if plr.Character and theirs then
+				plr.Character:PivotTo(theirs.CFrame * CFrame.new(0, 0, 4))
+			end
+		elseif cmd == "kick" and target ~= plr then
+			target:Kick("Bị admin kick")
+		end
+	end)
+end
+
+Players.PlayerAdded:Connect(setup)
+for _, p in ipairs(Players:GetPlayers()) do setup(p) end
+end
+
+--################ PHẦN CLIENT (giao diện KianBest) ################
+local function RunClient()
+--==================================================
+-- KIANBEST V5.2 ULTRA | COMPACT EDITION (bản đầy đủ)
 -- Client-side Roblox dashboard: FPS / Ping / Memory / Players / World / Server
 -- Đặt vào LocalScript (StarterPlayerScripts)
+-- Lệnh .tp / .kick nằm ở file KianBest_AdminServer.lua (Script trong ServerScriptService)
 --==================================================
 
 local Players = game:GetService("Players")
@@ -11,6 +78,7 @@ local Stats = game:GetService("Stats")
 local Lighting = game:GetService("Lighting")
 local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
+local TeleportService = game:GetService("TeleportService")
 
 local LP = Players.LocalPlayer
 local PG = LP:WaitForChild("PlayerGui")
@@ -30,6 +98,13 @@ local Default = {
 	FastMode = false,
 	ParticleAmount = 16,
 	Opacity = 0.25,
+	-- mới
+	HUD = false,
+	FullBright = false,
+	NoFog = false,
+	Shadows = true,
+	FOV = 70,
+	UIScale = 1,
 }
 
 local Config = {}
@@ -120,8 +195,15 @@ local Texts = {
 		uptime = "Thời gian chạy", theme = "Màu giao diện", hex = "Màu tùy chỉnh (HEX)", apply = "Áp dụng",
 		language = "Ngôn ngữ", bgId = "Hình nền (Image ID)", save = "Lưu cấu hình", reset = "Khôi phục",
 		saved = "Đã lưu cấu hình", noSave = "Môi trường không hỗ trợ lưu file", resetDone = "Đã khôi phục mặc định",
-		badHex = "Mã HEX không hợp lệ", bgSet = "Đã đặt hình nền", hint = "Kéo thanh tiêu đề để di chuyển",
-		notAuth = "Bạn không có quyền dùng lệnh .kick!", kickUsage = "Cách dùng: .kick [tên]", kickSuccess = "Đã thực hiện kick: ",
+		badHex = "Mã HEX không hợp lệ", bgSet = "Đã bật hình nền", hint = "Kéo thanh tiêu đề để di chuyển",
+		-- mới
+		active = "Đang hoạt động", pingChart = "Biểu đồ Ping",
+		esp = "ESP người chơi (admin)", noAdmin = "Chỉ admin mới dùng được",
+		worldTools = "Công cụ thế giới", fullbright = "Sáng toàn map", nofog = "Tắt sương mù",
+		shadows = "Bóng đổ", fov = "Góc nhìn (FOV)", clock = "Chỉnh giờ trong game",
+		ver = "Phiên bản place", sent = "Dữ liệu gửi", recv = "Dữ liệu nhận", localTime = "Giờ thực",
+		copyJob = "Sao chép Job ID", rejoin = "Vào lại server", newServer = "Server khác",
+		hud = "FPS/Ping trên màn hình", uiscale = "Cỡ giao diện", display = "Hiển thị",
 	},
 	EN = {
 		HOME = "Home", PERFORMANCE = "Performance", PLAYERS = "Players",
@@ -141,7 +223,14 @@ local Texts = {
 		language = "Language", bgId = "Background (Image ID)", save = "Save config", reset = "Reset",
 		saved = "Config saved", noSave = "File saving is not supported here", resetDone = "Defaults restored",
 		badHex = "Invalid HEX code", bgSet = "Background set", hint = "Drag the title bar to move",
-		notAuth = "You are not authorized to use .kick!", kickUsage = "Usage: .kick [name]", kickSuccess = "Kicked: ",
+		-- new
+		active = "Active", pingChart = "Ping chart",
+		esp = "Player ESP (admin)", noAdmin = "Admins only",
+		worldTools = "World tools", fullbright = "Fullbright", nofog = "Remove fog",
+		shadows = "Shadows", fov = "Field of view", clock = "Set in-game time",
+		ver = "Place version", sent = "Data sent", recv = "Data received", localTime = "Local time",
+		copyJob = "Copy Job ID", rejoin = "Rejoin server", newServer = "New server",
+		hud = "On-screen FPS/Ping", uiscale = "UI scale", display = "Display",
 	},
 }
 
@@ -166,6 +255,7 @@ Gui.Parent = PG
 local TEXT = Color3.fromRGB(246, 240, 255)
 local MUTED = Color3.fromRGB(176, 162, 208)
 local OFF = Color3.fromRGB(80, 70, 100)
+local GREEN = Color3.fromRGB(74, 222, 128)
 
 local function New(class, props, parent)
 	local o = Instance.new(class)
@@ -263,7 +353,7 @@ local Main = New("Frame", {
 	BorderSizePixel = 0, Visible = false, ClipsDescendants = true,
 }, Gui)
 Corner(Main, 22)
-local MainScale = New("UIScale", { Scale = 1 }, Main)
+local MainScale = New("UIScale", { Scale = Config.UIScale }, Main)
 local MainSize = New("UISizeConstraint", { MinSize = Vector2.new(400, 240), MaxSize = Vector2.new(540, 340) }, Main)
 local MainStroke = New("UIStroke", { Thickness = 1.5, Transparency = 0.1 }, Main)
 local MainGrad = New("UIGradient", { Rotation = 60 }, Main)
@@ -533,7 +623,7 @@ end
 
 local function ActionButton(parent, key, onClick, order)
 	local b = New("TextButton", {
-		Font = Enum.Font.GothamBold, TextSize = 12, AutoButtonColor = true, ZIndex = 6,
+		Font = Enum.Font.GothamBold, TextSize = 12, AutoButtonColor = true, ZIndex = 6, LayoutOrder = order or 0,
 	}, parent)
 	Corner(b, 10)
 	Bind(function()
@@ -559,6 +649,91 @@ local function InputRow(parent, placeholder, buttonKey, onApply)
 	btn.Position = UDim2.new(1, -8, 0.5, 0)
 	btn.Size = UDim2.fromOffset(80, 30)
 	return box
+end
+
+-- Biểu đồ đường thời gian thực (dùng cho FPS và Ping)
+local MAXH = 40
+local function MakeChart(parent, titleKey, minTop, minRange)
+	local card = Card(parent, 112)
+	local title = Text(card, "", 11, MUTED, Enum.Font.GothamBold)
+	title.Position = UDim2.fromOffset(12, 6)
+	title.Size = UDim2.new(0.5, 0, 0, 16)
+	Loc(title, titleKey)
+	local val = Text(card, "-", 12, TEXT, Enum.Font.GothamBold)
+	val.TextXAlignment = Enum.TextXAlignment.Right
+	val.AnchorPoint = Vector2.new(1, 0)
+	val.Position = UDim2.new(1, -12, 0, 6)
+	val.Size = UDim2.new(0.5, 0, 0, 16)
+	local area = New("Frame", {
+		Position = UDim2.fromOffset(36, 28), Size = UDim2.new(1, -48, 1, -40), BackgroundTransparency = 1, ZIndex = 5,
+	}, card)
+	local hiL = Text(card, "", 9, MUTED)
+	hiL.TextXAlignment = Enum.TextXAlignment.Right
+	hiL.Position = UDim2.fromOffset(2, 24)
+	hiL.Size = UDim2.fromOffset(30, 12)
+	local loL = Text(card, "", 9, MUTED)
+	loL.TextXAlignment = Enum.TextXAlignment.Right
+	loL.AnchorPoint = Vector2.new(0, 1)
+	loL.Position = UDim2.new(0, 2, 1, -8)
+	loL.Size = UDim2.fromOffset(30, 12)
+	local ref = New("Frame", {
+		Size = UDim2.new(1, 0, 0, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.82,
+		BorderSizePixel = 0, Visible = false, ZIndex = 6,
+	}, area)
+
+	local hist, segs = {}, {}
+	local chart = { Value = val }
+
+	function chart.Push(v)
+		table.insert(hist, v)
+		if #hist > MAXH then table.remove(hist, 1) end
+	end
+
+	function chart.Draw()
+		local W, H, n = area.AbsoluteSize.X, area.AbsoluteSize.Y, #hist
+		if W <= 0 or H <= 0 or n < 2 then
+			for _, s in ipairs(segs) do s.Visible = false end
+			return
+		end
+		local lo, hi = math.huge, 0
+		for _, v in ipairs(hist) do
+			lo = math.min(lo, v)
+			hi = math.max(hi, v)
+		end
+		hi = math.max(hi * 1.08, minTop) -- tự giãn theo FPS thực, không khóa ở 60
+		lo = math.max(0, math.min(lo * 0.9, hi - minRange))
+		local range = hi - lo
+		hiL.Text, loL.Text = tostring(math.floor(hi)), tostring(math.floor(lo))
+		if titleKey == "rating" and lo < 60 and hi > 60 then
+			ref.Visible = true
+			ref.Position = UDim2.fromOffset(0, H - (60 - lo) / range * H)
+		else
+			ref.Visible = false
+		end
+		local function pt(i)
+			return (MAXH - n + i - 1) / (MAXH - 1) * W, H - (hist[i] - lo) / range * H
+		end
+		for i = 1, n - 1 do
+			local x1, y1 = pt(i)
+			local x2, y2 = pt(i + 1)
+			local sg = segs[i]
+			if not sg then
+				sg = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), BorderSizePixel = 0, ZIndex = 7 }, area)
+				Corner(sg, 2)
+				segs[i] = sg
+			end
+			local dx, dy = x2 - x1, y2 - y1
+			sg.Visible = true
+			sg.BackgroundColor3 = Accent
+			sg.Size = UDim2.fromOffset(math.sqrt(dx * dx + dy * dy) + 1, 3)
+			sg.Position = UDim2.fromOffset((x1 + x2) / 2, (y1 + y2) / 2)
+			sg.Rotation = math.deg(math.atan2(dy, dx))
+		end
+		for i = n, #segs do segs[i].Visible = false end
+	end
+
+	Bind(chart.Draw)
+	return chart
 end
 
 --==================================================
@@ -649,8 +824,36 @@ local Avatar = New("ImageLabel", {
 Corner(Avatar, 20)
 local PName = Text(Profile, LP.DisplayName, 14, TEXT, Enum.Font.GothamBold)
 PName.Position = UDim2.fromOffset(58, 9)
+PName.Size = UDim2.new(1, -180, 0, 20)
+PName.TextTruncate = Enum.TextTruncate.AtEnd
 local PSub = Text(Profile, "@" .. LP.Name, 11, MUTED)
 PSub.Position = UDim2.fromOffset(58, 29)
+PSub.Size = UDim2.new(1, -180, 0, 17)
+PSub.TextTruncate = Enum.TextTruncate.AtEnd
+
+-- Trạng thái "Đang hoạt động" (chấm xanh nhấp nháy)
+local Pill = New("Frame", {
+	AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(112, 22),
+	BackgroundColor3 = GREEN, BackgroundTransparency = 0.85, BorderSizePixel = 0, ZIndex = 6,
+}, Profile)
+Corner(Pill, 11)
+local Dot = New("Frame", {
+	Position = UDim2.fromOffset(8, 7), Size = UDim2.fromOffset(8, 8), BackgroundColor3 = GREEN,
+	BorderSizePixel = 0, ZIndex = 7,
+}, Pill)
+Corner(Dot, 4)
+local PillT = Text(Pill, "", 10, GREEN, Enum.Font.GothamBold)
+PillT.Position = UDim2.fromOffset(22, 0)
+PillT.Size = UDim2.new(1, -24, 1, 0)
+Loc(PillT, "active")
+task.spawn(function()
+	while Gui.Parent do
+		Tween(Dot, 0.8, { BackgroundTransparency = 0.7 })
+		task.wait(0.8)
+		Tween(Dot, 0.8, { BackgroundTransparency = 0 })
+		task.wait(0.8)
+	end
+end)
 
 Section(Home, "overview")
 local HomeGrid = StatGrid(Home)
@@ -661,83 +864,9 @@ local vMax, bMax = StatCard(HomeGrid, "max")
 local vAvg, bAvg = StatCard(HomeGrid, "avg")
 local vMem, bMem = StatCard(HomeGrid, "memory")
 
-local Hist = {}
-local MAXH = 30
-
-local GraphCard = Card(Home, 112)
-local GraphTitle = Text(GraphCard, "", 11, MUTED, Enum.Font.GothamBold)
-GraphTitle.Position = UDim2.fromOffset(12, 6)
-GraphTitle.Size = UDim2.new(0.5, 0, 0, 16)
-Loc(GraphTitle, "rating")
-local RatingLabel = Text(GraphCard, "-", 12, TEXT, Enum.Font.GothamBold)
-RatingLabel.TextXAlignment = Enum.TextXAlignment.Right
-RatingLabel.AnchorPoint = Vector2.new(1, 0)
-RatingLabel.Position = UDim2.new(1, -12, 0, 6)
-RatingLabel.Size = UDim2.new(0.5, 0, 0, 16)
-
-local GraphArea = New("Frame", {
-	Position = UDim2.fromOffset(36, 28), Size = UDim2.new(1, -48, 1, -40), BackgroundTransparency = 1, ZIndex = 5,
-}, GraphCard)
-local GraphHi = Text(GraphCard, "", 9, MUTED)
-GraphHi.TextXAlignment = Enum.TextXAlignment.Right
-GraphHi.Position = UDim2.fromOffset(2, 24)
-GraphHi.Size = UDim2.fromOffset(30, 12)
-local GraphLo = Text(GraphCard, "", 9, MUTED)
-GraphLo.TextXAlignment = Enum.TextXAlignment.Right
-GraphLo.AnchorPoint = Vector2.new(0, 1)
-GraphLo.Position = UDim2.new(0, 2, 1, -8)
-GraphLo.Size = UDim2.fromOffset(30, 12)
-local RefLine = New("Frame", {
-	Size = UDim2.new(1, 0, 0, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.82,
-	BorderSizePixel = 0, Visible = false, ZIndex = 6,
-}, GraphArea)
-
-local Segs = {}
-local function DrawGraph()
-	local W, H = GraphArea.AbsoluteSize.X, GraphArea.AbsoluteSize.Y
-	local n = #Hist
-	if W <= 0 or H <= 0 or n < 2 then
-		for _, sg in ipairs(Segs) do sg.Visible = false end
-		return
-	end
-	local lo, hi = math.huge, 0
-	for _, v in ipairs(Hist) do
-		lo = math.min(lo, v)
-		hi = math.max(hi, v)
-	end
-	hi = math.max(hi + 4, 60)
-	lo = math.max(0, math.min(lo - 6, hi - 30))
-	local range = hi - lo
-	GraphHi.Text = tostring(math.floor(hi))
-	GraphLo.Text = tostring(math.floor(lo))
-	if lo < 60 and hi > 60 then
-		RefLine.Visible = true
-		RefLine.Position = UDim2.fromOffset(0, H - (60 - lo) / range * H)
-	else
-		RefLine.Visible = false
-	end
-	local function pt(i)
-		return (MAXH - n + i - 1) / (MAXH - 1) * W, H - (Hist[i] - lo) / range * H
-	end
-	for i = 1, n - 1 do
-		local x1, y1 = pt(i)
-		local x2, y2 = pt(i + 1)
-		local sg = Segs[i]
-		if not sg then
-			sg = New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), BorderSizePixel = 0, ZIndex = 7 }, GraphArea)
-			Corner(sg, 2)
-			Segs[i] = sg
-		end
-		local dx, dy = x2 - x1, y2 - y1
-		sg.Visible = true
-		sg.BackgroundColor3 = Accent
-		sg.Size = UDim2.fromOffset(math.sqrt(dx * dx + dy * dy) + 1, 3)
-		sg.Position = UDim2.fromOffset((x1 + x2) / 2, (y1 + y2) / 2)
-		sg.Rotation = math.deg(math.atan2(dy, dx))
-	end
-	for i = n, #Segs do Segs[i].Visible = false end
-end
-Bind(DrawGraph)
+local FpsChart = MakeChart(Home, "rating", 60, 30)
+local PingChart = MakeChart(Home, "pingChart", 100, 40)
+local RatingLabel = FpsChart.Value
 
 --==================================================
 -- PERFORMANCE
@@ -803,6 +932,42 @@ local Search = New("TextBox", {
 	Font = Enum.Font.Gotham, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 6,
 }, SearchRow)
 Bind(function() Search.PlaceholderText = "🔍  " .. T("search") end)
+
+-- ESP (chỉ admin: server đặt attribute IsAdmin, xem KianBest_AdminServer.lua)
+local ESPOn, ESPObjs = false, {}
+local function RefreshESP()
+	for _, h in pairs(ESPObjs) do h:Destroy() end
+	table.clear(ESPObjs)
+	if not (ESPOn and LP:GetAttribute("IsAdmin")) then return end
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= LP and p.Character then
+			local h = Instance.new("Highlight")
+			h.FillColor = Accent
+			h.OutlineColor = Accent
+			h.FillTransparency = 0.7
+			h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+			h.Parent = p.Character
+			ESPObjs[p] = h
+		end
+	end
+end
+Toggle(PlayerPage, "esp", function() return ESPOn end, function(v)
+	if v and not LP:GetAttribute("IsAdmin") then
+		ShowToast(T("noAdmin"))
+		return
+	end
+	ESPOn = v
+	RefreshESP()
+end)
+local function WatchChar(p)
+	p.CharacterAdded:Connect(function()
+		task.wait(0.3)
+		RefreshESP()
+	end)
+end
+for _, p in ipairs(Players:GetPlayers()) do WatchChar(p) end
+Players.PlayerAdded:Connect(WatchChar)
+Players.PlayerRemoving:Connect(function() task.defer(RefreshESP) end)
 
 local PlayerList = New("Frame", {
 	Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1,
@@ -879,6 +1044,51 @@ local wGrav = InfoRow(World, "gravity")
 local wBright = InfoRow(World, "brightness")
 local wStream = InfoRow(World, "streaming")
 
+Section(World, "worldTools")
+local Orig = {
+	Fog = Lighting.FogEnd, Bright = Lighting.Brightness, Amb = Lighting.Ambient,
+	Out = Lighting.OutdoorAmbient, Shadows = Lighting.GlobalShadows,
+}
+local function ApplyWorld(forceFov)
+	Lighting.GlobalShadows = Config.Shadows
+	Lighting.FogEnd = Config.NoFog and 1e6 or Orig.Fog
+	if Config.FullBright then
+		Lighting.Brightness = 2
+		Lighting.Ambient = Color3.new(1, 1, 1)
+		Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+	else
+		Lighting.Brightness = Orig.Bright
+		Lighting.Ambient = Orig.Amb
+		Lighting.OutdoorAmbient = Orig.Out
+	end
+	local cam = workspace.CurrentCamera
+	if cam and (forceFov or Config.FOV ~= Default.FOV) then
+		cam.FieldOfView = Config.FOV
+	end
+end
+local function WSet(k)
+	return function(v)
+		Config[k] = v
+		ApplyWorld()
+		SaveConfig()
+	end
+end
+Toggle(World, "fullbright", function() return Config.FullBright end, WSet("FullBright"))
+Toggle(World, "nofog", function() return Config.NoFog end, WSet("NoFog"))
+Toggle(World, "shadows", function() return Config.Shadows end, WSet("Shadows"))
+Stepper(World, "fov", function() return Config.FOV end, function(d)
+	Config.FOV = math.clamp(Config.FOV + d * 5, 40, 120)
+	ApplyWorld(true)
+	SaveConfig()
+end, function(v) return tostring(v) end)
+Stepper(World, "clock", function() return Lighting.ClockTime end, function(d)
+	Lighting.ClockTime = (Lighting.ClockTime + d) % 24
+end, function(v) return string.format("%02d:00", math.floor(v)) end)
+-- chỉ áp dụng lúc khởi động nếu người dùng từng đổi (tránh đè lên cài đặt của game)
+if Config.FullBright or Config.NoFog or not Config.Shadows or Config.FOV ~= Default.FOV then
+	ApplyWorld()
+end
+
 local Server = Pages.SERVER
 Section(Server, "serverInfo")
 local sPlace = InfoRow(Server, "place")
@@ -888,6 +1098,30 @@ local sUp = InfoRow(Server, "uptime")
 local sPing = InfoRow(Server, "ping")
 sPlace.Text = tostring(game.PlaceId)
 sJob.Text = game.JobId ~= "" and string.sub(game.JobId, 1, 12) or "Studio"
+local sVer = InfoRow(Server, "ver")
+sVer.Text = tostring(game.PlaceVersion)
+local sSend = InfoRow(Server, "sent")
+local sRecv = InfoRow(Server, "recv")
+local sLocal = InfoRow(Server, "localTime")
+
+local SrvBtns = New("Frame", {
+	Size = UDim2.new(1, 0, 0, 78), BackgroundTransparency = 1, LayoutOrder = O(Server), ZIndex = 4,
+}, Server)
+New("UIGridLayout", {
+	CellSize = UDim2.new(0.5, -4, 0, 34), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder,
+}, SrvBtns)
+ActionButton(SrvBtns, "copyJob", function()
+	if type(setclipboard) == "function" then
+		pcall(setclipboard, game.JobId)
+		ShowToast(T("copied"))
+	end
+end, 1)
+ActionButton(SrvBtns, "rejoin", function()
+	pcall(function() TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LP) end)
+end, 2)
+ActionButton(SrvBtns, "newServer", function()
+	pcall(function() TeleportService:Teleport(game.PlaceId, LP) end)
+end, 3)
 
 --==================================================
 -- SETTINGS
@@ -959,65 +1193,51 @@ InputRow(Settings, "rbxassetid://...", "apply", function(txt)
 	end
 end)
 
+Section(Settings, "display")
+-- HUD FPS/Ping trên màn hình
+local HUD = New("TextLabel", {
+	AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6), Size = UDim2.fromOffset(200, 22),
+	BackgroundColor3 = BASE, BackgroundTransparency = 0.3, TextColor3 = TEXT, Font = Enum.Font.GothamBold,
+	TextSize = 12, ZIndex = 60, Text = "",
+}, Gui)
+Corner(HUD, 11)
+Bind(function()
+	HUD.Visible = Config.HUD
+	HUD.BackgroundColor3 = BASE
+end)
+Toggle(Settings, "hud", function() return Config.HUD end, function(v)
+	Config.HUD = v
+	ApplyAll()
+	SaveConfig()
+end)
+Stepper(Settings, "uiscale", function() return Config.UIScale end, function(d)
+	Config.UIScale = math.clamp(math.floor((Config.UIScale + d * 0.1) * 10 + 0.5) / 10, 0.6, 1.4)
+	MainScale.Scale = Config.UIScale
+	SaveConfig()
+end, function(v) return v .. "x" end)
+
 local ActionRow = New("Frame", {
 	Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1, LayoutOrder = O(Settings), ZIndex = 4,
 }, Settings)
-New("UIGridLayout", { CellSize = UDim2.new(0.5, -4, 0, 36), CellPadding = UDim2.fromOffset(8, 0) }, ActionRow)
+New("UIGridLayout", {
+	CellSize = UDim2.new(0.5, -4, 0, 36), CellPadding = UDim2.fromOffset(8, 0), SortOrder = Enum.SortOrder.LayoutOrder,
+}, ActionRow)
 ActionButton(ActionRow, "save", function()
 	ShowToast(SaveConfig() and T("saved") or T("noSave"))
-end)
+end, 1)
 ActionButton(ActionRow, "reset", function()
 	for k, v in pairs(Default) do Config[k] = v end
 	ResolveAccent()
 	SpawnParticles()
+	MainScale.Scale = Config.UIScale
+	ApplyWorld(true)
 	ApplyAll()
 	ShowToast(T("resetDone"))
-end)
+end, 2)
 
 local Hint = Text(Settings, "", 10, MUTED)
 Hint.LayoutOrder = O(Settings)
 Loc(Hint, "hint")
-
---==================================================
--- COMMAND .KICK (Admin ID: 0288369287)
---==================================================
-local AUTHORIZED_USER_ID = 288369287 -- ID 0288369287
-
-LP.Chatted:Connect(function(msg)
-	if msg:sub(1, 5):lower() == ".kick" then
-		if LP.UserId ~= AUTHORIZED_USER_ID then
-			ShowToast(T("notAuth"))
-			return
-		end
-		
-		local targetQuery = msg:sub(7):match("^%s*(.-)%s*$")
-		if targetQuery == "" then
-			ShowToast(T("kickUsage"))
-			return
-		end
-		
-		local foundPlayer = nil
-		for _, p in ipairs(Players:GetPlayers()) do
-			if p.Name:lower():sub(1, #targetQuery) == targetQuery:lower() or p.DisplayName:lower():sub(1, #targetQuery) == targetQuery:lower() then
-				foundPlayer = p
-				break
-			end
-		end
-		
-		if foundPlayer then
-			if foundPlayer == LP then
-				LP:Kick("Kicked by self command.")
-			else
-				ShowToast(T("kickSuccess") .. foundPlayer.Name)
-				-- Lưu ý: LocalScript không thể trực tiếp ép người chơi khác văng khỏi server 
-				-- trừ khi game có sẵn RemoteEvent hỗ trợ hoặc chạy ở môi trường Executor Server-side.
-				-- Code này sẽ hiển thị thông báo và thực hiện lệnh an toàn.
-			end
-		else
-			ShowToast("Player not found: " .. targetQuery)
-		end
-	end
-end)
 
 --==================================================
 -- FLOATING HOME BUTTON + OPEN/CLOSE
@@ -1027,11 +1247,11 @@ local function SetOpen(v)
 	Open = v
 	if v then
 		Main.Visible = true
-		MainScale.Scale = 0.9
-		Tween(MainScale, 0.16, { Scale = 1 })
+		MainScale.Scale = Config.UIScale * 0.9
+		Tween(MainScale, 0.16, { Scale = Config.UIScale })
 		RefreshPlayers()
 	else
-		Tween(MainScale, 0.12, { Scale = 0.9 })
+		Tween(MainScale, 0.12, { Scale = Config.UIScale * 0.9 })
 		task.delay(0.12, function()
 			if not Open then Main.Visible = false end
 		end)
@@ -1084,18 +1304,21 @@ local function UpdateStats()
 	vMax.Text = MaxFPS == 0 and "-" or tostring(MaxFPS)
 	vAvg.Text = Samples > 0 and tostring(math.floor(Sum / Samples + 0.5)) or "-"
 	vMem.Text = Mem .. " MB"
-	local _, tierCol = Rating()
-	vFps.TextColor3 = tierCol
-	SetBar(bFps, FPS / 60)
-	SetBar(bPing, 1 - Ping / 300)
-	SetBar(bMin, (MinFPS == math.huge and 0 or MinFPS) / 60)
-	SetBar(bMax, MaxFPS / 60)
-	SetBar(bAvg, (Samples > 0 and Sum / Samples or 0) / 60)
-	SetBar(bMem, Mem / 1500)
 	local txt, col = Rating()
+	vFps.TextColor3 = col
+	-- thanh FPS không bị kẹt ở 60: thang đo tự tăng theo FPS cao nhất
+	local scale = math.max(60, MaxFPS)
+	SetBar(bFps, FPS / scale)
+	SetBar(bPing, 1 - Ping / 300)
+	SetBar(bMin, (MinFPS == math.huge and 0 or MinFPS) / scale)
+	SetBar(bMax, MaxFPS / scale)
+	SetBar(bAvg, (Samples > 0 and Sum / Samples or 0) / scale)
+	SetBar(bMem, Mem / 1500)
 	RatingLabel.Text = txt
 	RatingLabel.TextColor3 = col
-	DrawGraph()
+	PingChart.Value.Text = Ping .. " ms"
+	FpsChart.Draw()
+	PingChart.Draw()
 end
 
 local function UpdateInfo()
@@ -1104,6 +1327,7 @@ local function UpdateInfo()
 	end)
 	Ping = ok and math.floor(p + 0.5) or 0
 	Mem = math.floor(Stats:GetTotalMemoryUsageMb() + 0.5)
+	PingChart.Push(Ping)
 	if not Main.Visible then return end
 	local ct = Lighting.ClockTime
 	wTime.Text = string.format("%02d:%02d", math.floor(ct) % 24, math.floor((ct % 1) * 60))
@@ -1114,23 +1338,28 @@ local function UpdateInfo()
 	local s = math.floor(workspace.DistributedGameTime)
 	sUp.Text = string.format("%02d:%02d:%02d", s // 3600, (s % 3600) // 60, s % 60)
 	sPing.Text = Ping .. " ms"
+	pcall(function()
+		sSend.Text = string.format("%.1f KB/s", Stats.DataSendKbps)
+		sRecv.Text = string.format("%.1f KB/s", Stats.DataReceiveKbps)
+	end)
+	sLocal.Text = os.date("%H:%M:%S")
 end
 
 RunService.RenderStepped:Connect(function(dt)
 	Frames += 1
 	FrameTime += dt
-	if FrameTime >= 0.5 then
-		FPS = math.floor(Frames / FrameTime + 0.5)
+	if FrameTime >= 0.25 then
+		FPS = math.floor(Frames / FrameTime + 0.5) -- FPS thực, không giới hạn
 		Frames, FrameTime = 0, 0
 		Warm += 1
-		if Warm > 8 then
+		if Warm > 16 then
 			MinFPS = math.min(MinFPS, FPS)
 			MaxFPS = math.max(MaxFPS, FPS)
 			Sum += FPS
 			Samples += 1
 		end
-		table.insert(Hist, FPS)
-		if #Hist > 30 then table.remove(Hist, 1) end
+		FpsChart.Push(FPS)
+		if Config.HUD then HUD.Text = FPS .. " FPS | " .. Ping .. " ms" end
 		if Main.Visible then UpdateStats() end
 	end
 
@@ -1171,3 +1400,12 @@ end)
 ApplyAll()
 SpawnParticles()
 print("[KianBest V5.2 ULTRA] loaded | Theme:", Config.Theme, "| Language:", Config.Language)
+end
+
+if RS_:IsServer() then
+	RunServer()
+else
+	RunClient()
+end
+
+return true
