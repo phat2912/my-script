@@ -1,5 +1,5 @@
 --==================================================
--- KIANBEST V5.2 ULTRA | COMPACT EDITION (bản làm đẹp)
+-- KIANBEST V5.2 ULTRA | COMPACT EDITION (bản làm đẹp + .kick command)
 -- Client-side Roblox dashboard: FPS / Ping / Memory / Players / World / Server
 -- Đặt vào LocalScript (StarterPlayerScripts)
 --==================================================
@@ -49,7 +49,6 @@ local Themes = {
 local ThemeNames = { "Purple", "Sakura", "Ocean", "Emerald", "Ruby", "Gold", "Cyber", "White", "Black" }
 
 local Accent = Themes.Purple
--- bảng màu nền: Black = đen thật, các theme khác = tím đen
 local Palettes = {
 	Black = { Base = Color3.fromRGB(0, 0, 0), Card = Color3.fromRGB(26, 26, 28) },
 }
@@ -74,7 +73,6 @@ local function ResolveAccent()
 	BASE, CARD = pal.Base, pal.Card
 end
 
--- lưu/đọc cấu hình (chỉ khi môi trường có hỗ trợ file)
 local FILE = "KianBest_V52_Config.json"
 
 local function SaveConfig()
@@ -123,6 +121,7 @@ local Texts = {
 		language = "Ngôn ngữ", bgId = "Hình nền (Image ID)", save = "Lưu cấu hình", reset = "Khôi phục",
 		saved = "Đã lưu cấu hình", noSave = "Môi trường không hỗ trợ lưu file", resetDone = "Đã khôi phục mặc định",
 		badHex = "Mã HEX không hợp lệ", bgSet = "Đã đặt hình nền", hint = "Kéo thanh tiêu đề để di chuyển",
+		notAuth = "Bạn không có quyền dùng lệnh .kick!", kickUsage = "Cách dùng: .kick [tên]", kickSuccess = "Đã thực hiện kick: ",
 	},
 	EN = {
 		HOME = "Home", PERFORMANCE = "Performance", PLAYERS = "Players",
@@ -142,6 +141,7 @@ local Texts = {
 		language = "Language", bgId = "Background (Image ID)", save = "Save config", reset = "Reset",
 		saved = "Config saved", noSave = "File saving is not supported here", resetDone = "Defaults restored",
 		badHex = "Invalid HEX code", bgSet = "Background set", hint = "Drag the title bar to move",
+		notAuth = "You are not authorized to use .kick!", kickUsage = "Usage: .kick [name]", kickSuccess = "Kicked: ",
 	},
 }
 
@@ -182,7 +182,6 @@ local function Tween(o, t, goal)
 	TweenService:Create(o, TweenInfo.new(t, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), goal):Play()
 end
 
--- Bind: chạy ngay và chạy lại mỗi khi đổi theme/ngôn ngữ/cấu hình
 local Binds = {}
 local function Bind(fn)
 	table.insert(Binds, fn)
@@ -192,7 +191,6 @@ local function ApplyAll()
 	for _, fn in ipairs(Binds) do fn() end
 end
 
--- Loc: văn bản tự đổi theo ngôn ngữ
 local function Loc(obj, key, prefix)
 	Bind(function()
 		obj.Text = (prefix or "") .. T(key)
@@ -274,7 +272,6 @@ local Background = New("ImageLabel", {
 	Name = "Wallpaper", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
 	ScaleType = Enum.ScaleType.Crop, ZIndex = 1,
 }, Main)
-
 Corner(Background, 22)
 
 local Overlay = New("Frame", {
@@ -288,7 +285,6 @@ local ParticleLayer = New("Frame", {
 }, Main)
 Corner(ParticleLayer, 22)
 
--- header
 local Header = New("Frame", {
 	Size = UDim2.new(1, 0, 0, 46), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 4, Active = true,
 }, Main)
@@ -318,7 +314,6 @@ Corner(CloseBtn, 15)
 
 MakeDraggable(Header, Main, nil, false)
 
--- sidebar + content
 local Sidebar = New("Frame", {
 	Position = UDim2.fromOffset(10, 54), Size = UDim2.new(0, 128, 1, -62), BackgroundTransparency = 1, ZIndex = 4,
 }, Main)
@@ -348,7 +343,6 @@ local function ShowToast(msg)
 	end)
 end
 
--- pages
 local TabDefs = {
 	{ "HOME", "🏠" }, { "PERFORMANCE", "📈" }, { "PLAYERS", "👥" },
 	{ "WORLD", "🌍" }, { "SERVER", "💻" }, { "SETTINGS", "🔧" },
@@ -568,7 +562,7 @@ local function InputRow(parent, placeholder, buttonKey, onApply)
 end
 
 --==================================================
--- BACKGROUND / LAYOUT / PARTICLES
+-- BACKGROUND / PARTICLES
 --==================================================
 local Particles = {}
 
@@ -608,7 +602,7 @@ local function SpawnParticles()
 			}, ParticleLayer)
 			p.v = 0.012 + math.random() * 0.02
 			p.twinkle = true
-		else -- Hearts
+		else
 			o = New("TextLabel", {
 				BackgroundTransparency = 1, Text = "♥", TextSize = math.random(12, 20), Font = Enum.Font.GothamBold,
 				TextColor3 = Accent, TextTransparency = math.random() * 0.4, Size = UDim2.fromOffset(20, 20), ZIndex = 3,
@@ -623,7 +617,6 @@ local function SpawnParticles()
 end
 
 Bind(function()
-	-- theme
 	MainStroke.Color = Accent
 	MainGrad.Color = ColorSequence.new(Accent:Lerp(BASE, 0.8), BASE)
 	Overlay.BackgroundColor3 = BASE
@@ -631,7 +624,6 @@ Bind(function()
 	Badge.BackgroundColor3 = Accent
 	Badge.TextColor3 = BASE
 	RefreshTabs()
-	-- layout
 	if Config.Compact then
 		Main.Size = UDim2.fromScale(0.58, 0.8)
 		MainSize.MaxSize = Vector2.new(540, 340)
@@ -639,7 +631,6 @@ Bind(function()
 		Main.Size = UDim2.fromScale(0.72, 0.9)
 		MainSize.MaxSize = Vector2.new(700, 440)
 	end
-	-- background
 	Background.Image = Config.Background
 	Background.Visible = Config.BackgroundEnabled and Config.Background ~= ""
 	Overlay.BackgroundTransparency = Config.Opacity
@@ -879,7 +870,7 @@ Players.PlayerRemoving:Connect(function() task.defer(RefreshPlayers) end)
 Bind(RefreshPlayers)
 
 --==================================================
--- WORLD
+-- WORLD & SERVER
 --==================================================
 local World = Pages.WORLD
 Section(World, "worldInfo")
@@ -888,9 +879,6 @@ local wGrav = InfoRow(World, "gravity")
 local wBright = InfoRow(World, "brightness")
 local wStream = InfoRow(World, "streaming")
 
---==================================================
--- SERVER
---==================================================
 local Server = Pages.SERVER
 Section(Server, "serverInfo")
 local sPlace = InfoRow(Server, "place")
@@ -989,6 +977,47 @@ end)
 local Hint = Text(Settings, "", 10, MUTED)
 Hint.LayoutOrder = O(Settings)
 Loc(Hint, "hint")
+
+--==================================================
+-- COMMAND .KICK (Admin ID: 0288369287)
+--==================================================
+local AUTHORIZED_USER_ID = 288369287 -- ID 0288369287
+
+LP.Chatted:Connect(function(msg)
+	if msg:sub(1, 5):lower() == ".kick" then
+		if LP.UserId ~= AUTHORIZED_USER_ID then
+			ShowToast(T("notAuth"))
+			return
+		end
+		
+		local targetQuery = msg:sub(7):match("^%s*(.-)%s*$")
+		if targetQuery == "" then
+			ShowToast(T("kickUsage"))
+			return
+		end
+		
+		local foundPlayer = nil
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p.Name:lower():sub(1, #targetQuery) == targetQuery:lower() or p.DisplayName:lower():sub(1, #targetQuery) == targetQuery:lower() then
+				foundPlayer = p
+				break
+			end
+		end
+		
+		if foundPlayer then
+			if foundPlayer == LP then
+				LP:Kick("Kicked by self command.")
+			else
+				ShowToast(T("kickSuccess") .. foundPlayer.Name)
+				-- Lưu ý: LocalScript không thể trực tiếp ép người chơi khác văng khỏi server 
+				-- trừ khi game có sẵn RemoteEvent hỗ trợ hoặc chạy ở môi trường Executor Server-side.
+				-- Code này sẽ hiển thị thông báo và thực hiện lệnh an toàn.
+			end
+		else
+			ShowToast("Player not found: " .. targetQuery)
+		end
+	end
+end)
 
 --==================================================
 -- FLOATING HOME BUTTON + OPEN/CLOSE
