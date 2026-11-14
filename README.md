@@ -1,9 +1,9 @@
 --==================================================
 -- KIANBEST V5.2 ULTRA | ALL-IN-ONE (1 ModuleScript)
 -- Đặt vào: ReplicatedStorage > ModuleScript tên "KianBest"
--- Cần thêm 2 script 1 dòng gọi nó (xem hướng dẫn):
---   Script (ServerScriptService)      : require(game.ReplicatedStorage:WaitForChild("KianBest"))
---   LocalScript (StarterPlayerScripts): require(game.ReplicatedStorage:WaitForChild("KianBest"))
+-- Cần thêm 2 script 1 dòng gọi nó:
+--   Script (ServerScriptService)      : require(game:GetService("ReplicatedStorage"):WaitForChild("KianBest"))
+--   LocalScript (StarterPlayerScripts): require(game:GetService("ReplicatedStorage"):WaitForChild("KianBest"))
 --==================================================
 
 local RS_ = game:GetService("RunService")
@@ -13,16 +13,27 @@ local function RunServer()
 --==================================================
 -- KIANBEST ADMIN (chạy ở SERVER)
 -- Đặt vào: ServerScriptService > Script (KHÔNG phải LocalScript)
--- Lệnh: .tp <id hoặc tên>   |   .kick <id hoặc tên>
+-- Lệnh gõ trong chat: .tp <id hoặc tên>   |   .kick <id hoặc tên>
+-- Client (GUI) bắt lệnh rồi gửi lên đây qua RemoteEvent "KianBestCmd".
+-- Server tự kiểm tra ADMINS nên người khác không thể giả mạo.
 --==================================================
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Thêm ID admin vào đây (mỗi ID một dòng)
 local ADMINS = {
 	[288369287] = true,
-	-- [11949735098] = true, -- tài khoản test seedngon4 (bỏ dấu -- nếu muốn dùng)
+	[11949735098] = true, -- seedngon4
 }
+
+local Remote = ReplicatedStorage:FindFirstChild("KianBestCmd")
+if not Remote then
+	Remote = Instance.new("RemoteEvent")
+	Remote.Name = "KianBestCmd"
+	Remote.Parent = ReplicatedStorage
+end
+workspace:SetAttribute("KianBestServer", true) -- GUI dùng để biết server script đã chạy
 
 local function findTarget(q)
 	if q == "" then return nil end
@@ -36,30 +47,58 @@ local function findTarget(q)
 	end
 end
 
-local function setup(plr)
-	if not ADMINS[plr.UserId] then return end
-	plr:SetAttribute("IsAdmin", true) -- GUI dùng cái này để mở ESP
-
-	plr.Chatted:Connect(function(msg)
-		local cmd, arg = msg:match("^%.(%a+)%s*(.-)%s*$")
-		if not cmd then return end
-		cmd = cmd:lower()
-		local target = findTarget(arg)
-		if not target then return end
-
-		if cmd == "tp" then
-			local theirs = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
-			if plr.Character and theirs then
-				plr.Character:PivotTo(theirs.CFrame * CFrame.new(0, 0, 4))
-			end
-		elseif cmd == "kick" and target ~= plr then
-			target:Kick("Bị admin kick")
-		end
-	end)
+local function mark(plr)
+	if ADMINS[plr.UserId] then plr:SetAttribute("IsAdmin", true) end
 end
+Players.PlayerAdded:Connect(mark)
+for _, p in ipairs(Players:GetPlayers()) do mark(p) end
 
-Players.PlayerAdded:Connect(setup)
-for _, p in ipairs(Players:GetPlayers()) do setup(p) end
+local last = {}
+Players.PlayerRemoving:Connect(function(p) last[p] = nil end)
+
+Remote.OnServerEvent:Connect(function(plr, msg)
+	if type(msg) ~= "string" or #msg > 100 then return end
+	if not ADMINS[plr.UserId] then
+		Remote:FireClient(plr, "noAdmin")
+		return
+	end
+	local now = os.clock()
+	if last[plr] and now - last[plr] < 0.3 then return end
+	last[plr] = now
+
+	local cmd, arg = msg:match("^%.(%a+)%s*(.-)%s*$")
+	if not cmd then return end
+	cmd = cmd:lower()
+	if cmd ~= "tp" and cmd ~= "kick" then return end
+	if arg == "" then
+		Remote:FireClient(plr, "usage")
+		return
+	end
+
+	local target = findTarget(arg)
+	if not target then
+		Remote:FireClient(plr, "notFound", arg)
+		return
+	end
+
+	if cmd == "tp" then
+		local theirs = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
+		if not (plr.Character and theirs) then
+			Remote:FireClient(plr, "noChar")
+			return
+		end
+		plr.Character:PivotTo(theirs.CFrame * CFrame.new(0, 0, 4))
+		Remote:FireClient(plr, "tpOk", target.Name)
+	else
+		if target == plr then
+			Remote:FireClient(plr, "kickSelf")
+			return
+		end
+		local name = target.Name
+		target:Kick("Bị admin kick")
+		Remote:FireClient(plr, "kickOk", name)
+	end
+end)
 end
 
 --################ PHẦN CLIENT (giao diện KianBest) ################
@@ -79,6 +118,8 @@ local Lighting = game:GetService("Lighting")
 local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
 local TeleportService = game:GetService("TeleportService")
+local TextChatService = game:GetService("TextChatService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LP = Players.LocalPlayer
 local PG = LP:WaitForChild("PlayerGui")
@@ -105,6 +146,8 @@ local Default = {
 	Shadows = true,
 	FOV = 70,
 	UIScale = 1,
+	Font = "Builder",
+	FPSCap = 0,
 }
 
 local Config = {}
@@ -197,8 +240,17 @@ local Texts = {
 		saved = "Đã lưu cấu hình", noSave = "Môi trường không hỗ trợ lưu file", resetDone = "Đã khôi phục mặc định",
 		badHex = "Mã HEX không hợp lệ", bgSet = "Đã bật hình nền", hint = "Kéo thanh tiêu đề để di chuyển",
 		-- mới
+		espOn = "ESP đã hoạt động", espOff = "ESP đã tắt",
+		noServer = "Chưa có Script server (ServerScriptService), lệnh và ESP chưa dùng được",
+		nOk = "Thành công", nErr = "Lỗi", nWarn = "Cảnh báo", nInfo = "Thông báo",
+		tpOk = "Đã dịch chuyển tới", kickOk = "Đã kick", notFound = "Không tìm thấy người chơi",
+		usage = "Cú pháp: .tp <id/tên> hoặc .kick <id/tên>", noChar = "Nhân vật chưa sẵn sàng",
+		kickSelf = "Không thể tự kick chính mình",
+		fpsCap = "Giới hạn FPS", capOff = "Mặc định", capSet = "Đã đặt giới hạn FPS:",
+		capNo = "Môi trường này không hỗ trợ đổi giới hạn FPS",
+		font = "Kiểu chữ", fontBuilder = "Builder Sans", fontGotham = "Gotham",
 		active = "Đang hoạt động", pingChart = "Biểu đồ Ping",
-		esp = "ESP người chơi (admin)", noAdmin = "Chỉ admin mới dùng được",
+		esp = "ESP người chơi (admin)", noAdmin = "Tài khoản chưa có quyền admin (thêm ID vào ADMINS ở script server)",
 		worldTools = "Công cụ thế giới", fullbright = "Sáng toàn map", nofog = "Tắt sương mù",
 		shadows = "Bóng đổ", fov = "Góc nhìn (FOV)", clock = "Chỉnh giờ trong game",
 		ver = "Phiên bản place", sent = "Dữ liệu gửi", recv = "Dữ liệu nhận", localTime = "Giờ thực",
@@ -224,8 +276,17 @@ local Texts = {
 		saved = "Config saved", noSave = "File saving is not supported here", resetDone = "Defaults restored",
 		badHex = "Invalid HEX code", bgSet = "Background set", hint = "Drag the title bar to move",
 		-- new
+		espOn = "ESP is now active", espOff = "ESP turned off",
+		noServer = "Server script missing (ServerScriptService), commands and ESP unavailable",
+		nOk = "Success", nErr = "Error", nWarn = "Warning", nInfo = "Info",
+		tpOk = "Teleported to", kickOk = "Kicked", notFound = "Player not found",
+		usage = "Usage: .tp <id/name> or .kick <id/name>", noChar = "Character not ready",
+		kickSelf = "You cannot kick yourself",
+		fpsCap = "FPS cap", capOff = "Default", capSet = "FPS cap set to:",
+		capNo = "FPS cap is not supported in this environment",
+		font = "Font", fontBuilder = "Builder Sans", fontGotham = "Gotham",
 		active = "Active", pingChart = "Ping chart",
-		esp = "Player ESP (admin)", noAdmin = "Admins only",
+		esp = "Player ESP (admin)", noAdmin = "No admin rights (add your ID to ADMINS in the server script)",
 		worldTools = "World tools", fullbright = "Fullbright", nofog = "Remove fog",
 		shadows = "Shadows", fov = "Field of view", clock = "Set in-game time",
 		ver = "Place version", sent = "Data sent", recv = "Data received", localTime = "Local time",
@@ -251,6 +312,26 @@ Gui.IgnoreGuiInset = true
 Gui.DisplayOrder = 2147483647
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Gui.Parent = PG
+
+-- Hệ thống font: đổi kiểu chữ toàn bộ giao diện
+local Families = {
+	Builder = { Enum.Font.BuilderSans, Enum.Font.BuilderSansMedium, Enum.Font.BuilderSansMedium, Enum.Font.BuilderSansBold, Enum.Font.BuilderSansExtraBold },
+	Gotham = { Enum.Font.Gotham, Enum.Font.GothamMedium, Enum.Font.GothamSemibold, Enum.Font.GothamBold, Enum.Font.GothamBlack },
+}
+local function SetFont(d)
+	if d:IsA("TextLabel") or d:IsA("TextButton") or d:IsA("TextBox") then
+		local w = d:GetAttribute("KBW")
+		if not w then
+			w = table.find(Families.Gotham, d.Font) or 2
+			d:SetAttribute("KBW", w)
+		end
+		d.Font = (Families[Config.Font] or Families.Builder)[w]
+	end
+end
+Gui.DescendantAdded:Connect(SetFont)
+local function ApplyFonts()
+	for _, d in ipairs(Gui:GetDescendants()) do SetFont(d) end
+end
 
 local TEXT = Color3.fromRGB(246, 240, 255)
 local MUTED = Color3.fromRGB(176, 162, 208)
@@ -413,22 +494,62 @@ local Content = New("Frame", {
 	Position = UDim2.fromOffset(146, 54), Size = UDim2.new(1, -156, 1, -62), BackgroundTransparency = 1, ZIndex = 4,
 }, Main)
 
-local Toast = New("TextLabel", {
-	AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -10), Size = UDim2.fromOffset(240, 26),
-	BackgroundColor3 = BASE, BackgroundTransparency = 1, TextTransparency = 1, TextSize = 12,
-	Font = Enum.Font.GothamMedium, TextColor3 = TEXT, ZIndex = 20, Text = "",
-}, Main)
-Corner(Toast, 13)
+-- Thông báo góc dưới bên phải (có trạng thái rõ ràng)
+local NOTE_KIND = {
+	ok = { Color3.fromRGB(74, 222, 128), "nOk" },
+	err = { Color3.fromRGB(248, 113, 113), "nErr" },
+	warn = { Color3.fromRGB(250, 204, 21), "nWarn" },
+	info = { Color3.fromRGB(129, 140, 248), "nInfo" },
+}
+local NotifyHolder = New("Frame", {
+	AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -14, 1, UIS.TouchEnabled and -150 or -16),
+	Size = UDim2.fromOffset(270, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 90,
+}, Gui)
+New("UIListLayout", {
+	Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder,
+	VerticalAlignment = Enum.VerticalAlignment.Bottom, HorizontalAlignment = Enum.HorizontalAlignment.Right,
+}, NotifyHolder)
 
-local toastId = 0
-local function ShowToast(msg)
-	toastId += 1
-	local id = toastId
-	Toast.Text = msg
-	Tween(Toast, 0.15, { BackgroundTransparency = 0.15, TextTransparency = 0 })
-	task.delay(1.6, function()
-		if id == toastId then
-			Tween(Toast, 0.25, { BackgroundTransparency = 1, TextTransparency = 1 })
+local Notes, noteId = {}, 0
+local function ShowToast(msg, kind)
+	local k = NOTE_KIND[kind or "info"] or NOTE_KIND.info
+	local col = k[1]
+	noteId += 1
+	local card = New("CanvasGroup", {
+		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = BASE,
+		BackgroundTransparency = 0.05, BorderSizePixel = 0, GroupTransparency = 1, LayoutOrder = noteId, ZIndex = 91,
+	}, NotifyHolder)
+	Corner(card, 12)
+	New("UIStroke", { Color = col, Transparency = 0.35, Thickness = 1.5 }, card)
+	New("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 9), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }, card)
+	New("UIListLayout", { Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder }, card)
+	local head = New("Frame", { Size = UDim2.new(1, 0, 0, 16), BackgroundTransparency = 1, LayoutOrder = 1, ZIndex = 92 }, card)
+	local dot = New("Frame", { Position = UDim2.fromOffset(0, 4), Size = UDim2.fromOffset(8, 8), BackgroundColor3 = col, BorderSizePixel = 0, ZIndex = 93 }, head)
+	New("UICorner", { CornerRadius = UDim.new(0.5, 0) }, dot)
+	local hl = New("TextLabel", {
+		BackgroundTransparency = 1, Position = UDim2.fromOffset(14, 0), Size = UDim2.new(1, -14, 1, 0),
+		Text = T(k[2]), TextSize = 11, Font = Enum.Font.GothamBold, TextColor3 = col,
+		TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 93,
+	}, head)
+	New("TextLabel", {
+		BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
+		Text = tostring(msg), TextSize = 12, Font = Enum.Font.GothamMedium, TextColor3 = TEXT,
+		TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = 2, ZIndex = 93,
+	}, card)
+	table.insert(Notes, card)
+	if #Notes > 4 then
+		local oldest = table.remove(Notes, 1)
+		oldest:Destroy()
+	end
+	Tween(card, 0.18, { GroupTransparency = 0 })
+	task.delay(3.2, function()
+		if card.Parent then
+			Tween(card, 0.25, { GroupTransparency = 1 })
+			task.delay(0.3, function()
+				local i = table.find(Notes, card)
+				if i then table.remove(Notes, i) end
+				card:Destroy()
+			end)
 		end
 	end)
 end
@@ -753,28 +874,35 @@ local function SpawnParticles()
 		}
 		local o
 		if eff == "Snow" then
-			local sz = math.random(3, 7)
+			local sz = math.random(4, 9)
 			o = New("Frame", {
-				Size = UDim2.fromOffset(sz, sz), BackgroundColor3 = Color3.fromRGB(235, 245, 255),
-				BackgroundTransparency = 0.1 + math.random() * 0.4, BorderSizePixel = 0, ZIndex = 3,
+				Size = UDim2.fromOffset(sz, sz), BackgroundColor3 = Color3.new(1, 1, 1),
+				BackgroundTransparency = math.random() * 0.2, BorderSizePixel = 0, ZIndex = 3,
 			}, ParticleLayer)
-			Corner(o, sz)
-			p.v = 0.05 + sz * 0.012
+			New("UICorner", { CornerRadius = UDim.new(0.5, 0) }, o)
+			New("UIStroke", { Color = Color3.fromRGB(200, 225, 255), Transparency = 0.55, Thickness = 1.5 }, o)
+			p.v = 0.06 + sz * 0.012
 		elseif eff == "Sakura" then
+			local w = math.random(11, 17)
 			o = New("Frame", {
-				Size = UDim2.fromOffset(math.random(8, 12), math.random(5, 7)),
-				BackgroundColor3 = Color3.fromRGB(255, 183, 213):Lerp(Accent, 0.2),
-				BackgroundTransparency = 0.15 + math.random() * 0.3, BorderSizePixel = 0, ZIndex = 3,
+				Size = UDim2.fromOffset(w, math.floor(w * 0.62)), BackgroundColor3 = Color3.new(1, 1, 1),
+				BackgroundTransparency = math.random() * 0.15, BorderSizePixel = 0, ZIndex = 3,
 			}, ParticleLayer)
-			Corner(o, 6)
-			p.v = 0.05 + math.random() * 0.06
+			New("UICorner", { CornerRadius = UDim.new(0.5, 0) }, o)
+			New("UIGradient", {
+				Color = ColorSequence.new(Color3.fromRGB(255, 214, 230):Lerp(Accent, 0.15), Color3.fromRGB(255, 140, 184):Lerp(Accent, 0.15)),
+				Rotation = 30,
+			}, o)
+			New("UIStroke", { Color = Color3.fromRGB(255, 170, 205), Transparency = 0.5, Thickness = 1 }, o)
+			p.v = 0.06 + math.random() * 0.06
 			p.spin = true
 		elseif eff == "Stars" then
-			local sz = math.random(3, 6)
+			local sz = math.random(5, 9)
+			local sc = math.random() < 0.5 and Color3.new(1, 1, 1) or Accent
 			o = New("Frame", {
-				Size = UDim2.fromOffset(sz, sz), Rotation = 45, BorderSizePixel = 0, ZIndex = 3,
-				BackgroundColor3 = math.random() < 0.5 and Color3.new(1, 1, 1) or Accent,
+				Size = UDim2.fromOffset(sz, sz), Rotation = 45, BorderSizePixel = 0, ZIndex = 3, BackgroundColor3 = sc,
 			}, ParticleLayer)
+			New("UIStroke", { Color = sc, Transparency = 0.6, Thickness = 1.5 }, o)
 			p.v = 0.012 + math.random() * 0.02
 			p.twinkle = true
 		else
@@ -795,7 +923,6 @@ Bind(function()
 	MainStroke.Color = Accent
 	MainGrad.Color = ColorSequence.new(Accent:Lerp(BASE, 0.8), BASE)
 	Overlay.BackgroundColor3 = BASE
-	Toast.BackgroundColor3 = BASE
 	Badge.BackgroundColor3 = Accent
 	Badge.TextColor3 = BASE
 	RefreshTabs()
@@ -824,27 +951,34 @@ local Avatar = New("ImageLabel", {
 Corner(Avatar, 20)
 local PName = Text(Profile, LP.DisplayName, 14, TEXT, Enum.Font.GothamBold)
 PName.Position = UDim2.fromOffset(58, 9)
-PName.Size = UDim2.new(1, -180, 0, 20)
+PName.Size = UDim2.new(1, -190, 0, 20)
 PName.TextTruncate = Enum.TextTruncate.AtEnd
 local PSub = Text(Profile, "@" .. LP.Name, 11, MUTED)
 PSub.Position = UDim2.fromOffset(58, 29)
-PSub.Size = UDim2.new(1, -180, 0, 17)
+PSub.Size = UDim2.new(1, -190, 0, 17)
 PSub.TextTruncate = Enum.TextTruncate.AtEnd
 
--- Trạng thái "Đang hoạt động" (chấm xanh nhấp nháy)
+-- Trạng thái "Đang hoạt động" (tự co giãn theo chữ, bo tròn đều)
 local Pill = New("Frame", {
-	AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(112, 22),
-	BackgroundColor3 = GREEN, BackgroundTransparency = 0.85, BorderSizePixel = 0, ZIndex = 6,
+	AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(0, 24),
+	AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = GREEN, BackgroundTransparency = 0.82,
+	BorderSizePixel = 0, ZIndex = 6,
 }, Profile)
-Corner(Pill, 11)
-local Dot = New("Frame", {
-	Position = UDim2.fromOffset(8, 7), Size = UDim2.fromOffset(8, 8), BackgroundColor3 = GREEN,
-	BorderSizePixel = 0, ZIndex = 7,
+New("UICorner", { CornerRadius = UDim.new(0.5, 0) }, Pill)
+New("UIStroke", { Color = GREEN, Transparency = 0.6, Thickness = 1 }, Pill)
+New("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 12) }, Pill)
+New("UIListLayout", {
+	FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center,
+	Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder,
 }, Pill)
-Corner(Dot, 4)
-local PillT = Text(Pill, "", 10, GREEN, Enum.Font.GothamBold)
-PillT.Position = UDim2.fromOffset(22, 0)
-PillT.Size = UDim2.new(1, -24, 1, 0)
+local Dot = New("Frame", {
+	Size = UDim2.fromOffset(8, 8), BackgroundColor3 = GREEN, BorderSizePixel = 0, ZIndex = 7, LayoutOrder = 1,
+}, Pill)
+New("UICorner", { CornerRadius = UDim.new(0.5, 0) }, Dot)
+local PillT = New("TextLabel", {
+	BackgroundTransparency = 1, Size = UDim2.fromOffset(0, 24), AutomaticSize = Enum.AutomaticSize.X, Text = "",
+	TextSize = 11, Font = Enum.Font.GothamBold, TextColor3 = GREEN, ZIndex = 7, LayoutOrder = 2,
+}, Pill)
 Loc(PillT, "active")
 task.spawn(function()
 	while Gui.Parent do
@@ -895,6 +1029,25 @@ Toggle(Perf, "compact", function() return Config.Compact end, function(v)
 end)
 Toggle(Perf, "background", function() return Config.BackgroundEnabled end, function(v)
 	Config.BackgroundEnabled = v
+	ApplyAll()
+	SaveConfig()
+end)
+
+Section(Perf, "fpsCap")
+local function ApplyFPSCap(announce)
+	if Config.FPSCap <= 0 then return end
+	if type(setfpscap) == "function" then
+		pcall(setfpscap, Config.FPSCap)
+		if announce then ShowToast(T("capSet") .. " " .. Config.FPSCap, "ok") end
+	elseif announce then
+		ShowToast(T("capNo"), "warn")
+	end
+end
+ChipGrid(Perf, {
+	{ 0, "capOff" }, { 30, "30" }, { 60, "60" }, { 90, "90" }, { 120, "120" }, { 144, "144" }, { 240, "240" },
+}, function(c) return Config.FPSCap == c end, function(c)
+	Config.FPSCap = c
+	ApplyFPSCap(true)
 	ApplyAll()
 	SaveConfig()
 end)
@@ -952,12 +1105,19 @@ local function RefreshESP()
 	end
 end
 Toggle(PlayerPage, "esp", function() return ESPOn end, function(v)
-	if v and not LP:GetAttribute("IsAdmin") then
-		ShowToast(T("noAdmin"))
-		return
+	if v then
+		if not workspace:GetAttribute("KianBestServer") then
+			ShowToast(T("noServer"), "err")
+			return
+		end
+		if not LP:GetAttribute("IsAdmin") then
+			ShowToast(T("noAdmin") .. " (ID " .. LP.UserId .. ")", "err")
+			return
+		end
 	end
 	ESPOn = v
 	RefreshESP()
+	ShowToast(v and T("espOn") or T("espOff"), v and "ok" or "info")
 end)
 local function WatchChar(p)
 	p.CharacterAdded:Connect(function()
@@ -1017,7 +1177,7 @@ local function RefreshPlayers()
 				Corner(cp, 8)
 				cp.Activated:Connect(function()
 					pcall(setclipboard, tostring(plr.UserId))
-					ShowToast(T("copied"))
+					ShowToast(T("copied"), "ok")
 				end)
 			end
 		end
@@ -1113,7 +1273,7 @@ New("UIGridLayout", {
 ActionButton(SrvBtns, "copyJob", function()
 	if type(setclipboard) == "function" then
 		pcall(setclipboard, game.JobId)
-		ShowToast(T("copied"))
+		ShowToast(T("copied"), "ok")
 	end
 end, 1)
 ActionButton(SrvBtns, "rejoin", function()
@@ -1163,7 +1323,7 @@ Section(Settings, "hex")
 InputRow(Settings, "#A78BFA", "apply", function(txt)
 	local c = HexToColor(txt)
 	if not c then
-		ShowToast(T("badHex"))
+		ShowToast(T("badHex"), "err")
 		return
 	end
 	Config.Theme = "Custom"
@@ -1189,8 +1349,16 @@ InputRow(Settings, "rbxassetid://...", "apply", function(txt)
 		Config.BackgroundEnabled = true
 		ApplyAll()
 		SaveConfig()
-		ShowToast(T("bgSet"))
+		ShowToast(T("bgSet"), "ok")
 	end
+end)
+
+Section(Settings, "font")
+ChipGrid(Settings, { { "Builder", "fontBuilder" }, { "Gotham", "fontGotham" } }, function(f) return Config.Font == f end, function(f)
+	Config.Font = f
+	ApplyFonts()
+	ApplyAll()
+	SaveConfig()
 end)
 
 Section(Settings, "display")
@@ -1223,7 +1391,8 @@ New("UIGridLayout", {
 	CellSize = UDim2.new(0.5, -4, 0, 36), CellPadding = UDim2.fromOffset(8, 0), SortOrder = Enum.SortOrder.LayoutOrder,
 }, ActionRow)
 ActionButton(ActionRow, "save", function()
-	ShowToast(SaveConfig() and T("saved") or T("noSave"))
+	local saved = SaveConfig()
+	ShowToast(saved and T("saved") or T("noSave"), saved and "ok" or "warn")
 end, 1)
 ActionButton(ActionRow, "reset", function()
 	for k, v in pairs(Default) do Config[k] = v end
@@ -1232,12 +1401,44 @@ ActionButton(ActionRow, "reset", function()
 	MainScale.Scale = Config.UIScale
 	ApplyWorld(true)
 	ApplyAll()
-	ShowToast(T("resetDone"))
+	ShowToast(T("resetDone"), "ok")
 end, 2)
 
 local Hint = Text(Settings, "", 10, MUTED)
 Hint.LayoutOrder = O(Settings)
 Loc(Hint, "hint")
+
+--==================================================
+-- LỆNH ADMIN (.tp / .kick): gửi lên server xử lý
+--==================================================
+local CmdRemote
+task.spawn(function()
+	CmdRemote = ReplicatedStorage:WaitForChild("KianBestCmd", 15)
+	if CmdRemote then
+		CmdRemote.OnClientEvent:Connect(function(code, extra)
+			local ok = code == "tpOk" or code == "kickOk"
+			ShowToast(T(code) .. (extra and (" " .. tostring(extra)) or ""), ok and "ok" or "err")
+		end)
+	end
+end)
+
+local lastCmd, lastAt = "", 0
+local function SendCmd(msg)
+	if type(msg) ~= "string" or msg:sub(1, 1) ~= "." then return end
+	if msg == lastCmd and os.clock() - lastAt < 1 then return end
+	lastCmd, lastAt = msg, os.clock()
+	if not CmdRemote then
+		ShowToast(T("noServer"), "err")
+		return
+	end
+	CmdRemote:FireServer(msg)
+end
+pcall(function() LP.Chatted:Connect(SendCmd) end)
+pcall(function()
+	TextChatService.MessageReceived:Connect(function(m)
+		if m.TextSource and m.TextSource.UserId == LP.UserId then SendCmd(m.Text) end
+	end)
+end)
 
 --==================================================
 -- FLOATING HOME BUTTON + OPEN/CLOSE
@@ -1345,7 +1546,9 @@ local function UpdateInfo()
 	sLocal.Text = os.date("%H:%M:%S")
 end
 
-RunService.RenderStepped:Connect(function(dt)
+local okSig, RenderSig = pcall(function() return RunService.PreRender end)
+if not okSig or not RenderSig then RenderSig = RunService.RenderStepped end
+RenderSig:Connect(function(dt)
 	Frames += 1
 	FrameTime += dt
 	if FrameTime >= 0.25 then
@@ -1365,7 +1568,7 @@ RunService.RenderStepped:Connect(function(dt)
 
 	if Main.Visible and #Particles > 0 then
 		PAcc += dt
-		if PAcc >= 1 / 30 then
+		if PAcc >= 1 / 60 then
 			local d = PAcc
 			PAcc = 0
 			Clock += d
@@ -1398,6 +1601,8 @@ end)
 -- START
 --==================================================
 ApplyAll()
+ApplyFonts()
+ApplyFPSCap(false)
 SpawnParticles()
 print("[KianBest V5.2 ULTRA] loaded | Theme:", Config.Theme, "| Language:", Config.Language)
 end
