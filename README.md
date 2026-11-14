@@ -1,572 +1,1168 @@
---[[
-	KianBest V5.2 ULTRA  -  Roblox LocalScript
-	Đặt vào: StarterPlayer > StarterPlayerScripts (LocalScript)
 
-	CORE .......... Loader, Status Manager, Module Manager
-	FLOATING HOME . nút nổi kéo được, mở/đóng dashboard (hoặc phím K)
-	DASHBOARD ..... Home, Performance, Players, World, Server, Settings
-	MONITOR ....... FPS thật, FPS min/max/avg, Ping, Memory
-	BACKGROUND .... ảnh nền anime, độ trong suốt, bật/tắt
-	LANGUAGE ...... Tiếng Việt / English
-	THEMES ........ Purple, Sakura, Ocean, Emerald, Custom
-]]
+--==================================================
+-- KIANBEST V5.2 ULTRA | COMPACT EDITION
+-- Client-side Roblox Dashboard
+-- Default Theme: Purple #A78BFA
+--==================================================
 
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats")
 local Lighting = game:GetService("Lighting")
+local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
 
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+local LP = Players.LocalPlayer
+local PG = LP:WaitForChild("PlayerGui")
 
----------------------------------------------------------------------
+--==================================================
 -- CONFIG
----------------------------------------------------------------------
-local CONFIG = {
-	Name = "KianBest",
-	Version = "V5.2 ULTRA",
-	-- Upload ảnh anime lên Roblox rồi dán ID vào đây, ví dụ "rbxassetid://1234567890"
-	WallpaperId = "",
-	Language = "vi",
-	Theme = "Purple",
-	BackgroundOn = true,
-	Transparency = 0.25,
-	Toggle = Enum.KeyCode.K,
-	CustomColor = Color3.fromRGB(255, 122, 89),
+--==================================================
+
+local Config = {
+    Theme = "Purple",
+    Hex = "#A78BFA",
+    Language = "VI",
+    Effect = "Snow",
+    Background = "",
+    BackgroundEnabled = true,
+    Particles = true,
+    Compact = true,
+    FastMode = false,
+    ParticleAmount = 25,
+    Opacity = 0.08,
 }
 
-local THEMES = {
-	Purple = { Color3.fromRGB(168, 85, 247), Color3.fromRGB(109, 40, 217) },
-	Sakura = { Color3.fromRGB(244, 114, 182), Color3.fromRGB(190, 24, 93) },
-	Ocean = { Color3.fromRGB(56, 189, 248), Color3.fromRGB(3, 105, 161) },
-	Emerald = { Color3.fromRGB(52, 211, 153), Color3.fromRGB(4, 120, 87) },
-}
-local THEME_ORDER = { "Purple", "Sakura", "Ocean", "Emerald", "Custom" }
-
-local LANG = {
-	vi = {
-		home = "Trang chủ", performance = "Hiệu năng", players = "Người chơi", world = "Thế giới",
-		server = "Máy chủ", settings = "Cài đặt", fps = "FPS", ping = "Ping", memory = "Bộ nhớ",
-		min = "FPS thấp nhất", max = "FPS cao nhất", avg = "FPS trung bình", modules = "Mô-đun",
-		language = "Ngôn ngữ", theme = "Chủ đề", background = "Hình nền", transparency = "Độ trong suốt",
-		running = "Đang chạy", stopped = "Đã dừng", uptime = "Thời gian chạy", count = "Số người chơi",
-		clock = "Giờ trong game", gravity = "Trọng lực", brightness = "Độ sáng", streaming = "Streaming",
-		place = "Place ID", job = "Job ID", age = "Tuổi tài khoản (ngày)", on = "Bật", off = "Tắt",
-		monitor = "Giám sát", bgmod = "Hình nền", plmod = "Danh sách người chơi", hint = "Nhấn K để mở/đóng",
-	},
-	en = {
-		home = "Home", performance = "Performance", players = "Players", world = "World",
-		server = "Server", settings = "Settings", fps = "FPS", ping = "Ping", memory = "Memory",
-		min = "FPS min", max = "FPS max", avg = "FPS average", modules = "Modules",
-		language = "Language", theme = "Theme", background = "Background", transparency = "Transparency",
-		running = "Running", stopped = "Stopped", uptime = "Uptime", count = "Players",
-		clock = "In-game time", gravity = "Gravity", brightness = "Brightness", streaming = "Streaming",
-		place = "Place ID", job = "Job ID", age = "Account age (days)", on = "On", off = "Off",
-		monitor = "Monitor", bgmod = "Background", plmod = "Player list", hint = "Press K to open/close",
-	},
+local Themes = {
+    Purple  = Color3.fromRGB(167,139,250),
+    Sakura  = Color3.fromRGB(249,168,212),
+    Ocean   = Color3.fromRGB(56,189,248),
+    Emerald = Color3.fromRGB(52,211,153),
+    Ruby    = Color3.fromRGB(251,113,133),
+    Gold    = Color3.fromRGB(251,191,36),
+    Cyber   = Color3.fromRGB(34,211,238),
+    White   = Color3.fromRGB(226,232,240),
 }
 
-local function tr(key)
-	return (LANG[CONFIG.Language] or LANG.vi)[key] or key
+local Accent = Themes.Purple
+local Enabled = true
+local CurrentTab = "HOME"
+local FPS = 0
+local MinFPS = math.huge
+local MaxFPS = 0
+local FPSCounter = 0
+local FPSTime = 0
+
+--==================================================
+-- OPTIONAL CONFIG SAVE
+-- Uses executor file APIs only when available.
+--==================================================
+
+local function SaveConfig()
+    if type(writefile) ~= "function" then
+        return false
+    end
+
+    local success = pcall(function()
+        writefile(
+            "KianBest_V52_Config.json",
+            HttpService:JSONEncode(Config)
+        )
+    end)
+
+    return success
 end
 
-local function accent()
-	if CONFIG.Theme == "Custom" then
-		return CONFIG.CustomColor, CONFIG.CustomColor:Lerp(Color3.new(0, 0, 0), 0.4)
-	end
-	local t = THEMES[CONFIG.Theme]
-	return t[1], t[2]
+local function LoadConfig()
+    if type(readfile) ~= "function"
+        or type(isfile) ~= "function" then
+        return
+    end
+
+    pcall(function()
+        if isfile("KianBest_V52_Config.json") then
+            local data = HttpService:JSONDecode(
+                readfile("KianBest_V52_Config.json")
+            )
+
+            for k, v in pairs(data) do
+                if Config[k] ~= nil then
+                    Config[k] = v
+                end
+            end
+        end
+    end)
+
+    if Themes[Config.Theme] then
+        Accent = Themes[Config.Theme]
+    end
 end
 
-local function new(class, props, parent)
-	local o = Instance.new(class)
-	for k, v in pairs(props) do
-		o[k] = v
-	end
-	o.Parent = parent
-	return o
+LoadConfig()
+
+--==================================================
+-- LANGUAGE
+--==================================================
+
+local Texts = {
+    VI = {
+        HOME = "Trang chủ",
+        PERFORMANCE = "Hiệu năng",
+        PLAYERS = "Người chơi",
+        WORLD = "Thế giới",
+        SERVER = "Máy chủ",
+        SETTINGS = "Cài đặt",
+        FPS = "FPS thực tế",
+        PING = "Ping",
+        MIN = "FPS thấp nhất",
+        MAX = "FPS cao nhất",
+        THEME = "Màu giao diện",
+        EFFECT = "Hiệu ứng",
+        BACKGROUND = "Hình nền",
+        SAVE = "Lưu cấu hình",
+        RESET = "Khôi phục",
+        FAST = "Chế độ tăng tốc",
+        SNOW = "Tuyết rơi",
+        SAKURA = "Hoa anh đào",
+        STARS = "Sao lấp lánh",
+        HEARTS = "Trái tim",
+        NONE = "Tắt",
+        SEARCH = "Tìm người chơi...",
+        ONLINE = "ĐANG HOẠT ĐỘNG",
+        OFFLINE = "KHÔNG HOẠT ĐỘNG",
+    },
+
+    EN = {
+        HOME = "Home",
+        PERFORMANCE = "Performance",
+        PLAYERS = "Players",
+        WORLD = "World",
+        SERVER = "Server",
+        SETTINGS = "Settings",
+        FPS = "Real FPS",
+        PING = "Ping",
+        MIN = "Minimum FPS",
+        MAX = "Maximum FPS",
+        THEME = "Theme Color",
+        EFFECT = "Effects",
+        BACKGROUND = "Background",
+        SAVE = "Save Config",
+        RESET = "Reset",
+        FAST = "Boost Mode",
+        SNOW = "Snow Fall",
+        SAKURA = "Sakura Fall",
+        STARS = "Star Glow",
+        HEARTS = "Floating Hearts",
+        NONE = "Disabled",
+        SEARCH = "Search players...",
+        ONLINE = "ACTIVE",
+        OFFLINE = "INACTIVE",
+    }
+}
+
+local function T(key)
+    return Texts[Config.Language][key] or key
 end
 
----------------------------------------------------------------------
--- CORE: Loader / Status Manager / Module Manager
----------------------------------------------------------------------
-local Core = { Modules = {}, Order = {}, Status = {} }
+--==================================================
+-- GUI ROOT
+--==================================================
 
-function Core.register(name, mod)
-	mod.enabled = true
-	Core.Modules[name] = mod
-	table.insert(Core.Order, name)
-	Core.Status[name] = "stopped"
+local Old = PG:FindFirstChild("KianBestV52")
+if Old then Old:Destroy() end
+
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "KianBestV52"
+Gui.ResetOnSpawn = false
+Gui.DisplayOrder = 999
+Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+Gui.Parent = PG
+
+local Scale = Instance.new("UIScale")
+Scale.Parent = Gui
+
+local function UpdateScale()
+    local camera = workspace.CurrentCamera
+    if not camera then return end
+
+    local size = camera.ViewportSize
+    Scale.Scale = math.clamp(
+        math.min(size.X / 430, size.Y / 760),
+        0.72,
+        1.12
+    )
 end
 
-function Core.start(name)
-	local mod = Core.Modules[name]
-	if not mod then return end
-	local ok, err = pcall(function()
-		if mod.onStart then mod.onStart() end
-	end)
-	mod.enabled = ok
-	Core.Status[name] = ok and "running" or "error"
-	if not ok then warn("[KianBest] " .. name .. ": " .. tostring(err)) end
+UpdateScale()
+
+if workspace.CurrentCamera then
+    workspace.CurrentCamera:GetPropertyChangedSignal(
+        "ViewportSize"
+    ):Connect(UpdateScale)
 end
 
-function Core.stop(name)
-	local mod = Core.Modules[name]
-	if not mod then return end
-	pcall(function()
-		if mod.onStop then mod.onStop() end
-	end)
-	mod.enabled = false
-	Core.Status[name] = "stopped"
+--==================================================
+-- UI HELPERS
+--==================================================
+
+local function New(class, props, parent)
+    local obj = Instance.new(class)
+
+    for k, v in pairs(props or {}) do
+        obj[k] = v
+    end
+
+    obj.Parent = parent
+    return obj
 end
 
-function Core.toggle(name)
-	if Core.Modules[name].enabled then Core.stop(name) else Core.start(name) end
+local function Corner(obj, radius)
+    return New("UICorner", {
+        CornerRadius = UDim.new(0, radius or 10)
+    }, obj)
 end
 
----------------------------------------------------------------------
--- MONITOR data (FPS thật, Ping, Memory)
----------------------------------------------------------------------
-local M = { fps = 0, min = math.huge, max = 0, sum = 0, n = 0, ping = 0, mem = 0, hist = {} }
-local frames, acc, warm = 0, 0, 0
-local monitorConn
-
-local function readPing()
-	local ok, v = pcall(function()
-		return Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
-	end)
-	return ok and math.floor(v + 0.5) or 0
+local function Stroke(obj, color, thickness)
+    return New("UIStroke", {
+        Color = color or Accent,
+        Thickness = thickness or 1
+    }, obj)
 end
 
----------------------------------------------------------------------
--- UI
----------------------------------------------------------------------
-local gui = new("ScreenGui", {
-	Name = "KianBestUI", ResetOnSpawn = false, IgnoreGuiInset = true,
-	ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 999,
-}, playerGui)
-
-local panel = new("Frame", {
-	Name = "Dashboard", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
-	Size = UDim2.fromScale(0.92, 0.78), BackgroundColor3 = Color3.fromRGB(22, 12, 40),
-	BackgroundTransparency = CONFIG.Transparency, Visible = false, ClipsDescendants = true,
-}, gui)
-new("UISizeConstraint", { MaxSize = Vector2.new(520, 380), MinSize = Vector2.new(260, 220) }, panel)
-new("UICorner", { CornerRadius = UDim.new(0, 18) }, panel)
-local panelStroke = new("UIStroke", { Thickness = 2, Transparency = 0.2 }, panel)
-local panelGrad = new("UIGradient", { Rotation = 90 }, panel)
-
-local wallpaper = new("ImageLabel", {
-	Name = "Wallpaper", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
-	ScaleType = Enum.ScaleType.Crop, ImageTransparency = 0.55, ZIndex = 0,
-}, panel)
-new("UICorner", { CornerRadius = UDim.new(0, 18) }, wallpaper)
-
-local title = new("TextLabel", {
-	Position = UDim2.fromOffset(14, 8), Size = UDim2.new(1, -60, 0, 26), BackgroundTransparency = 1,
-	Font = Enum.Font.GothamBold, TextSize = 18, TextXAlignment = Enum.TextXAlignment.Left,
-	Text = CONFIG.Name .. "  " .. CONFIG.Version, TextColor3 = Color3.new(1, 1, 1), ZIndex = 2,
-}, panel)
-
-local closeBtn = new("TextButton", {
-	AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 8), Size = UDim2.fromOffset(30, 26),
-	BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0.88,
-	Text = "X", Font = Enum.Font.GothamBold, TextSize = 14, TextColor3 = Color3.new(1, 1, 1), ZIndex = 2,
-}, panel)
-new("UICorner", { CornerRadius = UDim.new(0, 8) }, closeBtn)
-
-local tabBar = new("ScrollingFrame", {
-	Position = UDim2.fromOffset(10, 40), Size = UDim2.new(1, -20, 0, 34), BackgroundTransparency = 1,
-	ScrollBarThickness = 0, CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.X,
-	ScrollingDirection = Enum.ScrollingDirection.X, ZIndex = 2,
-}, panel)
-new("UIListLayout", {
-	FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6),
-	VerticalAlignment = Enum.VerticalAlignment.Center,
-}, tabBar)
-
-local content = new("Frame", {
-	Position = UDim2.fromOffset(10, 80), Size = UDim2.new(1, -20, 1, -90), BackgroundTransparency = 1, ZIndex = 2,
-}, panel)
-
--- ---------- widgets ----------
-local function page(name)
-	local p = new("ScrollingFrame", {
-		Name = name, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false,
-		ScrollBarThickness = 3, CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y,
-		BorderSizePixel = 0, ZIndex = 2,
-	}, content)
-	new("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, p)
-	return p
+local function Label(parent, text, size, position, color)
+    return New("TextLabel", {
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = color or Color3.new(1,1,1),
+        TextSize = size or 13,
+        Font = Enum.Font.GothamMedium,
+        Position = position or UDim2.new(),
+        Size = UDim2.new(1,0,0,24),
+        TextXAlignment = Enum.TextXAlignment.Left
+    }, parent)
 end
 
-local langLabels = {} -- {label, key}
-local function localized(label, key)
-	label.Text = tr(key)
-	table.insert(langLabels, { label, key })
+local function Button(parent, text, size, position)
+    local b = New("TextButton", {
+        Text = text,
+        Size = size,
+        Position = position,
+        BackgroundColor3 = Color3.fromRGB(48,38,67),
+        TextColor3 = Color3.new(1,1,1),
+        Font = Enum.Font.GothamSemibold,
+        TextSize = 12,
+        AutoButtonColor = true
+    }, parent)
+
+    Corner(b, 9)
+    return b
 end
 
-local function row(parent, key, order)
-	local r = new("Frame", {
-		Size = UDim2.new(1, -6, 0, 34), BackgroundColor3 = Color3.new(1, 1, 1),
-		BackgroundTransparency = 0.92, LayoutOrder = order or 0, ZIndex = 2,
-	}, parent)
-	new("UICorner", { CornerRadius = UDim.new(0, 10) }, r)
-	local l = new("TextLabel", {
-		Position = UDim2.fromOffset(10, 0), Size = UDim2.new(0.55, 0, 1, 0), BackgroundTransparency = 1,
-		Font = Enum.Font.Gotham, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Color3.fromRGB(230, 220, 250), ZIndex = 3,
-	}, r)
-	if key then localized(l, key) end
-	local v = new("TextLabel", {
-		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 0), Size = UDim2.new(0.45, 0, 1, 0),
-		BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 14, Text = "-",
-		TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = Color3.new(1, 1, 1), ZIndex = 3,
-	}, r)
-	return r, l, v
-end
+--==================================================
+-- MAIN WINDOW
+--==================================================
 
-local accentButtons = {} -- buttons that follow the accent color
-local function button(parent, text, size, onClick)
-	local b = new("TextButton", {
-		Size = size or UDim2.fromOffset(90, 30), Text = text, Font = Enum.Font.GothamBold, TextSize = 13,
-		TextColor3 = Color3.new(1, 1, 1), AutoButtonColor = true, ZIndex = 3,
-	}, parent)
-	new("UICorner", { CornerRadius = UDim.new(0, 9) }, b)
-	table.insert(accentButtons, b)
-	b.Activated:Connect(onClick)
-	return b
-end
+local Main = New("Frame", {
+    Size = UDim2.fromOffset(340, 430),
+    Position = UDim2.new(0.5,-170,0.5,-215),
+    BackgroundColor3 = Color3.fromRGB(25,19,40),
+    BorderSizePixel = 0,
+    Visible = false,
+    ClipsDescendants = true
+}, Gui)
 
--- ---------- pages ----------
-local pages, tabButtons, current = {}, {}, "home"
+Corner(Main, 16)
+local MainStroke = Stroke(Main, Accent, 1.5)
 
--- HOME
-pages.home = page("home")
-local _, _, hFps = row(pages.home, "fps", 1)
-local _, _, hPing = row(pages.home, "ping", 2)
-local _, _, hMem = row(pages.home, "memory", 3)
-local modTitle = new("TextLabel", {
-	Size = UDim2.new(1, -6, 0, 22), BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 13,
-	TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(190, 170, 230), LayoutOrder = 4, ZIndex = 2,
-}, pages.home)
-localized(modTitle, "modules")
-local modRows = {}
+-- BACKGROUND IMAGE
+local Background = New("ImageLabel", {
+    Name = "AnimeBackground",
+    Size = UDim2.fromScale(1,1),
+    BackgroundTransparency = 1,
+    Image = Config.Background,
+    ImageTransparency = Config.Opacity,
+    ScaleType = Enum.ScaleType.Crop,
+    Visible = Config.BackgroundEnabled,
+    ZIndex = 0
+}, Main)
 
--- PERFORMANCE
-pages.performance = page("performance")
-local _, _, pFps = row(pages.performance, "fps", 1)
-local _, _, pMin = row(pages.performance, "min", 2)
-local _, _, pMax = row(pages.performance, "max", 3)
-local _, _, pAvg = row(pages.performance, "avg", 4)
-local _, _, pPing = row(pages.performance, "ping", 5)
-local _, _, pMem = row(pages.performance, "memory", 6)
-local graph = new("Frame", {
-	Size = UDim2.new(1, -6, 0, 70), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.92,
-	LayoutOrder = 7, ZIndex = 2,
-}, pages.performance)
-new("UICorner", { CornerRadius = UDim.new(0, 10) }, graph)
-local bars = {}
-for i = 1, 30 do
-	bars[i] = new("Frame", {
-		AnchorPoint = Vector2.new(0, 1), Position = UDim2.new((i - 1) / 30, 2, 1, -3),
-		Size = UDim2.new(1 / 30, -3, 0, 2), BorderSizePixel = 0, ZIndex = 3,
-	}, graph)
-	new("UICorner", { CornerRadius = UDim.new(0, 2) }, bars[i])
-end
+local Overlay = New("Frame", {
+    Size = UDim2.fromScale(1,1),
+    BackgroundColor3 = Color3.fromRGB(22,15,37),
+    BackgroundTransparency = 0.13,
+    BorderSizePixel = 0,
+    ZIndex = 0
+}, Main)
 
--- PLAYERS
-pages.players = page("players")
-local playerRows = {}
-local function rebuildPlayers()
-	for _, r in ipairs(playerRows) do r:Destroy() end
-	table.clear(playerRows)
-	if not Core.Modules.PlayerList.enabled then return end
-	for i, p in ipairs(Players:GetPlayers()) do
-		local r, l, v = row(pages.players, nil, i)
-		l.Text = p.DisplayName
-		v.Text = p.AccountAge .. " d"
-		table.insert(playerRows, r)
-	end
-end
+-- HEADER
+local Header = New("Frame", {
+    Size = UDim2.new(1,0,0,52),
+    BackgroundColor3 = Color3.fromRGB(34,24,53),
+    BorderSizePixel = 0,
+    ZIndex = 2
+}, Main)
 
--- WORLD
-pages.world = page("world")
-local _, _, wClock = row(pages.world, "clock", 1)
-local _, _, wGrav = row(pages.world, "gravity", 2)
-local _, _, wBright = row(pages.world, "brightness", 3)
-local _, _, wStream = row(pages.world, "streaming", 4)
+local Title = Label(
+    Header,
+    "KianBest V5.2 ULTRA",
+    15,
+    UDim2.fromOffset(13,7),
+    Color3.fromRGB(238,225,255)
+)
 
--- SERVER
-pages.server = page("server")
-local _, _, sPlace = row(pages.server, "place", 1)
-local _, _, sJob = row(pages.server, "job", 2)
-local _, _, sCount = row(pages.server, "count", 3)
-local _, _, sUp = row(pages.server, "uptime", 4)
-local _, _, sPing = row(pages.server, "ping", 5)
-sPlace.Text = tostring(game.PlaceId)
-sJob.Text = game.JobId ~= "" and string.sub(game.JobId, 1, 8) or "Studio"
+Title.Font = Enum.Font.GothamBold
 
--- SETTINGS
-pages.settings = page("settings")
-local applyAll -- forward
+local Subtitle = Label(
+    Header,
+    "COMPACT EDITION",
+    9,
+    UDim2.fromOffset(14,29),
+    Color3.fromRGB(183,160,220)
+)
 
-local function settingsRow(key, order, height)
-	local r = new("Frame", {
-		Size = UDim2.new(1, -6, 0, height or 40), BackgroundColor3 = Color3.new(1, 1, 1),
-		BackgroundTransparency = 0.92, LayoutOrder = order, ZIndex = 2,
-	}, pages.settings)
-	new("UICorner", { CornerRadius = UDim.new(0, 10) }, r)
-	local l = new("TextLabel", {
-		Position = UDim2.fromOffset(10, 0), Size = UDim2.new(0.4, 0, 1, 0), BackgroundTransparency = 1,
-		Font = Enum.Font.Gotham, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left,
-		TextColor3 = Color3.fromRGB(230, 220, 250), ZIndex = 3,
-	}, r)
-	localized(l, key)
-	local holder = new("Frame", {
-		AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.new(0.58, 0, 1, -8),
-		BackgroundTransparency = 1, ZIndex = 3,
-	}, r)
-	new("UIListLayout", {
-		FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right,
-		VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6),
-	}, holder)
-	return holder
-end
+local Close = Button(
+    Header,
+    "×",
+    UDim2.fromOffset(32,32),
+    UDim2.new(1,-42,0,10)
+)
 
-local langHolder = settingsRow("language", 1)
-button(langHolder, "VI", UDim2.fromOffset(46, 28), function() CONFIG.Language = "vi"; applyAll() end)
-button(langHolder, "EN", UDim2.fromOffset(46, 28), function() CONFIG.Language = "en"; applyAll() end)
-
-local themeHolder = settingsRow("theme", 2, 48)
-for _, name in ipairs(THEME_ORDER) do
-	local c = name == "Custom" and CONFIG.CustomColor or THEMES[name][1]
-	local sw = new("TextButton", {
-		Size = UDim2.fromOffset(28, 28), BackgroundColor3 = c, Text = "", ZIndex = 4,
-	}, themeHolder)
-	new("UICorner", { CornerRadius = UDim.new(1, 0) }, sw)
-	sw.Activated:Connect(function() CONFIG.Theme = name; applyAll() end)
-end
-
-local bgHolder = settingsRow("background", 3)
-local bgToggle = button(bgHolder, "", UDim2.fromOffset(70, 28), function()
-	CONFIG.BackgroundOn = not CONFIG.BackgroundOn
-	applyAll()
+Close.TextSize = 20
+Close.Activated:Connect(function()
+    Main.Visible = false
 end)
 
-local trHolder = settingsRow("transparency", 4)
-local trValue = new("TextLabel", {
-	Size = UDim2.fromOffset(44, 28), BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 14,
-	TextColor3 = Color3.new(1, 1, 1), ZIndex = 4,
-}, trHolder)
-button(trHolder, "-", UDim2.fromOffset(30, 28), function()
-	CONFIG.Transparency = math.clamp(CONFIG.Transparency - 0.05, 0, 0.9); applyAll()
+--==================================================
+-- NAVIGATION
+--==================================================
+
+local Nav = New("ScrollingFrame", {
+    Position = UDim2.fromOffset(0,52),
+    Size = UDim2.new(1,0,0,43),
+    BackgroundColor3 = Color3.fromRGB(30,23,46),
+    BorderSizePixel = 0,
+    ScrollBarThickness = 2,
+    ScrollingDirection = Enum.ScrollingDirection.X,
+    CanvasSize = UDim2.fromOffset(600,0),
+    ZIndex = 2
+}, Main)
+
+local NavLayout = New("UIListLayout", {
+    FillDirection = Enum.FillDirection.Horizontal,
+    Padding = UDim.new(0,5),
+    SortOrder = Enum.SortOrder.LayoutOrder
+}, Nav)
+
+local Content = New("Frame", {
+    Position = UDim2.fromOffset(0,95),
+    Size = UDim2.new(1,0,-0,335),
+    BackgroundTransparency = 1,
+    ZIndex = 2
+}, Main)
+
+local Pages = {}
+local TabButtons = {}
+
+local TabNames = {
+    "HOME",
+    "PERFORMANCE",
+    "PLAYERS",
+    "WORLD",
+    "SERVER",
+    "SETTINGS"
+}
+
+for i, name in ipairs(TabNames) do
+    local page = New("ScrollingFrame", {
+        Name = name,
+        Size = UDim2.fromScale(1,1),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = Accent,
+        CanvasSize = UDim2.fromOffset(0,0),
+        Visible = i == 1
+    }, Content)
+
+    local layout = New("UIListLayout", {
+        Padding = UDim.new(0,8),
+        SortOrder = Enum.SortOrder.LayoutOrder
+    }, page)
+
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(
+        function()
+            page.CanvasSize = UDim2.fromOffset(
+                0, layout.AbsoluteContentSize.Y + 15
+            )
+        end
+    )
+
+    Pages[name] = page
+
+    local tab = Button(
+        Nav,
+        name,
+        UDim2.fromOffset(94,34),
+        UDim2.new()
+    )
+
+    tab.LayoutOrder = i
+    TabButtons[name] = tab
+
+    tab.Activated:Connect(function()
+        CurrentTab = name
+
+        for n, p in pairs(Pages) do
+            p.Visible = n == name
+        end
+
+        for n, b in pairs(TabButtons) do
+            b.BackgroundColor3 =
+                n == name and Accent
+                or Color3.fromRGB(48,38,67)
+        end
+    end)
+end
+
+--==================================================
+-- COMPONENTS
+--==================================================
+
+local function Section(parent, text)
+    local l = Label(parent, text, 13)
+    l.Size = UDim2.new(1,-20,0,27)
+    l.Position = UDim2.fromOffset(10,0)
+    l.Font = Enum.Font.GothamBold
+    l.TextColor3 = Color3.fromRGB(205,178,246)
+    return l
+end
+
+local function InfoCard(parent, title, value)
+    local card = New("Frame", {
+        Size = UDim2.fromOffset(145,65),
+        BackgroundColor3 = Color3.fromRGB(43,33,62),
+        BorderSizePixel = 0
+    }, parent)
+
+    Corner(card, 10)
+
+    Label(
+        card,title,10,
+        UDim2.fromOffset(9,7),
+        Color3.fromRGB(185,164,220)
+    )
+
+    local v = Label(
+        card,value,21,
+        UDim2.fromOffset(9,28),
+        Color3.fromRGB(255,255,255)
+    )
+
+    v.Name = "Value"
+    return v
+end
+
+local function MakeToggle(parent, text, callback)
+    local row = New("Frame", {
+        Size = UDim2.new(1,-20,0,42),
+        BackgroundColor3 = Color3.fromRGB(42,32,59),
+        BorderSizePixel = 0
+    }, parent)
+
+    Corner(row, 9)
+
+    Label(row,text,12,UDim2.fromOffset(10,8))
+
+    local on = false
+
+    local toggle = Button(
+        row,"OFF",
+        UDim2.fromOffset(55,27),
+        UDim2.new(1,-65,0,7)
+    )
+
+    toggle.Activated:Connect(function()
+        on = not on
+
+        toggle.Text = on and "ON" or "OFF"
+        toggle.BackgroundColor3 = on
+            and Accent
+            or Color3.fromRGB(75,65,87)
+
+        callback(on)
+    end)
+
+    return row
+end
+
+--==================================================
+-- HOME PAGE
+--==================================================
+
+local HomePage = Pages.HOME
+
+Section(HomePage, "SYSTEM OVERVIEW")
+
+local Metrics = New("Frame", {
+    Size = UDim2.new(1,-20,0,145),
+    BackgroundTransparency = 1,
+    Position = UDim2.fromOffset(10,0)
+}, HomePage)
+
+local FPSValue = InfoCard(Metrics,"REAL FPS","0")
+FPSValue.Parent.Position = UDim2.fromOffset(0,0)
+
+local PingValue = InfoCard(Metrics,"YOUR PING","--")
+PingValue.Parent.Position = UDim2.fromOffset(155,0)
+
+local MinValue = InfoCard(Metrics,"MIN FPS","--")
+MinValue.Parent.Position = UDim2.fromOffset(0,75)
+
+local MaxValue = InfoCard(Metrics,"MAX FPS","--")
+MaxValue.Parent.Position = UDim2.fromOffset(155,75)
+
+local SystemInfo = New("Frame", {
+    Size = UDim2.new(1,-20,0,75),
+    BackgroundColor3 = Color3.fromRGB(42,32,59)
+}, HomePage)
+
+Corner(SystemInfo,10)
+
+Label(
+    SystemInfo,
+    "SYSTEM INFORMATION",
+    11,
+    UDim2.fromOffset(10,5)
+)
+
+local DeviceLabel = Label(
+    SystemInfo,
+    UIS.TouchEnabled and "DEVICE: TOUCH" or "DEVICE: DESKTOP",
+    10,
+    UDim2.fromOffset(10,29),
+    Color3.fromRGB(200,180,230)
+)
+
+local PlayerCount = Label(
+    SystemInfo,
+    "PLAYERS: 0",
+    10,
+    UDim2.fromOffset(10,48),
+    Color3.fromRGB(200,180,230)
+)
+
+--==================================================
+-- PERFORMANCE PAGE
+--==================================================
+
+local PerformancePage = Pages.PERFORMANCE
+
+Section(PerformancePage,"PERFORMANCE TOOLS")
+
+MakeToggle(
+    PerformancePage,
+    "Fast Mode - Reduce UI Effects",
+    function(enabled)
+        Config.FastMode = enabled
+
+        Overlay.BackgroundTransparency =
+            enabled and 0.04 or 0.13
+
+        Config.ParticleAmount =
+            enabled and 5 or 25
+
+        SaveConfig()
+    end
+)
+
+MakeToggle(
+    PerformancePage,
+    "Reduce Decorative Particles",
+    function(enabled)
+        Config.Particles = not enabled
+    end
+)
+
+MakeToggle(
+    PerformancePage,
+    "Compact Interface",
+    function(enabled)
+        Config.Compact = enabled
+        Main.Size = enabled
+            and UDim2.fromOffset(340,430)
+            or UDim2.fromOffset(390,500)
+    end
+)
+
+MakeToggle(
+    PerformancePage,
+    "Background Image",
+    function(enabled)
+        Config.BackgroundEnabled = enabled
+        Background.Visible = enabled
+    end
+)
+
+--==================================================
+-- PLAYER PAGE
+--==================================================
+
+local PlayerPage = Pages.PLAYERS
+
+Section(PlayerPage,"PLAYER MONITOR")
+
+local Search = New("TextBox", {
+    Size = UDim2.new(1,-20,0,35),
+    BackgroundColor3 = Color3.fromRGB(43,33,62),
+    TextColor3 = Color3.new(1,1,1),
+    PlaceholderText = "Search players...",
+    Text = "",
+    ClearTextOnFocus = false,
+    TextSize = 12,
+    Font = Enum.Font.Gotham
+}, PlayerPage)
+
+Corner(Search,9)
+
+local PlayerContainer = New("Frame", {
+    Size = UDim2.new(1,-20,0,0),
+    AutomaticSize = Enum.AutomaticSize.Y,
+    BackgroundTransparency = 1
+}, PlayerPage)
+
+local PlayerLayout = New("UIListLayout", {
+    Padding = UDim.new(0,7)
+}, PlayerContainer)
+
+local function ClearPlayerCards()
+    for _, obj in ipairs(PlayerContainer:GetChildren()) do
+        if obj:IsA("Frame") then
+            obj:Destroy()
+        end
+    end
+end
+
+local function RefreshPlayers()
+    ClearPlayerCards()
+
+    local query = Search.Text:lower()
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr.Name:lower():find(query,1,true)
+        or plr.DisplayName:lower():find(query,1,true) then
+
+            local card = New("Frame", {
+                Size = UDim2.new(1,0,0,77),
+                BackgroundColor3 = Color3.fromRGB(43,33,62),
+                BorderSizePixel = 0
+            }, PlayerContainer)
+
+            Corner(card,9)
+
+            Label(
+                card,
+                plr.DisplayName,
+                13,
+                UDim2.fromOffset(10,5)
+            )
+
+            Label(
+                card,
+                "@"..plr.Name.." | ID: "..plr.UserId,
+                9,
+                UDim2.fromOffset(10,25),
+                Color3.fromRGB(188,169,216)
+            )
+
+            Label(
+                card,
+                plr == LP and "YOU | FPS: Local Monitor"
+                or "FPS: Not available",
+                9,
+                UDim2.fromOffset(10,44),
+                Color3.fromRGB(160,220,180)
+            )
+
+            Label(
+                card,
+                "PING: Not available",
+                9,
+                UDim2.fromOffset(10,59),
+                Color3.fromRGB(180,200,240)
+            )
+
+            local copy = Button(
+                card,
+                "COPY ID",
+                UDim2.fromOffset(65,25),
+                UDim2.new(1,-75,0,25)
+            )
+
+            copy.Activated:Connect(function()
+                if type(setclipboard) == "function" then
+                    pcall(setclipboard,tostring(plr.UserId))
+                end
+            end)
+        end
+    end
+end
+
+Search:GetPropertyChangedSignal("Text"):Connect(RefreshPlayers)
+
+Players.PlayerAdded:Connect(RefreshPlayers)
+Players.PlayerRemoving:Connect(RefreshPlayers)
+
+RefreshPlayers()
+
+--==================================================
+-- WORLD PAGE
+--==================================================
+
+local WorldPage = Pages.WORLD
+
+Section(WorldPage,"WORLD INFORMATION")
+
+local WorldText = Label(
+    WorldPage,
+    "NPC / MONSTER INFORMATION\n\nThis panel is ready for authorized game data.",
+    12
+)
+
+WorldText.Size = UDim2.new(1,-20,0,70)
+WorldText.Position = UDim2.fromOffset(10,0)
+WorldText.TextWrapped = true
+
+local MonsterNote = New("Frame", {
+    Size = UDim2.new(1,-20,0,60),
+    BackgroundColor3 = Color3.fromRGB(43,33,62)
+}, WorldPage)
+
+Corner(MonsterNote,9)
+
+Label(
+    MonsterNote,
+    "Monster Database",
+    13,
+    UDim2.fromOffset(10,7)
+)
+
+Label(
+    MonsterNote,
+    "Connect your own authorized NPC data source.",
+    9,
+    UDim2.fromOffset(10,30),
+    Color3.fromRGB(190,175,220)
+)
+
+--==================================================
+-- SERVER PAGE
+--==================================================
+
+local ServerPage = Pages.SERVER
+
+Section(ServerPage,"SERVER INFORMATION")
+
+local function ServerCard(text)
+    local box = New("Frame", {
+        Size = UDim2.new(1,-20,0,47),
+        BackgroundColor3 = Color3.fromRGB(43,33,62)
+    }, ServerPage)
+
+    Corner(box,9)
+
+    Label(
+        box,text,10,
+        UDim2.fromOffset(10,12)
+    )
+
+    return box
+end
+
+ServerCard("PLACE ID: "..tostring(game.PlaceId))
+ServerCard("JOB ID: "..tostring(game.JobId))
+ServerCard("PLAYERS: "..#Players:GetPlayers())
+
+local ServerRefresh = Button(
+    ServerPage,
+    "REFRESH INFORMATION",
+    UDim2.new(1,-20,0,35),
+    UDim2.new()
+)
+
+ServerRefresh.Activated:Connect(function()
+    for _, item in ipairs(ServerPage:GetChildren()) do
+        if item:IsA("Frame") then
+            local label = item:FindFirstChildOfClass("TextLabel")
+            if label and label.Text:find("PLAYERS:") then
+                label.Text = "PLAYERS: "..#Players:GetPlayers()
+            end
+        end
+    end
 end)
-button(trHolder, "+", UDim2.fromOffset(30, 28), function()
-	CONFIG.Transparency = math.clamp(CONFIG.Transparency + 0.05, 0, 0.9); applyAll()
+
+--==================================================
+-- SETTINGS PAGE
+--==================================================
+
+local SettingsPage = Pages.SETTINGS
+
+Section(SettingsPage,"COLOR STUDIO")
+
+local ThemeNames = {
+    "Purple","Sakura","Ocean","Emerald",
+    "Ruby","Gold","Cyber","White"
+}
+
+for _, name in ipairs(ThemeNames) do
+    local b = Button(
+        SettingsPage,
+        name,
+        UDim2.new(1,-20,0,32),
+        UDim2.new()
+    )
+
+    b.Activated:Connect(function()
+        Accent = Themes[name]
+        Config.Theme = name
+        Config.Hex = name
+
+        MainStroke.Color = Accent
+
+        for _, button in pairs(TabButtons) do
+            button.BackgroundColor3 =
+                button.Text == CurrentTab
+                and Accent
+                or Color3.fromRGB(48,38,67)
+        end
+
+        SaveConfig()
+    end)
+end
+
+Section(SettingsPage,"CUSTOM HEX COLOR")
+
+local HexInput = New("TextBox", {
+    Size = UDim2.new(1,-20,0,35),
+    BackgroundColor3 = Color3.fromRGB(43,33,62),
+    TextColor3 = Color3.new(1,1,1),
+    PlaceholderText = "#A78BFA",
+    Text = "",
+    ClearTextOnFocus = false
+}, SettingsPage)
+
+Corner(HexInput,8)
+
+local ApplyHex = Button(
+    SettingsPage,
+    "APPLY CUSTOM COLOR",
+    UDim2.new(1,-20,0,34),
+    UDim2.new()
+)
+
+ApplyHex.Activated:Connect(function()
+    local hex = HexInput.Text:gsub("#","")
+
+    if #hex == 6 and hex:match("^%x+$") then
+        local r = tonumber(hex:sub(1,2),16)
+        local g = tonumber(hex:sub(3,4),16)
+        local b = tonumber(hex:sub(5,6),16)
+
+        Accent = Color3.fromRGB(r,g,b)
+        Config.Theme = "Custom"
+        Config.Hex = "#" .. hex:upper()
+
+        MainStroke.Color = Accent
+        SaveConfig()
+    end
 end)
 
-local hint = new("TextLabel", {
-	Size = UDim2.new(1, -6, 0, 22), BackgroundTransparency = 1, Font = Enum.Font.Gotham, TextSize = 12,
-	TextColor3 = Color3.fromRGB(190, 170, 230), LayoutOrder = 5, ZIndex = 2,
-}, pages.settings)
-localized(hint, "hint")
+Section(SettingsPage,"LANGUAGE")
 
--- ---------- tabs ----------
-local TAB_ORDER = { "home", "performance", "players", "world", "server", "settings" }
-local function showPage(name)
-	current = name
-	local a = accent()
-	for key, p in pairs(pages) do p.Visible = (key == name) end
-	for key, b in pairs(tabButtons) do
-		b.BackgroundColor3 = (key == name) and a or Color3.new(1, 1, 1)
-		b.BackgroundTransparency = (key == name) and 0 or 0.9
-	end
+local LanguageButton = Button(
+    SettingsPage,
+    "VI / EN",
+    UDim2.new(1,-20,0,35),
+    UDim2.new()
+)
+
+LanguageButton.Activated:Connect(function()
+    Config.Language =
+        Config.Language == "VI" and "EN" or "VI"
+
+    LanguageButton.Text =
+        Config.Language == "VI" and "Tiếng Việt"
+        or "English"
+
+    SaveConfig()
+end)
+
+Section(SettingsPage,"BACKGROUND")
+
+local ImageInput = New("TextBox", {
+    Size = UDim2.new(1,-20,0,35),
+    BackgroundColor3 = Color3.fromRGB(43,33,62),
+    TextColor3 = Color3.new(1,1,1),
+    PlaceholderText = "Roblox Image Asset ID",
+    Text = "",
+    ClearTextOnFocus = false
+}, SettingsPage)
+
+Corner(ImageInput,8)
+
+local SetImage = Button(
+    SettingsPage,
+    "APPLY IMAGE",
+    UDim2.new(1,-20,0,35),
+    UDim2.new()
+)
+
+SetImage.Activated:Connect(function()
+    local id = ImageInput.Text:match("%d+")
+
+    if id then
+        Config.Background = "rbxassetid://"..id
+        Background.Image = Config.Background
+        Background.Visible = true
+        SaveConfig()
+    end
+end)
+
+--==================================================
+-- HOME FLOATING BUTTON
+--==================================================
+
+local HomeButton = New("TextButton", {
+    Name = "FloatingHome",
+    Size = UDim2.fromOffset(54,54),
+    Position = UDim2.new(0,18,0.5,-27),
+    BackgroundColor3 = Accent,
+    Text = "KB",
+    TextColor3 = Color3.fromRGB(36,24,52),
+    Font = Enum.Font.GothamBold,
+    TextSize = 18,
+    ZIndex = 20
+}, Gui)
+
+Corner(HomeButton,100)
+Stroke(HomeButton,Color3.fromRGB(235,215,255),2)
+
+-- DRAG AND TAP
+local dragging = false
+local moved = false
+local startPosition
+local startInput
+
+HomeButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+
+        dragging = true
+        moved = false
+        startInput = input.Position
+        startPosition = HomeButton.Position
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if not dragging then return end
+
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+    or input.UserInputType == Enum.UserInputType.Touch then
+
+        local delta = input.Position - startInput
+
+        if delta.Magnitude > 8 then
+            moved = true
+        end
+
+        if moved then
+            HomeButton.Position = UDim2.new(
+                startPosition.X.Scale,
+                startPosition.X.Offset + delta.X,
+                startPosition.Y.Scale,
+                startPosition.Y.Offset + delta.Y
+            )
+        end
+    end
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
+
+        if dragging and not moved then
+            Main.Visible = not Main.Visible
+        end
+
+        dragging = false
+    end
+end)
+
+--==================================================
+-- PARTICLE EFFECTS
+--==================================================
+
+local ParticleLayer = New("Frame", {
+    Name = "Particles",
+    Size = UDim2.fromScale(1,1),
+    BackgroundTransparency = 1,
+    ClipsDescendants = true,
+    ZIndex = 10
+}, Main)
+
+local ParticleObjects = {}
+
+local Symbols = {
+    Snow = {"❄","❅","✦"},
+    Sakura = {"🌸","✿","❀"},
+    Stars = {"✦","✧","⋆"},
+    Hearts = {"♥","♡","💜"}
+}
+
+local function ClearParticles()
+    for _, p in ipairs(ParticleObjects) do
+        if p.Parent then p:Destroy() end
+    end
+    table.clear(ParticleObjects)
 end
-for _, key in ipairs(TAB_ORDER) do
-	local b = new("TextButton", {
-		Size = UDim2.fromOffset(0, 28), AutomaticSize = Enum.AutomaticSize.X, Font = Enum.Font.GothamBold,
-		TextSize = 13, TextColor3 = Color3.new(1, 1, 1), ZIndex = 3,
-	}, tabBar)
-	new("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }, b)
-	new("UICorner", { CornerRadius = UDim.new(0, 14) }, b)
-	localized(b, key)
-	tabButtons[key] = b
-	b.Activated:Connect(function() showPage(key) end)
+
+local function SpawnParticles()
+    ClearParticles()
+
+    if not Config.Particles or Config.Effect == "None" then
+        return
+    end
+
+    local list = Symbols[Config.Effect]
+    if not list then return end
+
+    local amount = Config.FastMode and 5
+        or Config.ParticleAmount
+
+    for i = 1, math.clamp(amount,0,60) do
+        local particle = New("TextLabel", {
+            BackgroundTransparency = 1,
+            Text = list[math.random(1,#list)],
+            TextSize = math.random(12,23),
+            TextColor3 = Config.Effect == "Snow"
+                and Color3.fromRGB(220,240,255)
+                or Accent,
+            Position = UDim2.new(
+                math.random(),0,
+                math.random(),0
+            ),
+            Size = UDim2.fromOffset(25,25),
+            ZIndex = 10
+        }, ParticleLayer)
+
+        table.insert(ParticleObjects,particle)
+    end
 end
 
--- ---------- modules ----------
-local function buildModuleRows()
-	local list = { { "Monitor", "monitor" }, { "Background", "bgmod" }, { "PlayerList", "plmod" } }
-	for i, m in ipairs(list) do
-		local r, l, v = row(pages.home, m[2], 10 + i)
-		v.Text = ""
-		local status = new("TextLabel", {
-			AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -62, 0, 0), Size = UDim2.new(0.3, 0, 1, 0),
-			BackgroundTransparency = 1, Font = Enum.Font.Gotham, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Right,
-			TextColor3 = Color3.fromRGB(190, 170, 230), ZIndex = 3,
-		}, r)
-		local btn = button(r, "", UDim2.fromOffset(48, 24), function()
-			Core.toggle(m[1])
-			applyAll()
-		end)
-		btn.AnchorPoint = Vector2.new(1, 0.5)
-		btn.Position = UDim2.new(1, -8, 0.5, 0)
-		modRows[m[1]] = { status = status, btn = btn }
-	end
-end
+SpawnParticles()
 
--- ---------- apply theme / language / background ----------
-function applyAll()
-	local a, a2 = accent()
-	panelStroke.Color = a
-	panelGrad.Color = ColorSequence.new(a2:Lerp(Color3.fromRGB(20, 10, 36), 0.55), Color3.fromRGB(20, 10, 36))
-	panel.BackgroundTransparency = CONFIG.Transparency
-	title.Text = CONFIG.Name .. "  " .. CONFIG.Version
-	for _, b in ipairs(accentButtons) do b.BackgroundColor3 = a end
-	for _, b in ipairs(bars) do b.BackgroundColor3 = a end
-	for _, item in ipairs(langLabels) do item[1].Text = tr(item[2]) end
-	for name, ui in pairs(modRows) do
-		local mod = Core.Modules[name]
-		ui.status.Text = mod.enabled and tr("running") or tr("stopped")
-		ui.btn.Text = mod.enabled and tr("on") or tr("off")
-	end
-	bgToggle.Text = CONFIG.BackgroundOn and tr("on") or tr("off")
-	trValue.Text = math.floor((1 - CONFIG.Transparency) * 100 + 0.5) .. "%"
-	wallpaper.Image = CONFIG.WallpaperId
-	wallpaper.Visible = CONFIG.BackgroundOn and Core.Modules.Background.enabled and CONFIG.WallpaperId ~= ""
-	showPage(current)
-	rebuildPlayers()
-end
+local EffectClock = 0
 
----------------------------------------------------------------------
--- Đăng ký module (Loader)
----------------------------------------------------------------------
-Core.register("Monitor", {
-	onStart = function()
-		frames, acc, warm = 0, 0, 0
-		monitorConn = RunService.RenderStepped:Connect(function(dt)
-			frames += 1
-			acc += dt
-			if acc >= 0.5 then
-				M.fps = math.floor(frames / acc + 0.5)
-				frames, acc = 0, 0
-				warm += 1
-				if warm > 4 then
-					M.min = math.min(M.min, M.fps)
-					M.max = math.max(M.max, M.fps)
-					M.sum += M.fps
-					M.n += 1
-				end
-				table.insert(M.hist, M.fps)
-				if #M.hist > 30 then table.remove(M.hist, 1) end
-			end
-		end)
-	end,
-	onStop = function()
-		if monitorConn then monitorConn:Disconnect() monitorConn = nil end
-	end,
-})
-Core.register("Background", {})
-Core.register("PlayerList", {})
+RunService.RenderStepped:Connect(function(dt)
+    if not Main.Visible or not Config.Particles then
+        return
+    end
 
-Players.PlayerAdded:Connect(function() task.defer(rebuildPlayers) end)
-Players.PlayerRemoving:Connect(function() task.defer(rebuildPlayers) end)
+    EffectClock += dt
 
----------------------------------------------------------------------
--- Cập nhật số liệu (mỗi 0.5 giây khi dashboard đang mở)
----------------------------------------------------------------------
-local function fmtTime(s)
-	s = math.floor(s)
-	return string.format("%02d:%02d:%02d", s // 3600, (s % 3600) // 60, s % 60)
-end
+    if EffectClock >= 0.035 then
+        EffectClock = 0
+
+        for _, p in ipairs(ParticleObjects) do
+            if p.Parent then
+                local y = p.Position.Y.Scale + 0.0025
+                local x = p.Position.X.Scale
+
+                if y > 1 then
+                    y = -0.04
+                    x = math.random()
+                end
+
+                p.Position = UDim2.new(x,0,y,0)
+            end
+        end
+    end
+end)
+
+--==================================================
+-- REAL LOCAL FPS MONITOR
+--==================================================
+
+RunService.RenderStepped:Connect(function(dt)
+    FPSCounter += 1
+    FPSTime += dt
+
+    if FPSTime >= 1 then
+        FPS = math.floor(FPSCounter / FPSTime + 0.5)
+
+        MinFPS = math.min(MinFPS,FPS)
+        MaxFPS = math.max(MaxFPS,FPS)
+
+        FPSValue.Text = tostring(FPS)
+        MinValue.Text = tostring(MinFPS)
+        MaxValue.Text = tostring(MaxFPS)
+
+        FPSCounter = 0
+        FPSTime = 0
+    end
+end)
+
+--==================================================
+-- LOCAL PING MONITOR
+--==================================================
 
 task.spawn(function()
-	while gui.Parent do
-		task.wait(0.5)
-		if panel.Visible then
-			M.ping = readPing()
-			M.mem = math.floor(Stats:GetTotalMemoryUsageMb() + 0.5)
-			local fps = Core.Modules.Monitor.enabled and tostring(M.fps) or "-"
-			hFps.Text, hPing.Text, hMem.Text = fps, M.ping .. " ms", M.mem .. " MB"
-			if current == "performance" then
-				pFps.Text = fps
-				pMin.Text = M.min == math.huge and "-" or tostring(M.min)
-				pMax.Text = M.max == 0 and "-" or tostring(M.max)
-				pAvg.Text = M.n > 0 and tostring(math.floor(M.sum / M.n + 0.5)) or "-"
-				pPing.Text, pMem.Text = M.ping .. " ms", M.mem .. " MB"
-				for i, bar in ipairs(bars) do
-					local v = M.hist[#M.hist - 30 + i]
-					bar.Size = UDim2.new(1 / 30, -3, 0, v and math.max(2, math.min(v / 120, 1) * 62) or 2)
-				end
-			elseif current == "world" then
-				wClock.Text = string.format("%.1f", Lighting.ClockTime)
-				wGrav.Text = string.format("%.1f", workspace.Gravity)
-				wBright.Text = string.format("%.1f", Lighting.Brightness)
-				wStream.Text = workspace.StreamingEnabled and tr("on") or tr("off")
-			elseif current == "server" then
-				sCount.Text = #Players:GetPlayers() .. "/" .. Players.MaxPlayers
-				sUp.Text = fmtTime(workspace.DistributedGameTime)
-				sPing.Text = M.ping .. " ms"
-			end
-		end
-	end
+    while Gui.Parent do
+        local success, result = pcall(function()
+            return Stats.Network.ServerStatsItem[
+                "Data Ping"
+            ]:GetValue()
+        end)
+
+        if success and result then
+            PingValue.Text = tostring(math.floor(result)).." ms"
+        else
+            PingValue.Text = "--"
+        end
+
+        PlayerCount.Text =
+            "PLAYERS: "..#Players:GetPlayers()
+
+        task.wait(1)
+    end
 end)
 
----------------------------------------------------------------------
--- FLOATING HOME (nút nổi kéo được)
----------------------------------------------------------------------
-local fab = new("TextButton", {
-	Name = "FloatingHome", Size = UDim2.fromOffset(54, 54), Position = UDim2.new(0, 16, 0.4, 0),
-	Text = "KB", Font = Enum.Font.GothamBlack, TextSize = 18, TextColor3 = Color3.new(1, 1, 1),
-	AutoButtonColor = false, ZIndex = 50,
-}, gui)
-new("UICorner", { CornerRadius = UDim.new(1, 0) }, fab)
-local fabStroke = new("UIStroke", { Thickness = 2, Color = Color3.new(1, 1, 1), Transparency = 0.3 }, fab)
-table.insert(accentButtons, fab)
+--==================================================
+-- STATUS
+--==================================================
 
-local function setOpen(v)
-	panel.Visible = v
-end
-closeBtn.Activated:Connect(function() setOpen(false) end)
+local Status = New("TextLabel", {
+    Size = UDim2.fromOffset(100,20),
+    Position = UDim2.new(1,-110,1,-25),
+    BackgroundTransparency = 1,
+    Text = "● READY",
+    TextColor3 = Color3.fromRGB(74,222,128),
+    TextSize = 10,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Right,
+    ZIndex = 15
+}, Main)
 
-do
-	local dragging, moved, startInput, startPos = false, false, nil, nil
-	fab.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging, moved = true, false
-			startInput, startPos = input.Position, fab.Position
-			input.Changed:Connect(function()
-				if input.UserInputState == Enum.UserInputState.End then
-					dragging = false
-					if not moved then setOpen(not panel.Visible) end
-				end
-			end)
-		end
-	end)
-	UIS.InputChanged:Connect(function(input)
-		if not dragging then return end
-		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-			local d = input.Position - startInput
-			if d.Magnitude > 6 then moved = true end
-			if moved then
-				fab.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
-			end
-		end
-	end)
-end
+--==================================================
+-- STARTUP
+--==================================================
 
-UIS.InputBegan:Connect(function(input, processed)
-	if not processed and input.KeyCode == CONFIG.Toggle then
-		setOpen(not panel.Visible)
-	end
-end)
+Main.Visible = false
 
----------------------------------------------------------------------
--- START
----------------------------------------------------------------------
-buildModuleRows()
-for _, name in ipairs(Core.Order) do Core.start(name) end
-applyAll()
-print(("[%s %s] loaded"):format(CONFIG.Name, CONFIG.Version))
+print("================================")
+print("KianBest V5.2 ULTRA")
+print("Dashboard initialized")
+print("Theme:",Config.Theme)
+print("Language:",Config.Language)
+print("================================")
